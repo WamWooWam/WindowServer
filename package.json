@@ -1,0 +1,12 @@
+{
+  "name": "window-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^20.9.0",
+    "filer": "^1.4.1",
+    "typescript": "^5.2.2"
+  }
+}

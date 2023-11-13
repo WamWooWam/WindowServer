@@ -1,0 +1,17 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "module": "NodeNext",
+    "target": "ES2017",
+    "lib": [ "ES2020", "DOM", "DOM.Iterable" ],
+    "moduleResolution": "NodeNext",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "noImplicitAny": true,
+    "outDir": "./dist",
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "rootDir": "./src",
+  }
+}
