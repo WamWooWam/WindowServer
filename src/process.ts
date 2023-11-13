@@ -2,7 +2,6 @@ import { ObSetObject } from "./objects.js";
 import NTDLL_EXPORTS from "./server/ntdll.js";
 import Executable from "./types/Executable.js";
 import Message from "./types/Message.js";
-import { Process } from "./types/Process.js";
 import NTDLL from "./types/ntdll.types.js";
 import { SUBSYS_NTDLL } from "./types/subsystems.js";
 import { HANDLE, PEB, Subsystem, SubsystemHandlers, Version } from "./types/types.js";
@@ -37,7 +36,7 @@ export class PsProcess {
 
     private sharedMemory: SharedArrayBuffer;
 
-    constructor(exec: Executable, args: string, cwd: string = "/", env: { [key: string]: string; } = {}) {
+    constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
         this.id = assignId();
         this.handle = ObSetObject<PsProcess>(this, this.terminate.bind(this));
         this.name = exec.name;

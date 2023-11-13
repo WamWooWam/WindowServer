@@ -10,11 +10,15 @@ import {
     CloseHandle,
     ReadConsole,
 } from "./client/kernel32.js";
+import { SHCreateDirectoryEx } from "./client/shell32.js";
 import { HANDLE } from "./types/types.js";
 
 async function main() {
+
+    await SHCreateDirectoryEx(0, "Test", 0);
+
     let hFile: HANDLE = await CreateFile(
-        "C:\\test.txt",
+        "Test\\test.txt",
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ,
         0,

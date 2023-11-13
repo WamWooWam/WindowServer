@@ -1,10 +1,10 @@
 import { ObGetObject } from "../objects.js";
 import { PsProcess } from "../process.js";
-import { SUBSYS_KERNEL32, SUBSYS_NTDLL } from "../types/subsystems.js";
+import { SUBSYS_KERNEL32, SUBSYS_NTDLL, SUBSYS_SHELL32 } from "../types/subsystems.js";
 import { PEB, Subsystem } from "../types/types.js";
 import NTDLL from "../types/ntdll.types.js";
 
-const ValidSubsystems = [SUBSYS_NTDLL, SUBSYS_KERNEL32];
+const ValidSubsystems = [SUBSYS_NTDLL, SUBSYS_KERNEL32, SUBSYS_SHELL32];
 
 
 async function SubsystemLoaded(peb: PEB, data: any) {

@@ -1,4 +1,5 @@
 import { ObGetObject, ObSetObject } from "./objects.js";
+import { PsProcess } from "./process.js";
 import { HANDLE, PEB } from "./types/types.js";
 
 const Filer = window['Filer' as keyof typeof window];
@@ -44,6 +45,41 @@ abstract class NtFile {
     abstract close(): Promise<void>;
 }
 
+function _win32PathIsRooted(lpFileName: string) {
+    return lpFileName[1] === ':';
+}
+
+
+export function NtRootPath(hOwner: HANDLE, lpFileName: string) {
+    const process = ObGetObject<PsProcess>(hOwner);
+    const cwd = process.cwd;
+
+    if (lpFileName.startsWith('\\\\')) {
+        // UNC path
+        return lpFileName;
+    } else if (_win32PathIsRooted(lpFileName)) {
+        // Rooted path
+        return lpFileName;
+    }
+    else if (lpFileName[0] === '\\') {
+        // Relative path
+        return `${cwd[0]}:${lpFileName}`;
+    } else {
+        // Relative path
+        return `${cwd}\\${lpFileName}`;
+    }
+}
+
+function _win32FileNameToUnix(hOwner: HANDLE, lpFileName: string) {
+    const rootPath = NtRootPath(hOwner, lpFileName);
+    console.log(`Root path: ${rootPath}`)
+
+    const driveLetter = rootPath[0].toLowerCase();
+    const drivePath = driveLetter === 'c' ? '/' : `/mnt/${driveLetter}`;
+    const path = rootPath.slice(2).replace(/\\/g, '/');
+    return `${drivePath}/${path}`.toLowerCase(); // hack for case-insensitive file systems
+}
+
 class FsFile extends NtFile {
     private fd: number;
     private length: number;
@@ -59,10 +95,13 @@ class FsFile extends NtFile {
         dwFlagsAndAttributes: number) {
         super(hOwner, lpFileName, dwDesiredAccess, dwShareMode, dwCreationDisposition, dwFlagsAndAttributes);
 
+        const rootedPath = NtRootPath(hOwner, lpFileName);
+        console.log(`Opening file ${rootedPath}`);
+
         this.fd = -1;
         this.length = 0;
-        this.mode =  this._win32FlagsToUnix(dwDesiredAccess, dwCreationDisposition, dwFlagsAndAttributes);
-        this.path = this._win32FileNameToUnix(lpFileName);
+        this.mode = this._win32FlagsToUnix(dwDesiredAccess, dwCreationDisposition, dwFlagsAndAttributes);
+        this.path = _win32FileNameToUnix(hOwner, lpFileName);
     }
 
     async open() {
@@ -142,14 +181,6 @@ class FsFile extends NtFile {
         });
     }
 
-    private _win32FileNameToUnix(lpFileName: string) {
-        if (lpFileName[1] !== ':') throw new Error('Invalid file name');
-
-        const driveLetter = lpFileName[0].toLowerCase();
-        const drivePath = driveLetter === 'c' ? '/' : `/mnt/${driveLetter}`;        
-        const path = lpFileName.slice(2).replace(/\\/g, '/');
-        return `${drivePath}/${path}`.toLowerCase(); // hack for case-insensitive file systems
-    }
 
     private _win32FlagsToUnix(dwDesiredAccess: number, dwCreationDisposition: number, dwFlagsAndAttributes: number) {
         // Map dwDesiredAccess
@@ -339,6 +370,23 @@ export async function NtSetFilePointer(
     return { retVal: file.position };
 }
 
+export async function NtCreateDirectory(
+    peb: PEB,
+    lpPathName: string,
+    lpSecurityAttributes: number
+): Promise<boolean> {
+    const path = _win32FileNameToUnix(peb.hProcess, lpPathName);
+
+    await new Promise<void>((resolve, reject) => {
+        fs.mkdir(path, { recursive: true }, (err: any) => {
+            if (err && err.name !== 'EEXIST') reject(err);
+            else resolve();
+        });
+    });
+
+    return true;
+}
+
 async function NtCreateFileObject(
     hOwner: HANDLE,
     lpFileName: string,
@@ -373,4 +421,3 @@ async function NtCreateFileObject(
 
     return file;
 }
-

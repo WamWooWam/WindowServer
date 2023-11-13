@@ -148,6 +148,21 @@ export async function SetFilePointer(
     return msg.data.dwNewFilePointer;
 }
 
+export async function CreateDirectory(
+    lpPathName: string,
+    lpSecurityAttributes: number
+): Promise<boolean> {
+    const msg = await Kernel32_SendMessage({
+        type: KERNEL32.CreateDirectory,
+        data: {
+            lpPathName: lpPathName,
+            lpSecurityAttributes: lpSecurityAttributes
+        }
+    });
+
+    return msg.data;
+}
+
 
 export function GetStdHandle(nStdHandle: number): HANDLE {
     if (nStdHandle > STD_ERROR_HANDLE && nStdHandle < STD_INPUT_HANDLE)
@@ -167,6 +182,8 @@ export function CloseHandle(hObject: HANDLE): boolean {
 
     return true;
 }
+
+// consoleapi.h
 
 export async function AllocConsole(): Promise<boolean> {
     return false; // TODO: implement
@@ -190,6 +207,8 @@ export async function GetConsoleTitle(): Promise<string> {
 export async function SetConsoleTitle(lpConsoleTitle: string): Promise<boolean> {
     return false;
 }
+
+// debugapi.h
 
 export function OutputDebugString(lpOutputString: string): void {
     console.debug(lpOutputString);

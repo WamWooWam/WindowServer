@@ -1,4 +1,4 @@
-import { NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../file.js";
+import { NtCreateDirectory, NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../file.js";
 import { ObCloseHandle, ObGetObject } from "../objects.js";
 import { PsProcess } from "../process.js";
 import { HANDLE, PEB } from "../types/types.js";
@@ -88,6 +88,18 @@ async function SetFilePointer(peb: PEB, data: {
     return ret;
 }
 
+async function CreateDirectory(peb: PEB, data: {
+    lpPathName: string,
+    lpSecurityAttributes: number
+}) {
+    const ret = await NtCreateDirectory(
+        peb,
+        data.lpPathName,
+        data.lpSecurityAttributes
+    );
+
+    return ret;
+};
 
 const KERNEL32_EXPORTS = {
     [KERNEL32.GetProcessInfo]: GetProcessInfo,
@@ -96,6 +108,7 @@ const KERNEL32_EXPORTS = {
     [KERNEL32.ReadFile]: ReadFile,
     [KERNEL32.WriteFile]: WriteFile,
     [KERNEL32.SetFilePointer]: SetFilePointer,
+    [KERNEL32.CreateDirectory]: CreateDirectory
 };
 
 export default KERNEL32_EXPORTS;

@@ -5,6 +5,7 @@ const KERNEL32 = {
     ReadFile: 0x00000004,
     WriteFile: 0x00000005,
     SetFilePointer: 0x00000006,
+    CreateDirectory: 0x00000007
 }
 
 export default KERNEL32;
