@@ -17,6 +17,7 @@ type PEB = {
     dwProcessId: number;
     dwThreadId: number;
 
+    lpOwnedHandles: HANDLE[];
     lpHandlers: Map<Subsystem, SubsystemHandlers>;
 }
 

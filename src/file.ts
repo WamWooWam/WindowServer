@@ -1,6 +1,7 @@
-import { ObGetObject, ObSetObject } from "./objects.js";
-import { PsProcess } from "./process.js";
 import { HANDLE, PEB } from "./types/types.js";
+import { ObGetObject, ObSetObject } from "./objects.js";
+
+import { PsProcess } from "./process.js";
 
 const Filer = window['Filer' as keyof typeof window];
 const fs = new Filer.FileSystem();
@@ -305,7 +306,7 @@ export async function NtCreateFile(
     const file = await NtCreateFileObject(peb.hProcess, lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     if (!file) return -1;
 
-    const hFile = ObSetObject(file, () => file.close());
+    const hFile = ObSetObject(file, peb.hProcess, () => file.close());
     return hFile;
 }
 

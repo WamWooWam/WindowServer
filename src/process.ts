@@ -1,10 +1,11 @@
-import { ObSetObject } from "./objects.js";
-import NTDLL_EXPORTS from "./server/ntdll.js";
+import { HANDLE, PEB, Subsystem, SubsystemHandlers, Version } from "./types/types.js";
+import { ObDestroyHandle, ObSetObject } from "./objects.js";
+
 import Executable from "./types/Executable.js";
 import Message from "./types/Message.js";
 import NTDLL from "./types/ntdll.types.js";
+import NTDLL_EXPORTS from "./server/ntdll.js";
 import { SUBSYS_NTDLL } from "./types/subsystems.js";
-import { HANDLE, PEB, Subsystem, SubsystemHandlers, Version } from "./types/types.js";
 
 let __procId = 0;
 const assignId = () => {
@@ -38,7 +39,7 @@ export class PsProcess {
 
     constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
         this.id = assignId();
-        this.handle = ObSetObject<PsProcess>(this, this.terminate.bind(this));
+        this.handle = ObSetObject<PsProcess>(this, null, this.terminate.bind(this));
         this.name = exec.name;
         this.version = exec.version;
         this.executable = exec.file;
@@ -56,7 +57,8 @@ export class PsProcess {
             hThread: 0,
             dwProcessId: this.id,
             dwThreadId: 0,
-            lpHandlers: new Map()
+            lpHandlers: new Map(),
+            lpOwnedHandles: []
         };
 
         this.loadSubsystem(SUBSYS_NTDLL, NTDLL_EXPORTS);
@@ -64,15 +66,15 @@ export class PsProcess {
 
     start() {
         this.worker = new Worker('/client/ntdll.js', { type: "module", name: this.name });
-        this.worker.onmessage = (event) => {
-            const msg = event.data as Message;
-            this.recieve(msg);
-        };
+        this.worker.onmessage = (event) => this.recieve(event.data as Message);
         this.send({ subsys: SUBSYS_NTDLL, type: NTDLL.ProcessCreate, data: { mem: this.sharedMemory, ...this.exec } });
     }
 
     terminate() {
         this.worker.terminate();
+        for (const handle of [...this.peb.lpOwnedHandles]) {
+            ObDestroyHandle(handle);
+        }
     }
 
     send(msg: Message) {
@@ -108,6 +110,17 @@ export class PsProcess {
     loadSubsystem(subsys: Subsystem, handler: SubsystemHandlers) {
         if (!this.peb.lpHandlers.has(subsys)) {
             this.peb.lpHandlers.set(subsys, handler);
+        }
+    }
+
+    ownHandle(handle: HANDLE) {
+        this.peb.lpOwnedHandles.push(handle);
+    }
+
+    disownHandle(handle: HANDLE) {
+        const index = this.peb.lpOwnedHandles.indexOf(handle);
+        if (index >= 0) {
+            this.peb.lpOwnedHandles.splice(index, 1);
         }
     }
 }
