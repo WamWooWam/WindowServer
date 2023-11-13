@@ -5,6 +5,7 @@ type tagHANDLE = {
     refCount: number;
     value: any;
     owner: HANDLE;
+    ownedHandles: HANDLE[];
     dtor?: () => void;
 }
 
@@ -34,12 +35,13 @@ export function ObSetObject<T>(value: T, owner: HANDLE, dtor?: () => void): HAND
         refCount: 1,
         value: value,
         owner: owner,
+        ownedHandles: [],
         dtor: dtor
     });
 
-    const hProcess = ObGetObject<PsProcess>(owner);
-    if (hProcess) {
-        hProcess.ownHandle(handle);
+    const owningHandle = handleTable.get(owner);
+    if (owningHandle) {
+        owningHandle.ownedHandles.push(handle);
     }
 
     return handle;
@@ -65,14 +67,15 @@ export function ObDestroyHandle(handle: HANDLE): boolean {
         return false;
     }
 
+    console.log(`destroying handle ${handle}, %O`, tag.value);
+
+    for (const ownedHandle of tag.ownedHandles) {
+        ObDestroyHandle(ownedHandle);
+    }
+
     handleTable.delete(handle);
     if (tag.dtor) {
         tag.dtor();
-    }
-
-    const hProcess = ObGetObject<PsProcess>(tag.owner);
-    if (hProcess) {
-        hProcess.disownHandle(handle);
     }
 
     return true;

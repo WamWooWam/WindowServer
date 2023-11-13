@@ -1,7 +1,8 @@
+import Executable from "../types/Executable.js";
 import Message from "../types/Message.js";
-import USER32 from "../types/user32.types.js";
-import { SUBSYS_USER32 } from "../types/subsystems.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
+import { SUBSYS_USER32 } from "../types/subsystems.js";
+import USER32 from "../types/user32.types.js";
 
 const [User32_SendMessage, User32_PostMessage] = await NtRegisterSubsystem(SUBSYS_USER32, User32_HandleMessage);
 
@@ -90,3 +91,18 @@ export async function MessageBoxIndirect(
 ): Promise<number> {
     return 0;
 }
+
+const user32: Executable = {
+    file: "user32.js",
+    type: "dll",
+    subsystem: "console",
+    arch: "js",
+    entryPoint: null,
+    dependencies: ["ntdll.js", "kernel32.js"],
+
+    name: "user32",
+    version: [1, 0, 0, 0],
+    rsrc: {}
+};
+
+export default user32;

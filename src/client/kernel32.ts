@@ -1,8 +1,9 @@
-import Message from "../types/Message.js";
-import KERNEL32 from "../types/kernel32.types.js";
-import { SUBSYS_KERNEL32 } from "../types/subsystems.js";
+import Executable from "../types/Executable.js";
 import { HANDLE } from "../types/types.js";
+import KERNEL32 from "../types/kernel32.types.js";
+import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
+import { SUBSYS_KERNEL32 } from "../types/subsystems.js";
 
 export const STD_INPUT_HANDLE = -10;
 export const STD_OUTPUT_HANDLE = -11;
@@ -213,3 +214,18 @@ export async function SetConsoleTitle(lpConsoleTitle: string): Promise<boolean> 
 export function OutputDebugString(lpOutputString: string): void {
     console.debug(lpOutputString);
 }
+
+const kernel32: Executable = {
+    file: "kernel32.js",
+    type: "dll",
+    subsystem: "console",
+    arch: "js",
+    entryPoint: null,
+    dependencies: ["ntdll.js"],
+
+    name: "kernel32",
+    version: [1, 0, 0, 0],
+    rsrc: {}
+}
+
+export default kernel32;

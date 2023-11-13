@@ -1,13 +1,14 @@
 // env: worker
 
+import NTDLL, { PROCESS_CREATE } from "../types/ntdll.types.js";
+
 import Executable from "../types/Executable.js";
 import Message from "../types/Message.js";
-import { Subsystem } from "../types/types.js";
 import { SUBSYS_NTDLL } from "../types/subsystems.js";
-import NTDLL from "../types/ntdll.types.js";
+import { Subsystem } from "../types/types.js";
 
-
-let sharedMemory: SharedArrayBuffer;
+let sharedMemory: SharedArrayBuffer; // todo: move this somewhere else
+const loadedModules: string[] = [];
 
 // all worker events should be handled by this subsystem
 const __addEventListener = globalThis.addEventListener;
@@ -54,27 +55,6 @@ __addEventListener('unhandledrejection', (event) => {
     console.error(event); // TODO: send error to parent
 });
 
-type NtSendMessage = (msg: Omit<Message, "subsys">) => Promise<Message>;
-type NtPostMessage = (msg: Omit<Message, "subsys">) => Promise<void>;
-
-const [NTDLL_SendMessage, NTDLL_PostMessage] = await NtRegisterSubsystem(SUBSYS_NTDLL, NTDLL_HandleMessage);
-
-async function NtRegisterSubsystem(subsys: Subsystem, handler: (msg: Omit<Message, "subsys">) => void): Promise<[NtSendMessage, NtPostMessage]> {
-    subsystems.set(subsys, handler);
-
-    const ret = await NtSendMessageAsync({
-        subsys: SUBSYS_NTDLL,
-        type: NTDLL.SubsystemLoaded,
-        data: {
-            subsys: subsys,
-        }
-    });
-
-    return [
-        async (msg: Omit<Message, "subsys">) => await NtSendMessageAsync({ subsys, ...msg }),
-        async (msg: Omit<Message, "subsys">) => await NtPostMessageAsync({ subsys, ...msg }),
-    ]
-}
 
 async function NtPostMessageAsync(msg: Message): Promise<void> {
     __postMessage(msg);
@@ -100,25 +80,108 @@ async function NtSendMessageAsync(msg: Message): Promise<Message> {
     });
 }
 
-async function executeLoad(exec: any) {
-    sharedMemory = exec.sharedMemory;
+type NtSendMessage = (msg: Omit<Message, "subsys">) => Promise<Message>;
+type NtPostMessage = (msg: Omit<Message, "subsys">) => Promise<void>;
 
-    for (const iterator of exec.dependencies) {
-        await import("/client/" + iterator);
+const [NTDLL_SendMessage, NTDLL_PostMessage] = await NtRegisterSubsystem(SUBSYS_NTDLL, NTDLL_HandleMessage);
+
+async function NtRegisterSubsystem(subsys: Subsystem, handler: (msg: Omit<Message, "subsys">) => void): Promise<[NtSendMessage, NtPostMessage]> {
+    subsystems.set(subsys, handler);
+
+    const ret = await NtSendMessageAsync({
+        subsys: SUBSYS_NTDLL,
+        type: NTDLL.LoadSubsystem,
+        data: {
+            lpSubsystem: subsys,
+        }
+    });
+
+    return [
+        async (msg: Omit<Message, "subsys">) => await NtSendMessageAsync({ subsys, ...msg }),
+        async (msg: Omit<Message, "subsys">) => await NtPostMessageAsync({ subsys, ...msg }),
+    ]
+}
+
+async function LdrInitializeThunk(pPC: PROCESS_CREATE) {
+    sharedMemory = pPC.lpSharedMemory;
+
+    const exec = pPC.lpExecutable;
+    for (const lpDependencies of exec.dependencies) {
+        await LdrLoadDll(lpDependencies, pPC);
     }
 
+    await BaseThreadInitThunk(pPC);
+}
+
+async function LdrLoadDll(lpLibFileName: string, pPC: PROCESS_CREATE) {
+    if (loadedModules.includes(lpLibFileName)) return;
+
+    console.debug(`LdrLoadDll:${lpLibFileName}...`);
+
+    // TODO: search for dll in search path
+    const module = await import("/client/" + lpLibFileName);
+    if (!module.default) {
+        throw new Error(`invalid module ${lpLibFileName}`);
+    }
+
+    loadedModules.push(lpLibFileName);
+
+    const exec = module.default as Executable;
+    if (exec.type !== "dll") {
+        throw new Error(`invalid module ${lpLibFileName}`);
+    }
+
+    for (const lpDependency of exec.dependencies) {
+        await LdrLoadDll(lpDependency, pPC);
+    }
+    
+    if (module[exec.entryPoint]) {
+        let retVal = module[exec.entryPoint]();
+        if (retVal && retVal.then) {
+            retVal = await retVal;
+        }
+    }
+}
+
+async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
+    const exec = pPC.lpExecutable;
     const module = await import("/" + exec.file);
     if (module[exec.entryPoint]) {
-        module[exec.entryPoint]();
+        let retVal = module[exec.entryPoint]();
+        if (retVal && retVal.then) {
+            retVal = await retVal;
+        }
+
+        await NTDLL_PostMessage({
+            type: NTDLL.ProcessExit,
+            data: {
+                uExitCode: retVal ?? 0,
+            }
+        });
     }
 }
 
 function NTDLL_HandleMessage(msg: Message) {
     switch (msg.type) {
         case NTDLL.ProcessCreate: // load executable
-            executeLoad(msg.data);
+            LdrInitializeThunk(msg.data);
             break;
     }
 };
+
+const ntdll: Executable = {
+    file: "ntdll.js",
+    type: "dll",
+    subsystem: "console",
+    arch: "js",
+    entryPoint: null,
+    dependencies: [],
+
+    name: "ntdll",
+    version: [1, 0, 0, 0],
+    rsrc: {}
+}
+
+export default ntdll;
 
 export { NtRegisterSubsystem, NtSendMessageAsync, NtPostMessageAsync };

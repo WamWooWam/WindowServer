@@ -1,10 +1,11 @@
 import { HANDLE, PEB, Subsystem, SubsystemHandlers, Version } from "./types/types.js";
-import { ObDestroyHandle, ObSetObject } from "./objects.js";
+import NTDLL, { PROCESS_CREATE } from "./types/ntdll.types.js";
+import { ObDestroyHandle, ObGetObject, ObSetObject } from "./objects.js";
 
 import Executable from "./types/Executable.js";
 import Message from "./types/Message.js";
-import NTDLL from "./types/ntdll.types.js";
 import NTDLL_EXPORTS from "./server/ntdll.js";
+import { NtAllocSharedMemory } from "./sharedmem.js";
 import { SUBSYS_NTDLL } from "./types/subsystems.js";
 
 let __procId = 0;
@@ -35,7 +36,7 @@ export class PsProcess {
     private exec: Executable;
     private peb: PEB;
 
-    private sharedMemory: SharedArrayBuffer;
+    private hSharedMemory: HANDLE;
 
     constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
         this.id = assignId();
@@ -48,9 +49,7 @@ export class PsProcess {
         this.env = env;
         this.exec = exec;
 
-        if (typeof SharedArrayBuffer !== 'undefined') {
-            this.sharedMemory = new SharedArrayBuffer(16 * 1024); // 16kb
-        }
+        this.hSharedMemory = NtAllocSharedMemory(16 * 1024, this.handle)
 
         this.peb = {
             hProcess: this.handle,
@@ -58,7 +57,6 @@ export class PsProcess {
             dwProcessId: this.id,
             dwThreadId: 0,
             lpHandlers: new Map(),
-            lpOwnedHandles: []
         };
 
         this.loadSubsystem(SUBSYS_NTDLL, NTDLL_EXPORTS);
@@ -67,14 +65,29 @@ export class PsProcess {
     start() {
         this.worker = new Worker('/client/ntdll.js', { type: "module", name: this.name });
         this.worker.onmessage = (event) => this.recieve(event.data as Message);
-        this.send({ subsys: SUBSYS_NTDLL, type: NTDLL.ProcessCreate, data: { mem: this.sharedMemory, ...this.exec } });
+        this.worker.onerror = (event) => console.error(event);
+        this.worker.onmessageerror = (event) => console.error(event);
+
+        const create: PROCESS_CREATE = {
+            hProcess: this.handle,
+            lpExecutable: this.exec,
+            lpCommandLine: this.args,
+            lpCurrentDirectory: this.cwd,
+            lpEnvironment: this.env,
+            lpSharedMemory: ObGetObject<SharedArrayBuffer>(this.hSharedMemory),
+        }
+
+        this.send({
+            subsys: SUBSYS_NTDLL,
+            type: NTDLL.ProcessCreate,
+            data: create
+        });
     }
 
     terminate() {
         this.worker.terminate();
-        for (const handle of [...this.peb.lpOwnedHandles]) {
-            ObDestroyHandle(handle);
-        }
+
+        ObDestroyHandle(this.handle);
     }
 
     send(msg: Message) {
@@ -110,17 +123,6 @@ export class PsProcess {
     loadSubsystem(subsys: Subsystem, handler: SubsystemHandlers) {
         if (!this.peb.lpHandlers.has(subsys)) {
             this.peb.lpHandlers.set(subsys, handler);
-        }
-    }
-
-    ownHandle(handle: HANDLE) {
-        this.peb.lpOwnedHandles.push(handle);
-    }
-
-    disownHandle(handle: HANDLE) {
-        const index = this.peb.lpOwnedHandles.indexOf(handle);
-        if (index >= 0) {
-            this.peb.lpOwnedHandles.splice(index, 1);
         }
     }
 }

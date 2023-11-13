@@ -1,7 +1,8 @@
+import Executable from "../types/Executable.js";
 import Message from "../types/Message.js";
+import { NtRegisterSubsystem } from "./ntdll.js";
 import SHELL32 from "../types/shell32.types.js";
 import { SUBSYS_SHELL32 } from "../types/subsystems.js";
-import { NtRegisterSubsystem } from "./ntdll.js";
 
 const [Shell32_SendMessage, Shell32_PostMessage] = await NtRegisterSubsystem(SUBSYS_SHELL32, Shell32_HandleMessage);
 
@@ -26,3 +27,18 @@ export async function SHCreateDirectoryEx(
 
     return msg.data.retVal;
 }
+
+const shell32: Executable = {
+    file: "shell32.js",
+    type: "dll",
+    subsystem: "console",
+    arch: "js",
+    entryPoint: null,
+    dependencies: ["ntdll.js", "kernel32.js", "user32.js"],
+
+    name: "shell32",
+    version: [1, 0, 0, 0],
+    rsrc: {}
+};
+
+export default shell32;
