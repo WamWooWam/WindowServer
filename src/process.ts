@@ -59,7 +59,7 @@ export class PsProcess {
             lpHandlers: new Map()
         };
 
-        this.loadHandler(SUBSYS_NTDLL, NTDLL_EXPORTS);
+        this.loadSubsystem(SUBSYS_NTDLL, NTDLL_EXPORTS);
     }
 
     start() {
@@ -105,7 +105,7 @@ export class PsProcess {
         }
     }
 
-    loadHandler(subsys: Subsystem, handler: SubsystemHandlers) {
+    loadSubsystem(subsys: Subsystem, handler: SubsystemHandlers) {
         if (!this.peb.lpHandlers.has(subsys)) {
             this.peb.lpHandlers.set(subsys, handler);
         }

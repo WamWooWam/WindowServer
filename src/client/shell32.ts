@@ -9,6 +9,7 @@ function Shell32_HandleMessage(msg: Message) {
 
 }
 
+// TOOD: this should really be client-side
 export async function SHCreateDirectoryEx(
     hwnd: number,
     pszPath: string,

@@ -1,14 +1,14 @@
 import {
     CreateFile,
+    ReadConsole,
+    WriteConsole,
+    SetFilePointer,
+    CloseHandle,
     FILE_SHARE_READ,
     GENERIC_READ,
     GENERIC_WRITE,
     FILE_ATTRIBUTE_NORMAL,
-    WriteConsole,
-    SetFilePointer,
     CREATE_ALWAYS,
-    CloseHandle,
-    ReadConsole,
 } from "./client/kernel32.js";
 import { SHCreateDirectoryEx } from "./client/shell32.js";
 import { HANDLE } from "./types/types.js";
