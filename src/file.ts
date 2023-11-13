@@ -13,9 +13,27 @@ abstract class NtFile {
     public hOwningProcess: HANDLE;
     public position: number;
 
-    constructor(hOwner: HANDLE) {
+    public lpFileName: string;
+    public dwAccess: number;
+    public dwShareMode: number;
+    public lpSecurityAttributes: number;
+    public dwCreationDisposition: number;
+    public dwFlagsAndAttributes: number;
+
+    constructor(
+        hOwner: HANDLE,
+        lpFileName: string,
+        dwDesiredAccess: number,
+        dwShareMode: number,
+        dwCreationDisposition: number,
+        dwFlagsAndAttributes: number) {
         this.hOwningProcess = hOwner;
         this.position = 0;
+        this.lpFileName = lpFileName;
+        this.dwAccess = dwDesiredAccess;
+        this.dwShareMode = dwShareMode;
+        this.dwCreationDisposition = dwCreationDisposition;
+        this.dwFlagsAndAttributes = dwFlagsAndAttributes;
     }
 
     abstract open(): Promise<void>;
@@ -29,8 +47,23 @@ abstract class NtFile {
 class FsFile extends NtFile {
     private fd: number;
     private length: number;
+    private mode: string;
+    private path: string;
 
-    constructor(private path: string, private mode: string, hOwner: HANDLE) { super(hOwner); }
+    constructor(
+        hOwner: HANDLE,
+        lpFileName: string,
+        dwDesiredAccess: number,
+        dwShareMode: number,
+        dwCreationDisposition: number,
+        dwFlagsAndAttributes: number) {
+        super(hOwner, lpFileName, dwDesiredAccess, dwShareMode, dwCreationDisposition, dwFlagsAndAttributes);
+
+        this.fd = -1;
+        this.length = 0;
+        this.mode =  this._win32FlagsToUnix(dwDesiredAccess, dwCreationDisposition, dwFlagsAndAttributes);
+        this.path = this._win32FileNameToUnix(lpFileName);
+    }
 
     async open() {
         this.fd = await new Promise((resolve, reject) => {
@@ -108,13 +141,66 @@ class FsFile extends NtFile {
             });
         });
     }
+
+    private _win32FileNameToUnix(lpFileName: string) {
+        if (lpFileName[1] !== ':') throw new Error('Invalid file name');
+
+        const driveLetter = lpFileName[0].toLowerCase();
+        const drivePath = driveLetter === 'c' ? '/' : `/mnt/${driveLetter}`;        
+        const path = lpFileName.slice(2).replace(/\\/g, '/');
+        return `${drivePath}/${path}`.toLowerCase(); // hack for case-insensitive file systems
+    }
+
+    private _win32FlagsToUnix(dwDesiredAccess: number, dwCreationDisposition: number, dwFlagsAndAttributes: number) {
+        // Map dwDesiredAccess
+        let unixFlags = '';
+        if (dwDesiredAccess & 0x40000000) {
+            // GENERIC_WRITE is set
+            unixFlags += 'w';
+        }
+        else if (dwDesiredAccess & 0x80000000) {
+            // GENERIC_READ is set
+            unixFlags += 'r';
+        }
+
+        // Map dwCreationDisposition
+        if (dwCreationDisposition === 1) {
+            // CREATE_NEW
+            unixFlags += 'x';
+        } else if (dwCreationDisposition === 2 || dwCreationDisposition === 3) {
+            // CREATE_ALWAYS or OPEN_ALWAYS
+            unixFlags = 'a';
+            if (dwCreationDisposition === 3 || dwDesiredAccess & 0x40000000) unixFlags += '+'; // OPEN_ALWAYS
+
+        } else if (dwCreationDisposition === 4) {
+            // OPEN_EXISTING
+            unixFlags += '';
+        } else if (dwCreationDisposition === 5) {
+            // TRUNCATE_EXISTING
+            unixFlags += 'w';
+        }
+
+        // Map dwFlagsAndAttributes
+        if (dwFlagsAndAttributes & 0x02000000) {
+            // FILE_ATTRIBUTE_DIRECTORY
+            unixFlags += 'd';
+        }
+
+        // Append the '+' for read/write access
+        if (unixFlags.includes('r') || unixFlags.includes('w')) {
+            unixFlags += '+';
+        }
+
+        return unixFlags;
+    }
 }
 
 class ConsoleFile extends NtFile {
     private stream: ReadableStream<string> | WritableStream<string>;
 
     constructor(private type: 'in' | 'out' | 'err', hOwner: HANDLE) {
-        super(hOwner);
+        super(hOwner, null, null, null, null, null);
+
         if (type === 'in') {
             this.stream = new ReadableStream<string>({
                 start(controller) {
@@ -174,49 +260,6 @@ class ConsoleFile extends NtFile {
     async close() { }
 }
 
-
-function mapWin32FlagsToUnix(dwDesiredAccess: number, dwCreationDisposition: number, dwFlagsAndAttributes: number) {
-    // Map dwDesiredAccess
-    let unixFlags = '';
-    if (dwDesiredAccess & 0x40000000) {
-        // GENERIC_WRITE is set
-        unixFlags += 'w';
-    }
-    else if (dwDesiredAccess & 0x80000000) {
-        // GENERIC_READ is set
-        unixFlags += 'r';
-    }
-
-    // Map dwCreationDisposition
-    if (dwCreationDisposition === 1) {
-        // CREATE_NEW
-        unixFlags += 'x';
-    } else if (dwCreationDisposition === 2 || dwCreationDisposition === 3) {
-        // CREATE_ALWAYS or OPEN_ALWAYS
-        unixFlags = 'a';
-        if (dwCreationDisposition === 3 || dwDesiredAccess & 0x40000000) unixFlags += '+'; // OPEN_ALWAYS
-
-    } else if (dwCreationDisposition === 4) {
-        // OPEN_EXISTING
-        unixFlags += '';
-    } else if (dwCreationDisposition === 5) {
-        // TRUNCATE_EXISTING
-        unixFlags += 'w';
-    }
-
-    // Map dwFlagsAndAttributes
-    if (dwFlagsAndAttributes & 0x02000000) {
-        // FILE_ATTRIBUTE_DIRECTORY
-        unixFlags += 'd';
-    }
-
-    // Append the '+' for read/write access
-    if (unixFlags.includes('r') || unixFlags.includes('w')) {
-        unixFlags += '+';
-    }
-
-    return unixFlags;
-}
 
 export async function NtCreateFile(
     peb: PEB,
@@ -317,11 +360,15 @@ async function NtCreateFileObject(
             break;
     }
 
+    const file = new FsFile(
+        hOwner,
+        lpFileName,
+        dwDesiredAccess,
+        dwShareMode,
+        dwCreationDisposition,
+        dwFlagsAndAttributes
+    );
 
-    const mode = mapWin32FlagsToUnix(dwDesiredAccess, dwCreationDisposition, dwFlagsAndAttributes);
-
-    console.log(`Opening file ${lpFileName} with mode ${mode}`);
-    const file = new FsFile(lpFileName, mode, hOwner);
     await file.open();
 
     return file;

@@ -191,3 +191,6 @@ export async function SetConsoleTitle(lpConsoleTitle: string): Promise<boolean> 
     return false;
 }
 
+export function OutputDebugString(lpOutputString: string): void {
+    console.debug(lpOutputString);
+}

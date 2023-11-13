@@ -1,13 +1,11 @@
 import {
     CreateFile,
-    CREATE_NEW,
     FILE_SHARE_READ,
     GENERIC_READ,
     GENERIC_WRITE,
     FILE_ATTRIBUTE_NORMAL,
     WriteConsole,
     SetFilePointer,
-    ReadFile,
     CREATE_ALWAYS,
     CloseHandle,
     ReadConsole,
@@ -16,7 +14,7 @@ import { HANDLE } from "./types/types.js";
 
 async function main() {
     let hFile: HANDLE = await CreateFile(
-        "/test.txt",
+        "C:\\test.txt",
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ,
         0,
@@ -33,7 +31,7 @@ async function main() {
     const buf = await ReadConsole(hFile, 13);
     console.log(buf);
 
-    CloseHandle(hFile)
+    CloseHandle(hFile);
 }
 
 export { main };
