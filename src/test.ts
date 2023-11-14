@@ -1,41 +1,43 @@
-import {
-    CreateFile,
-    ReadConsole,
-    WriteConsole,
-    SetFilePointer,
-    CloseHandle,
-    FILE_SHARE_READ,
-    GENERIC_READ,
-    GENERIC_WRITE,
-    FILE_ATTRIBUTE_NORMAL,
-    CREATE_ALWAYS,
-} from "./client/kernel32.js";
-import { SHCreateDirectoryEx } from "./client/shell32.js";
-import { HANDLE } from "./types/types.js";
+import { GetModuleHandle } from "./client/kernel32.js";
+import { DefWindowProc, RegisterClass } from "./client/user32.js";
+import { HINSTANCE, HWND, LPARAM, LRESULT, WNDCLASSEX, WPARAM } from "./types/user32.types.js";
+
+async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    return await DefWindowProc(hwnd, msg, wParam, lParam);
+}
 
 async function main() {
+    const hModule = await GetModuleHandle(null);
+    const className = "Test Window Class";
 
-    await SHCreateDirectoryEx(0, "Test", 0);
 
-    let hFile: HANDLE = await CreateFile(
-        "Test\\test.txt",
-        GENERIC_READ | GENERIC_WRITE,
-        FILE_SHARE_READ,
-        0,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        0
-    );
+    const wndClass: WNDCLASSEX = {
+        cbSize: 0,
+        style: 0,
+        lpfnWndProc: WndProc,
+        cbClsExtra: 0,
+        cbWndExtra: 0,
+        hInstance: <HINSTANCE>hModule,
+        hIcon: 0,
+        hCursor: 0,
+        hbrBackground: 0,
+        lpszMenuName: 0,
+        lpszClassName: className,
+        hIconSm: 0
+    }
 
-    console.log(hFile);
+    const atom = await RegisterClass(wndClass);
+    console.log(atom);
 
-    await WriteConsole(hFile, "Hello, world!\n");
-    await SetFilePointer(hFile, 0, 0);
+    // next: CreateWindowEx
 
-    const buf = await ReadConsole(hFile, 13);
-    console.log(buf);
+    // next: ShowWindow
 
-    CloseHandle(hFile);
+    // next: GetMessage
+    // next: TranslateMessage
+    // next: DispatchMessage
+
+    return 0;
 }
 
 export { main };

@@ -1,6 +1,12 @@
 // env: worker
 
-import NTDLL, { PROCESS_CREATE } from "../types/ntdll.types.js";
+import NTDLL, {
+    CALLBACK_MESSAGE_TYPE,
+    LOAD_SUBSYSTEM,
+    PROCESS_CREATE,
+    PROCESS_EXIT,
+    SUBSYSTEM_LOADED
+} from "../types/ntdll.types.js";
 
 import Executable from "../types/Executable.js";
 import Message from "../types/Message.js";
@@ -32,22 +38,25 @@ delete globalThis.onunhandledrejection;
 class SubsystemClass {
     public readonly name: string;
 
-    private handler: (msg: Omit<Message, "subsys">) => void;
-    private callbackMap = new Map<number, (msg: Message) => void>();
-    private callbackId = 0;
+    private handler: (msg: Omit<Message, "lpSubsystem">) => void;
+    private sharedMemory: SharedArrayBuffer;
+    private callbackMap = new Map<number, (msg: Message) => any | Promise<any>>();
+    private callbackId = 0x4000;
 
-    constructor(name: string, handler: (msg: Omit<Message, "subsys">) => void) {
+    constructor(name: string, handler: (msg: Omit<Message, "lpSubsystem">) => void, sharedMemory?: SharedArrayBuffer) {
         this.name = name;
         this.handler = handler;
+        this.sharedMemory = sharedMemory;
 
         __addEventListener('message', (event) => this.HandleMessage(event.data as Message));
     }
 
-    public async SendMessage({ type, data }: Omit<Message, "subsys">): Promise<Message> {
-        console.debug(`${this.name}:client sending message %s:%d, %O`, this.name, type, data);
+    public async SendMessage<S = any, R = any>(msg: Omit<Message<S>, "lpSubsystem">): Promise<Message<R>> {
+        console.debug(`${this.name}:client sending message %s:%d, %O`, this.name, msg.nType, msg);
+
         return new Promise((resolve, reject) => {
-            const id = this.RegisterCallback((msg) => {
-                if (msg.type & 0x80000000) {
+            const channel = this.RegisterCallback((msg) => {
+                if (msg.nType & 0x80000000) {
                     reject(msg.data);
                 }
                 else {
@@ -55,55 +64,66 @@ class SubsystemClass {
                 }
             });
 
-            const msg: Message = {
-                subsys: this.name,
-                type: type,
-                reply: id,
-                data: data,
-            }
-            __postMessage(msg);
+            __postMessage({
+                lpSubsystem: this.name,
+                nType: msg.nType,
+                nChannel: msg.nReplyChannel ?? channel,
+                nReplyChannel: channel,
+                data: msg.data
+            });
         });
     }
 
-    public async PostMessage(msg: Omit<Message, "subsys">): Promise<void> {
-        console.debug(`${this.name}:client sending message %s:%d, %O`, this.name, msg.type, msg.data);
-        __postMessage({ subsys: this.name, ...msg });
+    public async PostMessage<S = any>(msg: Omit<Message<S>, "lpSubsystem">): Promise<void> {
+        console.debug(`${this.name}:client sending message %s:%d, %O`, this.name, msg.nType, msg);
+
+        __postMessage({
+            lpSubsystem: this.name,
+            nType: msg.nType,
+            nChannel: msg.nChannel,
+            nReplyChannel: msg.nReplyChannel,
+            data: msg.data
+        });
     }
 
-    public RegisterCallback(callback: (msg: Message) => void): number {
+    public RegisterCallback(callback: (msg: Message) => void, persist: boolean = false): number {
         const id = this.callbackId++;
-        this.callbackMap.set(id, callback);
+        const handler = (msg: Message) => {
+            if (!persist)
+                this.callbackMap.delete(id);
+            return callback(msg);
+        };
+
+        this.callbackMap.set(id, handler);
         return id;
     }
 
     private async HandleMessage(msg: Message): Promise<void> {
-        if (msg.subsys !== this.name) return;
+        if (msg.lpSubsystem !== this.name) return;
 
-        console.debug(`${this.name}:client recieved message %s:%d -> %d, %O`, msg.subsys, msg.type, msg.reply, msg.data);
+        console.debug(`${this.name}:client recieved message %s:%d -> %d, %O`, msg.lpSubsystem, msg.nType, msg.nChannel, msg);
 
-        const callback = this.callbackMap.get(msg.reply);
+        const callback = this.callbackMap.get(msg.nChannel);
         if (callback) {
-            callback(msg);
+            let ret = callback(msg);
+            if (ret && ret.then) {
+                ret = await ret;
+            }
+            
+            if (ret !== undefined && msg.nReplyChannel) {
+                this.PostMessage({ nType: msg.nType, nChannel: msg.nReplyChannel, data: ret });
+            }
         } else {
-            this.handler(msg);
+            return this.handler(msg);
         }
     }
 }
 
-let sharedMemory: SharedArrayBuffer; // todo: move this somewhere else
 const loadedModules: string[] = [];
 
-// const subsystems = new Map<Subsystem, SubsystemClass>();
-
-// __addEventListener('message', (event) => {
-//     console.debug(`ntclient recieved message %s:%d, %O`, event.data.subsys, event.data.type, event.data.data);
-//     // const handler = subsystems.get(event.data.subsys);
-//     // if (handler) {
-//     //     handler.ProcessMessage(event.data);
-//     // } else {
-//     //     console.error(`unknown subsystem ${event.data.subsys}`);
-//     // }
-// });
+__addEventListener('message', (event) => {
+    console.debug(`client recieved message %s:%d, %O`, event.data.lpSubsystem, event.data.nType, event.data);
+});
 
 __addEventListener('error', (event) => {
     console.error(event); // TODO: send error to parent
@@ -119,20 +139,19 @@ __addEventListener('unhandledrejection', (event) => {
 
 const Ntdll = new SubsystemClass(SUBSYS_NTDLL, NTDLL_HandleMessage);
 
-async function NtRegisterSubsystem(subsys: Subsystem, handler: (msg: Omit<Message, "subsys">) => void): Promise<SubsystemClass> {
-    await Ntdll.SendMessage({
-        type: NTDLL.LoadSubsystem,
+async function NtRegisterSubsystem(subsys: Subsystem, handler: (msg: Omit<Message, "subsys">) => void, cbSharedMemory: number = 0): Promise<SubsystemClass> {
+    const retVal = await Ntdll.SendMessage<LOAD_SUBSYSTEM, SUBSYSTEM_LOADED>({
+        nType: NTDLL.LoadSubsystem,
         data: {
             lpSubsystem: subsys,
+            cbSharedMemory
         }
     });
 
-    return new SubsystemClass(subsys, handler);
+    return new SubsystemClass(subsys, handler, retVal.data.lpSharedMemory);
 }
 
 async function LdrInitializeThunk(pPC: PROCESS_CREATE) {
-    sharedMemory = pPC.lpSharedMemory;
-
     const exec = pPC.lpExecutable;
     for (const lpDependencies of exec.dependencies) {
         await LdrLoadDll(lpDependencies, pPC);
@@ -180,8 +199,8 @@ async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
             retVal = await retVal;
         }
 
-        await Ntdll.SendMessage({
-            type: NTDLL.ProcessExit,
+        await Ntdll.SendMessage<PROCESS_EXIT>({
+            nType: NTDLL.ProcessExit,
             data: {
                 uExitCode: retVal ?? 0,
             }
@@ -190,7 +209,7 @@ async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
 }
 
 function NTDLL_HandleMessage(msg: Message) {
-    switch (msg.type) {
+    switch (msg.nType) {
         case NTDLL.ProcessCreate: // load executable
             LdrInitializeThunk(msg.data);
             break;

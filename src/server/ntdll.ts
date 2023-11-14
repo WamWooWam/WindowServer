@@ -25,6 +25,11 @@ async function SubsystemLoaded(peb: PEB, data: LOAD_SUBSYSTEM) {
     // TODO: validate subsystem
     const subsysExports = await import(`./${subsys}.js`);
     process.loadSubsystem(subsys, subsysExports.default);
+
+    const sharedMemory = data.cbSharedMemory ? new SharedArrayBuffer(data.cbSharedMemory) : undefined;
+    return {
+        lpSharedMemory: sharedMemory,
+    }
 }
 
 function ProcessExit(peb: PEB, data: PROCESS_EXIT) {

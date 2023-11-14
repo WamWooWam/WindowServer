@@ -1,13 +1,12 @@
 import { NtCreateDirectory, NtRootPath } from "../file.js";
+import SHELL32, {
+    SH_CREATE_DIRECTORY_EX,
+    SH_CREATE_DIRECTORY_EX_REPLY
+} from "../types/shell32.types.js";
 
 import { PEB } from "../types/types.js";
-import SHELL32 from "../types/shell32.types.js";
 
-async function SHCreateDirectoryEx(peb: PEB, data: {
-    hwnd: number,
-    pszPath: string,
-    psa: number
-}): Promise<number> {
+async function SHCreateDirectoryEx(peb: PEB, data: SH_CREATE_DIRECTORY_EX): Promise<SH_CREATE_DIRECTORY_EX_REPLY> {
     const rootedPath = NtRootPath(peb.hProcess, data.pszPath);
     const split = rootedPath.split("\\");
     let path = "";
@@ -15,12 +14,12 @@ async function SHCreateDirectoryEx(peb: PEB, data: {
         path += split[i] + "\\";
         await NtCreateDirectory(peb, path, data.psa);
     }
-    
-    return 0;
+
+    return { retVal: 0 };
 }
 
 const SHELL32_EXPORTS = {
-   [SHELL32.SHCreateDirectoryEx]: SHCreateDirectoryEx
+    [SHELL32.SHCreateDirectoryEx]: SHCreateDirectoryEx
 };
 
 export default SHELL32_EXPORTS;

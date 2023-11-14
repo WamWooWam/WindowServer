@@ -1,7 +1,11 @@
+import SHELL32, {
+    SH_CREATE_DIRECTORY_EX,
+    SH_CREATE_DIRECTORY_EX_REPLY
+} from "../types/shell32.types.js";
+
 import Executable from "../types/Executable.js";
 import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
-import SHELL32 from "../types/shell32.types.js";
 import { SUBSYS_SHELL32 } from "../types/subsystems.js";
 
 const Shell32 = await NtRegisterSubsystem(SUBSYS_SHELL32, Shell32_HandleMessage);
@@ -16,8 +20,8 @@ export async function SHCreateDirectoryEx(
     pszPath: string,
     psa: number
 ): Promise<number> {
-    const msg = await Shell32.SendMessage({
-        type: SHELL32.SHCreateDirectoryEx,
+    const msg = await Shell32.SendMessage<SH_CREATE_DIRECTORY_EX, SH_CREATE_DIRECTORY_EX_REPLY>({
+        nType: SHELL32.SHCreateDirectoryEx,
         data: {
             hwnd: hwnd,
             pszPath: pszPath,

@@ -4,9 +4,10 @@
 
 import { Subsystem } from "./types.js"
 
-export default interface Message {
-    subsys: Subsystem;
-    type: number;
-    reply?: number;
-    data: any;
+export default interface Message<T = any> {
+    lpSubsystem: Subsystem;
+    nType: number;
+    nChannel?: number;
+    nReplyChannel?: number;
+    data: T;
 }

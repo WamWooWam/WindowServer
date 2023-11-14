@@ -1,6 +1,23 @@
+import KERNEL32, {
+    CLOSE_HANDLE,
+    CREATE_DIRECTORY,
+    CREATE_DIRECTORY_REPLY,
+    CREATE_FILE,
+    CREATE_FILE_REPLY,
+    GET_MODULE_HANDLE,
+    GET_MODULE_HANDLE_REPLY,
+    GET_PROCESS_INFO,
+    GET_PROCESS_INFO_REPLY,
+    READ_FILE,
+    READ_FILE_REPLY,
+    SET_FILE_POINTER,
+    SET_FILE_POINTER_REPLY,
+    WRITE_FILE,
+    WRITE_FILE_REPLY
+} from "../types/kernel32.types.js";
+
 import Executable from "../types/Executable.js";
 import { HANDLE } from "../types/types.js";
-import KERNEL32 from "../types/kernel32.types.js";
 import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
 import { SUBSYS_KERNEL32 } from "../types/subsystems.js";
@@ -54,16 +71,23 @@ function Kernel32_HandleMessage(msg: Message) {
 
 const Kernel32 = await NtRegisterSubsystem(SUBSYS_KERNEL32, Kernel32_HandleMessage);
 
+export async function GetModuleHandle(lpModuleName: string): Promise<HANDLE> {
+    const msg = await Kernel32.SendMessage<GET_MODULE_HANDLE, GET_MODULE_HANDLE_REPLY>({
+        nType: KERNEL32.GetModuleHandle,
+        data: { lpModuleName }
+    });
+
+    return msg.data.hModule;
+}
+
 export function GetCurrentProcess(): HANDLE {
     return -1;
 }
 
 export async function GetProcessId(hProcess: HANDLE): Promise<number> {
-    const msg = await Kernel32.SendMessage({
-        type: KERNEL32.GetProcessInfo,
-        data: {
-            hProcess: hProcess
-        }
+    const msg = await Kernel32.SendMessage<GET_PROCESS_INFO, GET_PROCESS_INFO_REPLY>({
+        nType: KERNEL32.GetProcessInfo,
+        data: { hProcess }
     });
 
     return msg.data.id;
@@ -78,16 +102,16 @@ export async function CreateFile(
     dwFlagsAndAttributes: number,
     hTemplateFile: HANDLE
 ): Promise<HANDLE> {
-    const msg = await Kernel32.SendMessage({
-        type: KERNEL32.CreateFile,
+    const msg = await Kernel32.SendMessage<CREATE_FILE, CREATE_FILE_REPLY>({
+        nType: KERNEL32.CreateFile,
         data: {
-            lpFileName: lpFileName,
-            dwDesiredAccess: dwDesiredAccess,
-            dwShareMode: dwShareMode,
-            lpSecurityAttributes: lpSecurityAttributes,
-            dwCreationDisposition: dwCreationDisposition,
-            dwFlagsAndAttributes: dwFlagsAndAttributes,
-            hTemplateFile: hTemplateFile
+            lpFileName,
+            dwDesiredAccess,
+            dwShareMode,
+            lpSecurityAttributes,
+            dwCreationDisposition,
+            dwFlagsAndAttributes,
+            hTemplateFile
         }
     });
 
@@ -99,20 +123,16 @@ export async function ReadFile(
     lpBuffer: Uint8Array,
     nNumberOfBytesToRead: number,
 ): Promise<{ retVal: boolean, lpNumberOfBytesRead: number }> {
-    const msg = await Kernel32.SendMessage({
-        type: KERNEL32.ReadFile,
-        data: {
-            hFile: hFile,
-            lpBuffer: lpBuffer,
-            nNumberOfBytesToRead: nNumberOfBytesToRead,
-        }
+    const msg = await Kernel32.SendMessage<READ_FILE, READ_FILE_REPLY>({
+        nType: KERNEL32.ReadFile,
+        data: { hFile, lpBuffer, nNumberOfBytesToRead }
     });
 
     if (msg.data.retVal) {
-        lpBuffer.set(msg.data.lpBuffer);        
+        lpBuffer.set(msg.data.lpBuffer);
     }
 
-    return { retVal: msg.data.retVal, lpNumberOfBytesRead: msg.data.nNumberOfBytesRead };
+    return { retVal: msg.data.retVal, lpNumberOfBytesRead: msg.data.lpNumberOfBytesRead };
 }
 
 export async function WriteFile(
@@ -120,16 +140,12 @@ export async function WriteFile(
     lpBuffer: Uint8Array,
     nNumberOfBytesToWrite: number,
 ): Promise<{ retVal: boolean, lpNumberOfBytesWritten: number }> {
-    const msg = await Kernel32.SendMessage({
-        type: KERNEL32.WriteFile,
-        data: {
-            hFile: hFile,
-            lpBuffer: lpBuffer,
-            nNumberOfBytesToWrite: nNumberOfBytesToWrite,
-        }
+    const msg = await Kernel32.SendMessage<WRITE_FILE, WRITE_FILE_REPLY>({
+        nType: KERNEL32.WriteFile,
+        data: { hFile, lpBuffer, nNumberOfBytesToWrite }
     });
 
-    return { retVal: msg.data.bSuccess, lpNumberOfBytesWritten: msg.data.nNumberOfBytesWritten };
+    return { retVal: msg.data.retVal, lpNumberOfBytesWritten: msg.data.lpNumberOfBytesWritten };
 }
 
 export async function SetFilePointer(
@@ -137,13 +153,9 @@ export async function SetFilePointer(
     lDistanceToMove: number,
     dwMoveMethod: number,
 ): Promise<number> {
-    const msg = await Kernel32.SendMessage({
-        type: KERNEL32.SetFilePointer,
-        data: {
-            hFile: hFile,
-            lDistanceToMove: lDistanceToMove,
-            dwMoveMethod: dwMoveMethod,
-        }
+    const msg = await Kernel32.SendMessage<SET_FILE_POINTER, SET_FILE_POINTER_REPLY>({
+        nType: KERNEL32.SetFilePointer,
+        data: { hFile, lDistanceToMove, dwMoveMethod }
     });
 
     return msg.data.dwNewFilePointer;
@@ -153,15 +165,12 @@ export async function CreateDirectory(
     lpPathName: string,
     lpSecurityAttributes: number
 ): Promise<boolean> {
-    const msg = await Kernel32.SendMessage({
-        type: KERNEL32.CreateDirectory,
-        data: {
-            lpPathName: lpPathName,
-            lpSecurityAttributes: lpSecurityAttributes
-        }
+    const msg = await Kernel32.SendMessage<CREATE_DIRECTORY, CREATE_DIRECTORY_REPLY>({
+        nType: KERNEL32.CreateDirectory,
+        data: { lpPathName, lpSecurityAttributes }
     });
 
-    return msg.data;
+    return msg.data.retVal;
 }
 
 
@@ -174,11 +183,9 @@ export function GetStdHandle(nStdHandle: number): HANDLE {
 
 
 export function CloseHandle(hObject: HANDLE): boolean {
-    Kernel32.PostMessage({
-        type: KERNEL32.CloseHandle,
-        data: {
-            hObject: hObject
-        }
+    Kernel32.PostMessage<CLOSE_HANDLE>({
+        nType: KERNEL32.CloseHandle,
+        data: { hObject }
     });
 
     return true;

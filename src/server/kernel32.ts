@@ -1,10 +1,34 @@
+import KERNEL32, {
+    CLOSE_HANDLE,
+    CREATE_DIRECTORY,
+    CREATE_DIRECTORY_REPLY,
+    CREATE_FILE,
+    CREATE_FILE_REPLY,
+    GET_MODULE_HANDLE,
+    GET_MODULE_HANDLE_REPLY,
+    GET_PROCESS_INFO,
+    GET_PROCESS_INFO_REPLY,
+    READ_FILE,
+    READ_FILE_REPLY,
+    SET_FILE_POINTER,
+    SET_FILE_POINTER_REPLY,
+    WRITE_FILE,
+    WRITE_FILE_REPLY
+} from "../types/kernel32.types.js";
 import { NtCreateDirectory, NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../file.js";
 import { ObCloseHandle, ObGetObject } from "../objects.js";
-import { PsProcess } from "../process.js";
-import { HANDLE, PEB } from "../types/types.js";
-import KERNEL32 from "../types/kernel32.types.js";
 
-function GetProcessInfo(peb: PEB, data: { hProcess: HANDLE }) {
+import { PEB } from "../types/types.js";
+import { PsProcess } from "../process.js";
+
+function GetModuleHandle(peb: PEB, { lpModuleName }: GET_MODULE_HANDLE): GET_MODULE_HANDLE_REPLY {
+    if (lpModuleName == null) return { hModule: 0 };
+
+    // TODO: implement
+    return { hModule: 0 };
+}
+
+function GetProcessInfo(peb: PEB, data: GET_PROCESS_INFO): GET_PROCESS_INFO_REPLY {
     var hProcess = data.hProcess;
     if (hProcess == -1) hProcess = peb.hProcess;
 
@@ -14,20 +38,12 @@ function GetProcessInfo(peb: PEB, data: { hProcess: HANDLE }) {
     };
 }
 
-function CloseHandle(peb: PEB, data: { hObject: HANDLE }) {
+function CloseHandle(peb: PEB, data: CLOSE_HANDLE) {
     var hObject = data.hObject;
     ObCloseHandle(hObject);
 }
 
-async function CreateFile(peb: PEB, data: {
-    lpFileName: string,
-    dwDesiredAccess: number,
-    dwShareMode: number,
-    lpSecurityAttributes: number,
-    dwCreationDisposition: number,
-    dwFlagsAndAttributes: number,
-    hTemplateFile: HANDLE
-}) {
+async function CreateFile(peb: PEB, data: CREATE_FILE): Promise<CREATE_FILE_REPLY> {
     const ret = await NtCreateFile(
         peb,
         data.lpFileName,
@@ -44,11 +60,7 @@ async function CreateFile(peb: PEB, data: {
     };
 }
 
-async function ReadFile(peb: PEB, data: {
-    hFile: HANDLE,
-    lpBuffer: Uint8Array,
-    nNumberOfBytesToRead: number,
-}) {
+async function ReadFile(peb: PEB, data: READ_FILE): Promise<READ_FILE_REPLY> {
     const ret = await NtReadFile(
         peb,
         data.hFile,
@@ -59,11 +71,7 @@ async function ReadFile(peb: PEB, data: {
     return ret;
 }
 
-async function WriteFile(peb: PEB, data: {
-    hFile: HANDLE,
-    lpBuffer: Uint8Array,
-    nNumberOfBytesToWrite: number,
-}) {
+async function WriteFile(peb: PEB, data: WRITE_FILE): Promise<WRITE_FILE_REPLY> {
     const ret = await NtWriteFile(
         data.hFile,
         data.lpBuffer,
@@ -73,11 +81,7 @@ async function WriteFile(peb: PEB, data: {
     return ret;
 }
 
-async function SetFilePointer(peb: PEB, data: {
-    hFile: HANDLE,
-    lDistanceToMove: number,
-    dwMoveMethod: number
-}) {
+async function SetFilePointer(peb: PEB, data: SET_FILE_POINTER): Promise<SET_FILE_POINTER_REPLY> {
     const ret = await NtSetFilePointer(
         peb,
         data.hFile,
@@ -85,20 +89,17 @@ async function SetFilePointer(peb: PEB, data: {
         data.dwMoveMethod
     );
 
-    return ret;
+    return { dwNewFilePointer: ret.retVal };
 }
 
-async function CreateDirectory(peb: PEB, data: {
-    lpPathName: string,
-    lpSecurityAttributes: number
-}) {
+async function CreateDirectory(peb: PEB, data: CREATE_DIRECTORY): Promise<CREATE_DIRECTORY_REPLY> {
     const ret = await NtCreateDirectory(
         peb,
         data.lpPathName,
         data.lpSecurityAttributes
     );
 
-    return ret;
+    return { retVal: ret };
 };
 
 const KERNEL32_EXPORTS = {
@@ -108,7 +109,8 @@ const KERNEL32_EXPORTS = {
     [KERNEL32.ReadFile]: ReadFile,
     [KERNEL32.WriteFile]: WriteFile,
     [KERNEL32.SetFilePointer]: SetFilePointer,
-    [KERNEL32.CreateDirectory]: CreateDirectory
+    [KERNEL32.CreateDirectory]: CreateDirectory,
+    [KERNEL32.GetModuleHandle]: GetModuleHandle
 };
 
 export default KERNEL32_EXPORTS;

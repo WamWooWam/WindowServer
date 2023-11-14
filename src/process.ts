@@ -1,5 +1,5 @@
 import { HANDLE, PEB, Subsystem, SubsystemHandlers, Version } from "./types/types.js";
-import NTDLL, { PROCESS_CREATE } from "./types/ntdll.types.js";
+import NTDLL, { CALLBACK_MESSAGE_TYPE, PROCESS_CREATE } from "./types/ntdll.types.js";
 import { ObDestroyHandle, ObGetObject, ObSetObject } from "./objects.js";
 
 import Executable from "./types/Executable.js";
@@ -38,6 +38,9 @@ export class PsProcess {
 
     private hSharedMemory: HANDLE;
 
+    private callbackMap = new Map<number, (msg: Message) => any | Promise<any>>();
+    private callbackId = 0x7FFFFFFF;
+
     constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
         this.id = assignId();
         this.handle = ObSetObject<PsProcess>(this, null, this.terminate.bind(this));
@@ -64,7 +67,7 @@ export class PsProcess {
 
     start() {
         this.worker = new Worker('/client/ntdll.js', { type: "module", name: this.name });
-        this.worker.onmessage = (event) => this.recieve(event.data as Message);
+        this.worker.onmessage = (event) => this.HandleMessage(event.data as Message);
         this.worker.onerror = (event) => console.error(event);
         this.worker.onmessageerror = (event) => console.error(event);
 
@@ -77,9 +80,9 @@ export class PsProcess {
             lpSharedMemory: ObGetObject<SharedArrayBuffer>(this.hSharedMemory),
         }
 
-        this.send({
-            subsys: SUBSYS_NTDLL,
-            type: NTDLL.ProcessCreate,
+        this.PostMessage({
+            lpSubsystem: SUBSYS_NTDLL,
+            nType: NTDLL.ProcessCreate,
             data: create
         });
     }
@@ -90,36 +93,83 @@ export class PsProcess {
         ObDestroyHandle(this.handle);
     }
 
-    send(msg: Message) {
+    // send(msg: Message) {
+    //     this.worker.postMessage(msg);
+    // }
+
+    async SendMessage<S = any, R = any>(msg: Message<S>): Promise<Message<R>> {
+        console.debug(`server sending message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+
+        return new Promise((resolve, reject) => {
+            const channel = this.RegisterCallback((msg) => {
+                if (msg.nType & 0x80000000) {
+                    reject(msg.data);
+                }
+                else {
+                    resolve(msg);
+                }
+            });
+
+            this.worker.postMessage({
+                lpSubsystem: msg.lpSubsystem,
+                nType: msg.nType,
+                nChannel: msg.nChannel ?? channel,
+                nReplyChannel: channel,
+                data: msg.data
+            });
+        });
+    }
+
+    private PostMessage<S = any>(msg: Message<S>) {
+        console.warn(`server posting message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
         this.worker.postMessage(msg);
     }
 
-    async recieve(msg: Message) {
-        const handler = this.peb.lpHandlers.get(msg.subsys)?.[msg.type];
-        const errorHandler = (e: Error) => {
-            this.send({ subsys: msg.subsys, type: msg.type | 0x80000000, reply: msg.reply, data: e });
-            console.error(`error while handling message ${msg.subsys}:${msg.type}`);
-            console.error(e);
-        }
+    private RegisterCallback(callback: (msg: Message) => any | Promise<any>) {
+        const id = --this.callbackId;
+        const handler = (msg: Message) => {
+            this.callbackMap.delete(id);
+            return callback(msg);
+        };
 
-        try {
-            if (handler) {
-                console.log(`recieved message %s:%d, %O, calling %O`, msg.subsys, msg.type, msg, handler);
+        this.callbackMap.set(id, handler);
+        return id;
+    }
+
+    private HandleMessage(msg: Message) {
+        const callback = this.callbackMap.get(msg.nChannel);
+        if (callback) {
+            callback(msg);
+            this.callbackMap.delete(msg.nChannel);
+        }
+        else {
+            this.recieve(msg);
+        }
+    }
+
+    async recieve(msg: Message) {
+        const handler = this.peb.lpHandlers.get(msg.lpSubsystem)?.[msg.nType];
+        if (handler) {            
+            try {
+                console.log(`recieved message %s:%d, %O, calling %O`, msg.lpSubsystem, msg.nType, msg, handler);
 
                 let resp = handler(this.peb, msg.data);
                 if (resp !== undefined && 'then' in resp && typeof resp.then === 'function') {
                     resp = await resp;
                 }
 
-                this.send({ subsys: msg.subsys, type: msg.type, reply: msg.reply, data: resp });
-            } else {
-                console.error(`unknown message ${msg.subsys}:${msg.type}`);
-                this.send({ subsys: msg.subsys, type: msg.type | 0x80000000, reply: msg.reply, data: null });
+                this.PostMessage({ lpSubsystem: msg.lpSubsystem, nType: msg.nType, nChannel: msg.nChannel, data: resp });
+            } catch (e) {
+                this.PostMessage({ lpSubsystem: msg.lpSubsystem, nType: msg.nType | 0x80000000, nChannel: msg.nChannel, data: e });
+                console.error(`error while handling message ${msg.lpSubsystem}:${msg.nType}`);
+                console.error(e);
             }
-        } catch (error) {
-            errorHandler(error);
+        } else {
+            console.error(`unknown message ${msg.lpSubsystem}:${msg.nType}`);
+            this.PostMessage({ lpSubsystem: msg.lpSubsystem, nType: msg.nType | 0x80000000, nChannel: msg.nChannel, data: null });
         }
     }
+
 
     loadSubsystem(subsys: Subsystem, handler: SubsystemHandlers) {
         if (!this.peb.lpHandlers.has(subsys)) {

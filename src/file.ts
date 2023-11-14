@@ -50,7 +50,6 @@ function _win32PathIsRooted(lpFileName: string) {
     return lpFileName[1] === ':';
 }
 
-
 export function NtRootPath(hOwner: HANDLE, lpFileName: string) {
     const process = ObGetObject<PsProcess>(hOwner);
     const cwd = process.cwd;
@@ -228,57 +227,21 @@ class FsFile extends NtFile {
 }
 
 class ConsoleFile extends NtFile {
-    private stream: ReadableStream<string> | WritableStream<string>;
+    
 
     constructor(private type: 'in' | 'out' | 'err', hOwner: HANDLE) {
         super(hOwner, null, null, null, null, null);
-
-        if (type === 'in') {
-            this.stream = new ReadableStream<string>({
-                start(controller) {
-                    const handler = (event: KeyboardEvent) => {
-                        controller.enqueue(event.key);
-                    };
-
-                    window.addEventListener('keypress', handler);
-                }
-            });
-        } else {
-            this.stream = new WritableStream<string>({
-                write(chunk) {
-                    console.log(chunk);
-                }
-            });
-        }
+        
     }
 
     async open() { }
 
     async read(buffer: Uint8Array, offset: number, length: number) {
-        if (this.type !== 'in') throw new Error('Cannot read from non-input console handle')
-
-        const reader = (this.stream as ReadableStream<string>).getReader();
-        const result = await reader.read();
-        if (result.done) return 0;
-
-        const encoder = new TextEncoder();
-        const encoded = encoder.encode(result.value);
-        buffer.set(encoded, offset);
-
-        return encoded.length;
+        return 0;
     }
 
     async write(buffer: Uint8Array, offset: number, length: number) {
-        if (this.type === 'in') throw new Error('Cannot write to non-output console handle');
-
-        const decoder = new TextDecoder();
-        const decoded = decoder.decode(buffer.slice(offset, offset + length));
-
-        const writer = (this.stream as WritableStream<string>).getWriter();
-        writer.write(decoded);
-        writer.releaseLock();
-
-        return length;
+        return 0;
     }
 
     async seek(position: number, origin: 'begin' | 'current' | 'end') {
@@ -289,7 +252,8 @@ class ConsoleFile extends NtFile {
         throw new Error('Cannot set length on console handle');
     }
 
-    async close() { }
+    async close() {         
+    }
 }
 
 
