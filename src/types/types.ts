@@ -18,6 +18,7 @@ type PEB = {
     dwThreadId: number;
 
     lpHandlers: Map<Subsystem, SubsystemHandlers>;
+    lpSubsystems: Map<Subsystem, any>; // subsystem per process data
 }
 
 export { Version, Subsystem, SubsystemHandlers, MessageType, HANDLE, PEB };

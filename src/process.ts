@@ -60,6 +60,7 @@ export class PsProcess {
             dwProcessId: this.id,
             dwThreadId: 0,
             lpHandlers: new Map(),
+            lpSubsystems: new Map()
         };
 
         this.loadSubsystem(SUBSYS_NTDLL, NTDLL_EXPORTS);
