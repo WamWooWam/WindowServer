@@ -101,7 +101,7 @@ class SubsystemClass {
     private async HandleMessage(msg: Message): Promise<void> {
         if (msg.lpSubsystem !== this.name) return;
 
-        console.debug(`${this.name}:client recieved message %s:%d -> %d, %O`, msg.lpSubsystem, msg.nType, msg.nChannel, msg);
+        console.log(`${this.name}:client recieved message %s:%d -> %d, %O`, msg.lpSubsystem, msg.nType, msg.nChannel, msg);
 
         const callback = this.callbackMap.get(msg.nChannel);
         if (callback) {

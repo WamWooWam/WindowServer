@@ -122,7 +122,7 @@ export class PsProcess {
     }
 
     private PostMessage<S = any>(msg: Message<S>) {
-        console.warn(`server posting message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+        console.debug(`server posting message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
         this.worker.postMessage(msg);
     }
 
@@ -152,7 +152,7 @@ export class PsProcess {
         const handler = this.peb.lpHandlers.get(msg.lpSubsystem)?.[msg.nType];
         if (handler) {            
             try {
-                console.log(`recieved message %s:%d, %O, calling %O`, msg.lpSubsystem, msg.nType, msg, handler);
+                console.log(`%s:server recieved message %s:%d, %O, calling %O`, msg.lpSubsystem, msg.lpSubsystem, msg.nType, msg, handler);
 
                 let resp = handler(this.peb, msg.data);
                 if (resp !== undefined && 'then' in resp && typeof resp.then === 'function') {

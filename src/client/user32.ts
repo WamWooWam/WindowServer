@@ -1,5 +1,7 @@
 import USER32, {
     ATOM,
+    CREATE_WINDOW_EX,
+    CREATE_WINDOW_EX_REPLY,
     HBRUSH,
     HCURSOR,
     HICON,
@@ -42,6 +44,41 @@ export async function RegisterClass(lpWndClass: WNDCLASS): Promise<ATOM> {
     });
 
     return msg.data.retVal;
+}
+
+export async function CreateWindowEx(
+    dwExStyle: number,
+    lpClassName: string,
+    lpWindowName: string,
+    dwStyle: number,
+    x: number,
+    y: number,
+    nWidth: number,
+    nHeight: number,
+    hWndParent: HANDLE,
+    hMenu: HANDLE,
+    hInstance: HINSTANCE,
+    lpParam: any
+): Promise<HANDLE> {
+    const msg = await User32.SendMessage<CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY>({
+        nType: USER32.CreateWindowEx,
+        data: {
+            dwExStyle,
+            lpClassName,
+            lpWindowName,
+            dwStyle,
+            x,
+            y,
+            nWidth,
+            nHeight,
+            hWndParent,
+            hMenu,
+            hInstance,
+            lpParam
+        }
+    });
+
+    return msg.data.hWnd;
 }
 
 export async function DefWindowProc(hWnd: HANDLE, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {

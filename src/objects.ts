@@ -11,7 +11,7 @@ type tagHANDLE = {
 
 const INVALID_HANDLE_VALUE = -1;
 const handleTable: Map<HANDLE, tagHANDLE> = new Map();
-
+ 
 let handleCounter = 0;
 function GenHandle(): HANDLE {
     const handleBase = 0x80000000;
