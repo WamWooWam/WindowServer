@@ -1,6 +1,7 @@
 import { NtCreateDirectory, NtRootPath } from "../file.js";
-import SHELL32 from "../types/shell32.types.js";
+
 import { PEB } from "../types/types.js";
+import SHELL32 from "../types/shell32.types.js";
 
 async function SHCreateDirectoryEx(peb: PEB, data: {
     hwnd: number,

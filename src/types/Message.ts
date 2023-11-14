@@ -7,5 +7,6 @@ import { Subsystem } from "./types.js"
 export default interface Message {
     subsys: Subsystem;
     type: number;
+    reply?: number;
     data: any;
 }

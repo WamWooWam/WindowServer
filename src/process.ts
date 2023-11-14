@@ -97,23 +97,24 @@ export class PsProcess {
     async recieve(msg: Message) {
         const handler = this.peb.lpHandlers.get(msg.subsys)?.[msg.type];
         const errorHandler = (e: Error) => {
-            this.send({ subsys: msg.subsys, type: msg.type | 0x80000000, data: e });
+            this.send({ subsys: msg.subsys, type: msg.type | 0x80000000, reply: msg.reply, data: e });
             console.error(`error while handling message ${msg.subsys}:${msg.type}`);
             console.error(e);
         }
 
         try {
             if (handler) {
-                console.log(`recieved message %s:%d, %O, calling %O`, msg.subsys, msg.type, msg.data, handler);
+                console.log(`recieved message %s:%d, %O, calling %O`, msg.subsys, msg.type, msg, handler);
+
                 let resp = handler(this.peb, msg.data);
                 if (resp !== undefined && 'then' in resp && typeof resp.then === 'function') {
                     resp = await resp;
                 }
 
-                this.send({ subsys: msg.subsys, type: msg.type, data: resp });
+                this.send({ subsys: msg.subsys, type: msg.type, reply: msg.reply, data: resp });
             } else {
                 console.error(`unknown message ${msg.subsys}:${msg.type}`);
-                this.send({ subsys: msg.subsys, type: msg.type | 0x80000000, data: null });
+                this.send({ subsys: msg.subsys, type: msg.type | 0x80000000, reply: msg.reply, data: null });
             }
         } catch (error) {
             errorHandler(error);

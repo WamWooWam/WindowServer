@@ -52,14 +52,14 @@ function Kernel32_HandleMessage(msg: Message) {
 
 }
 
-const [Kernel32_SendMessage, Kernel32_PostMessage] = await NtRegisterSubsystem(SUBSYS_KERNEL32, Kernel32_HandleMessage);
+const Kernel32 = await NtRegisterSubsystem(SUBSYS_KERNEL32, Kernel32_HandleMessage);
 
 export function GetCurrentProcess(): HANDLE {
     return -1;
 }
 
 export async function GetProcessId(hProcess: HANDLE): Promise<number> {
-    const msg = await Kernel32_SendMessage({
+    const msg = await Kernel32.SendMessage({
         type: KERNEL32.GetProcessInfo,
         data: {
             hProcess: hProcess
@@ -78,7 +78,7 @@ export async function CreateFile(
     dwFlagsAndAttributes: number,
     hTemplateFile: HANDLE
 ): Promise<HANDLE> {
-    const msg = await Kernel32_SendMessage({
+    const msg = await Kernel32.SendMessage({
         type: KERNEL32.CreateFile,
         data: {
             lpFileName: lpFileName,
@@ -99,7 +99,7 @@ export async function ReadFile(
     lpBuffer: Uint8Array,
     nNumberOfBytesToRead: number,
 ): Promise<{ retVal: boolean, lpNumberOfBytesRead: number }> {
-    const msg = await Kernel32_SendMessage({
+    const msg = await Kernel32.SendMessage({
         type: KERNEL32.ReadFile,
         data: {
             hFile: hFile,
@@ -120,7 +120,7 @@ export async function WriteFile(
     lpBuffer: Uint8Array,
     nNumberOfBytesToWrite: number,
 ): Promise<{ retVal: boolean, lpNumberOfBytesWritten: number }> {
-    const msg = await Kernel32_SendMessage({
+    const msg = await Kernel32.SendMessage({
         type: KERNEL32.WriteFile,
         data: {
             hFile: hFile,
@@ -137,7 +137,7 @@ export async function SetFilePointer(
     lDistanceToMove: number,
     dwMoveMethod: number,
 ): Promise<number> {
-    const msg = await Kernel32_SendMessage({
+    const msg = await Kernel32.SendMessage({
         type: KERNEL32.SetFilePointer,
         data: {
             hFile: hFile,
@@ -153,7 +153,7 @@ export async function CreateDirectory(
     lpPathName: string,
     lpSecurityAttributes: number
 ): Promise<boolean> {
-    const msg = await Kernel32_SendMessage({
+    const msg = await Kernel32.SendMessage({
         type: KERNEL32.CreateDirectory,
         data: {
             lpPathName: lpPathName,
@@ -174,7 +174,7 @@ export function GetStdHandle(nStdHandle: number): HANDLE {
 
 
 export function CloseHandle(hObject: HANDLE): boolean {
-    Kernel32_PostMessage({
+    Kernel32.PostMessage({
         type: KERNEL32.CloseHandle,
         data: {
             hObject: hObject

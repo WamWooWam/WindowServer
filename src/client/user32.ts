@@ -1,10 +1,11 @@
 import Executable from "../types/Executable.js";
+import { HANDLE } from "../types/types.js";
 import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 import USER32 from "../types/user32.types.js";
 
-const [User32_SendMessage, User32_PostMessage] = await NtRegisterSubsystem(SUBSYS_USER32, User32_HandleMessage);
+const User32 = await NtRegisterSubsystem(SUBSYS_USER32, User32_HandleMessage);
 
 function User32_HandleMessage(msg: Message) {
 
@@ -55,6 +56,26 @@ export interface MSGBOXPARAMS {
     dwLanguageId: number;
 }
 
+type WNDPROC = (hWnd: number, uMsg: number, wParam: number, lParam: number) => number;
+
+export interface WNDCLASS {
+    style: number;
+    lpfnWndProc: WNDPROC;
+    cbClsExtra: number;
+    cbWndExtra: number;
+    hInstance: HANDLE;
+    hIcon: HANDLE;
+    hCursor: HANDLE;
+    hbrBackground: HANDLE;
+    lpszMenuName: number | string;
+    lpszClassName: number | string;
+}
+
+export interface WNDCLASSEX extends WNDCLASS {
+    cbSize: number;
+    hIconSm: HANDLE;
+}
+
 export async function MessageBox(
     hWnd: number,
     lpText: string,
@@ -90,6 +111,49 @@ export async function MessageBoxIndirect(
     lpMsgBoxParams: MSGBOXPARAMS
 ): Promise<number> {
     return 0;
+}
+
+export async function RegisterClassEx(
+    lpWndClass: WNDCLASS
+): Promise<number> {
+    return 0;
+}
+
+export async function CreateWindowEx(
+    dwExStyle: number,
+    lpClassName: string,
+    lpWindowName: string,
+    dwStyle: number,
+    X: number,
+    Y: number,
+    nWidth: number,
+    nHeight: number,
+    hWndParent: HANDLE,
+    hMenu: HANDLE,
+    hInstance: HANDLE,
+    lpParam: any
+): Promise<HANDLE> {
+    // const msg = await User32_SendMessage({
+    //     type: USER32.CreateWindowEx,
+    //     data: {
+    //         dwExStyle: dwExStyle,
+    //         lpClassName: lpClassName,
+    //         lpWindowName: lpWindowName,
+    //         dwStyle: dwStyle,
+    //         X: X,
+    //         Y: Y,
+    //         nWidth: nWidth,
+    //         nHeight: nHeight,
+    //         hWndParent: hWndParent,
+    //         hMenu: hMenu,
+    //         hInstance: hInstance,
+    //         lpParam: lpParam
+    //     }
+    // });
+
+    // return msg.data.retVal;
+
+    return -1;
 }
 
 const user32: Executable = {
