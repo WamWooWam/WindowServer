@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "./client/kernel32.js";
+import { GetLastError, GetModuleHandle } from "./client/kernel32.js";
 import { CreateWindowEx, DefWindowProc, RegisterClass } from "./client/user32.js";
 import { CW_USEDEFAULT, HINSTANCE, HWND, LPARAM, LRESULT, WNDCLASSEX, WPARAM, WS_OVERLAPPEDWINDOW } from "./types/user32.types.js";
 
@@ -46,6 +46,8 @@ async function main() {
     );
 
     console.log(hWnd);
+
+    console.log(GetLastError());
 
     // next: ShowWindow
 

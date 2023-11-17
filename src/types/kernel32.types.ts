@@ -11,6 +11,10 @@ const KERNEL32 = {
     GetModuleHandle: 0x00000008
 }
 
+export const IDX_PID = 0;
+export const IDX_HMODULE = 1;
+export const IDX_LAST_ERROR = 2;
+
 export interface GET_PROCESS_INFO {
     hProcess: HANDLE;
 }

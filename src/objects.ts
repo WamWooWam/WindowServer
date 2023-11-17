@@ -4,6 +4,7 @@ import { PsProcess } from "./process.js";
 type tagHANDLE = {
     refCount: number;
     value: any;
+    type: string;
     owner: HANDLE;
     ownedHandles: HANDLE[];
     dtor?: () => void;
@@ -29,11 +30,12 @@ export function ObGetObject<T>(handle: HANDLE): T {
     return tag.value;
 }
 
-export function ObSetObject<T>(value: T, owner: HANDLE, dtor?: () => void): HANDLE {
+export function ObSetObject<T>(value: T, type: string, owner: HANDLE, dtor?: () => void): HANDLE {
     const handle = GenHandle();
     handleTable.set(handle, {
         refCount: 1,
         value: value,
+        type: type,
         owner: owner,
         ownedHandles: [],
         dtor: dtor
@@ -45,6 +47,64 @@ export function ObSetObject<T>(value: T, owner: HANDLE, dtor?: () => void): HAND
     }
 
     return handle;
+}
+
+export function ObGetHandleType(handle: HANDLE): string {
+    const tag = handleTable.get(handle);
+    if (!tag) {
+        return null;
+    }
+
+    return tag.type;
+}
+
+export function ObGetChildHandles(handle: HANDLE): HANDLE[] {
+    const tag = handleTable.get(handle);
+    if (!tag) {
+        return [];
+    }
+
+    return tag.ownedHandles;
+}
+
+export function ObGetChildHandlesByType(handle: HANDLE, type: string): HANDLE[] {
+    const tag = handleTable.get(handle);
+    if (!tag) {
+        return [];
+    }
+
+    return tag.ownedHandles.filter(h => ObGetHandleType(h) === type);
+}
+
+export function ObGetParentHandle(handle: HANDLE): HANDLE {
+    const tag = handleTable.get(handle);
+    if (!tag) {
+        return INVALID_HANDLE_VALUE;
+    }
+
+    return tag.owner;
+}
+
+export function ObSetHandleOwner(handle: HANDLE, owner: HANDLE): boolean {
+    const tag = handleTable.get(handle);
+    if (!tag) {
+        return false;
+    }
+
+    const oldOwner = tag.owner;
+    tag.owner = owner;
+
+    const oldOwnerTag = handleTable.get(oldOwner);
+    if (oldOwnerTag) {
+        oldOwnerTag.ownedHandles = oldOwnerTag.ownedHandles.filter(h => h !== handle);
+    }
+
+    const newOwnerTag = handleTable.get(owner);
+    if (newOwnerTag) {
+        newOwnerTag.ownedHandles.push(handle);
+    }
+
+    return true;
 }
 
 export function ObCloseHandle(handle: HANDLE): boolean {

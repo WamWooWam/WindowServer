@@ -8,6 +8,8 @@ import KERNEL32, {
     GET_MODULE_HANDLE_REPLY,
     GET_PROCESS_INFO,
     GET_PROCESS_INFO_REPLY,
+    IDX_LAST_ERROR,
+    IDX_PID,
     READ_FILE,
     READ_FILE_REPLY,
     SET_FILE_POINTER,
@@ -69,7 +71,8 @@ function Kernel32_HandleMessage(msg: Message) {
 
 }
 
-const Kernel32 = await NtRegisterSubsystem(SUBSYS_KERNEL32, Kernel32_HandleMessage);
+const Kernel32 = await NtRegisterSubsystem(SUBSYS_KERNEL32, Kernel32_HandleMessage, 4096);
+const K32Memory = new Uint32Array(Kernel32.memory);
 
 export async function GetModuleHandle(lpModuleName: string): Promise<HANDLE> {
     const msg = await Kernel32.SendMessage<GET_MODULE_HANDLE, GET_MODULE_HANDLE_REPLY>({
@@ -84,7 +87,23 @@ export function GetCurrentProcess(): HANDLE {
     return -1;
 }
 
+export function GetLastError(): number {
+    const lastError = Atomics.load(K32Memory, IDX_LAST_ERROR);
+    return lastError;
+}
+
+export function SetLastError(dwErrorCode: number): void {
+    console.debug(`SetLastError pid:${GetCurrentProcessId()} ${dwErrorCode}`);
+    Atomics.store(K32Memory, IDX_LAST_ERROR, dwErrorCode);
+}
+
+function GetCurrentProcessId(): number {
+    return Atomics.load(K32Memory, IDX_PID);
+}
+
 export async function GetProcessId(hProcess: HANDLE): Promise<number> {
+    if(hProcess === -1) return GetCurrentProcessId();
+
     const msg = await Kernel32.SendMessage<GET_PROCESS_INFO, GET_PROCESS_INFO_REPLY>({
         nType: KERNEL32.GetProcessInfo,
         data: { hProcess }

@@ -18,6 +18,7 @@ import USER32, {
 } from "../types/user32.types.js";
 
 import Executable from "../types/Executable.js";
+import { GetModuleHandle } from "./kernel32.js";
 import { HANDLE } from "../types/types.js";
 import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
@@ -29,14 +30,17 @@ function User32_HandleMessage(msg: Message) {
 
 }
 
-
-
 export async function RegisterClass(lpWndClass: WNDCLASS): Promise<ATOM> {
-
     const lpWndClassWire: WNDCLASS_WIRE = {
         ...lpWndClass,
         lpfnWndProc: User32.RegisterCallback((msg: Message<WNDPROC_PARAMS>) => { return lpWndClass.lpfnWndProc(...msg.data); }, true),
     }
+
+    if (lpWndClassWire.hInstance === 0) {
+        lpWndClassWire.hInstance = await GetModuleHandle(null);
+    }
+
+    // TODO: Resource lookup
 
     const msg = await User32.SendMessage<REGISTER_CLASS, REGISTER_CLASS_REPLY>({
         nType: USER32.RegisterClass,

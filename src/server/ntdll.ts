@@ -1,5 +1,5 @@
 import NTDLL, { LOAD_SUBSYSTEM, PROCESS_EXIT } from "../types/ntdll.types.js";
-import { PEB, Subsystem } from "../types/types.js";
+import { PEB, SUBSYSTEM_DEF, SubsystemId } from "../types/types.js";
 import {
     SUBSYS_GDI32,
     SUBSYS_KERNEL32,
@@ -15,18 +15,24 @@ const ValidSubsystems = [SUBSYS_NTDLL, SUBSYS_KERNEL32, SUBSYS_USER32, SUBSYS_GD
 
 async function SubsystemLoaded(peb: PEB, data: LOAD_SUBSYSTEM) {
     const process = ObGetObject<PsProcess>(peb.hProcess);
-    const subsys = data.lpSubsystem as Subsystem;
+    const subsys = data.lpSubsystem as SubsystemId;
     if (subsys == SUBSYS_NTDLL) return; // NTDLL is already loaded
 
     console.debug(`Loading subsystem ${subsys}...`);
 
     if (!ValidSubsystems.includes(subsys)) throw new Error(`Invalid subsystem ${subsys}`);
 
-    // TODO: validate subsystem
+    // TODO: validate subsystem 
     const subsysExports = await import(`./${subsys}.js`);
-    process.loadSubsystem(subsys, subsysExports.default);
+    const subsystem = subsysExports.default as SUBSYSTEM_DEF;
 
-    const sharedMemory = data.cbSharedMemory ? new SharedArrayBuffer(data.cbSharedMemory) : undefined;
+    let sharedMemory = null;
+    if (data.cbSharedMemory) {
+        sharedMemory = new SharedArrayBuffer(data.cbSharedMemory);
+    }
+    
+    process.CreateSubsystem(subsystem, sharedMemory);
+
     return {
         lpSharedMemory: sharedMemory,
     }
@@ -37,9 +43,12 @@ function ProcessExit(peb: PEB, data: PROCESS_EXIT) {
     process.terminate();
 }
 
-const NTDLL_EXPORTS = {
-    [NTDLL.LoadSubsystem]: SubsystemLoaded,
-    [NTDLL.ProcessExit]: ProcessExit,
+const NTDLL_SUBSYSTEM: SUBSYSTEM_DEF = {
+    lpszName: SUBSYS_NTDLL,
+    lpExports: {
+        [NTDLL.LoadSubsystem]: SubsystemLoaded,
+        [NTDLL.ProcessExit]: ProcessExit,
+    }
 };
 
-export default NTDLL_EXPORTS;
+export default NTDLL_SUBSYSTEM;

@@ -10,8 +10,9 @@ import NTDLL, {
 
 import Executable from "../types/Executable.js";
 import Message from "../types/Message.js";
+import { NtAwait } from "../util.js";
 import { SUBSYS_NTDLL } from "../types/subsystems.js";
-import { Subsystem } from "../types/types.js";
+import { SubsystemId } from "../types/types.js";
 
 // all worker events should be handled by this subsystem
 const __addEventListener = globalThis.addEventListener;
@@ -42,6 +43,10 @@ class SubsystemClass {
     private sharedMemory: SharedArrayBuffer;
     private callbackMap = new Map<number, (msg: Message) => any | Promise<any>>();
     private callbackId = 0x4000;
+
+    public get memory(): SharedArrayBuffer {
+        return this.sharedMemory;
+    }
 
     constructor(name: string, handler: (msg: Omit<Message, "lpSubsystem">) => void, sharedMemory?: SharedArrayBuffer) {
         this.name = name;
@@ -105,11 +110,7 @@ class SubsystemClass {
 
         const callback = this.callbackMap.get(msg.nChannel);
         if (callback) {
-            let ret = callback(msg);
-            if (ret && ret.then) {
-                ret = await ret;
-            }
-            
+            let ret = await NtAwait(callback(msg));
             if (ret !== undefined && msg.nReplyChannel) {
                 this.PostMessage({ nType: msg.nType, nChannel: msg.nReplyChannel, data: ret });
             }
@@ -139,7 +140,7 @@ __addEventListener('unhandledrejection', (event) => {
 
 const Ntdll = new SubsystemClass(SUBSYS_NTDLL, NTDLL_HandleMessage);
 
-async function NtRegisterSubsystem(subsys: Subsystem, handler: (msg: Omit<Message, "subsys">) => void, cbSharedMemory: number = 0): Promise<SubsystemClass> {
+async function NtRegisterSubsystem(subsys: SubsystemId, handler: (msg: Omit<Message, "subsys">) => void, cbSharedMemory: number = 0): Promise<SubsystemClass> {
     const retVal = await Ntdll.SendMessage<LOAD_SUBSYSTEM, SUBSYSTEM_LOADED>({
         nType: NTDLL.LoadSubsystem,
         data: {
@@ -183,10 +184,7 @@ async function LdrLoadDll(lpLibFileName: string, pPC: PROCESS_CREATE) {
     }
 
     if (module[exec.entryPoint]) {
-        let retVal = module[exec.entryPoint]();
-        if (retVal && retVal.then) {
-            retVal = await retVal;
-        }
+        let retVal = await NtAwait(module[exec.entryPoint]());
     }
 }
 
@@ -194,10 +192,7 @@ async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
     const exec = pPC.lpExecutable;
     const module = await import("/" + exec.file);
     if (module[exec.entryPoint]) {
-        let retVal = module[exec.entryPoint]();
-        if (retVal && retVal.then) {
-            retVal = await retVal;
-        }
+        let retVal = await NtAwait(module[exec.entryPoint]());
 
         await Ntdll.SendMessage<PROCESS_EXIT>({
             nType: NTDLL.ProcessExit,

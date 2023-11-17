@@ -1,11 +1,12 @@
-import { HANDLE, PEB, Subsystem, SubsystemHandlers, Version } from "./types/types.js";
+import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF, SubsystemHandlers, SubsystemId, Version } from "./types/types.js";
 import NTDLL, { CALLBACK_MESSAGE_TYPE, PROCESS_CREATE } from "./types/ntdll.types.js";
 import { ObDestroyHandle, ObGetObject, ObSetObject } from "./objects.js";
 
 import Executable from "./types/Executable.js";
 import Message from "./types/Message.js";
-import NTDLL_EXPORTS from "./server/ntdll.js";
+import NTDLL_SUBSYSTEM from "./server/ntdll.js";
 import { NtAllocSharedMemory } from "./sharedmem.js";
+import { NtAwait } from "./util.js";
 import { SUBSYS_NTDLL } from "./types/subsystems.js";
 
 let __procId = 0;
@@ -43,7 +44,7 @@ export class PsProcess {
 
     constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
         this.id = assignId();
-        this.handle = ObSetObject<PsProcess>(this, null, this.terminate.bind(this));
+        this.handle = ObSetObject<PsProcess>(this, "PROC", null, this.terminate.bind(this));
         this.name = exec.name;
         this.version = exec.version;
         this.executable = exec.file;
@@ -59,11 +60,10 @@ export class PsProcess {
             hThread: 0,
             dwProcessId: this.id,
             dwThreadId: 0,
-            lpHandlers: new Map(),
             lpSubsystems: new Map()
         };
 
-        this.loadSubsystem(SUBSYS_NTDLL, NTDLL_EXPORTS);
+        this.CreateSubsystem(NTDLL_SUBSYSTEM);
     }
 
     start() {
@@ -90,6 +90,10 @@ export class PsProcess {
 
     terminate() {
         this.worker.terminate();
+
+        for (const [_, subsys] of this.peb.lpSubsystems) {
+            subsys.lpfnExit?.(this.peb, subsys);
+        }
 
         ObDestroyHandle(this.handle);
     }
@@ -149,15 +153,12 @@ export class PsProcess {
     }
 
     async recieve(msg: Message) {
-        const handler = this.peb.lpHandlers.get(msg.lpSubsystem)?.[msg.nType];
-        if (handler) {            
+        const handler = this.peb.lpSubsystems.get(msg.lpSubsystem)?.lpExports[msg.nType];
+        if (handler) {
             try {
                 console.log(`%s:server recieved message %s:%d, %O, calling %O`, msg.lpSubsystem, msg.lpSubsystem, msg.nType, msg, handler);
 
-                let resp = handler(this.peb, msg.data);
-                if (resp !== undefined && 'then' in resp && typeof resp.then === 'function') {
-                    resp = await resp;
-                }
+                let resp = await NtAwait(handler(this.peb, msg.data));
 
                 this.PostMessage({ lpSubsystem: msg.lpSubsystem, nType: msg.nType, nChannel: msg.nChannel, data: resp });
             } catch (e) {
@@ -172,9 +173,19 @@ export class PsProcess {
     }
 
 
-    loadSubsystem(subsys: Subsystem, handler: SubsystemHandlers) {
-        if (!this.peb.lpHandlers.has(subsys)) {
-            this.peb.lpHandlers.set(subsys, handler);
+    async CreateSubsystem(subsystem: SUBSYSTEM_DEF, sharedMemory: SharedArrayBuffer = null) {
+        if (!this.peb.lpSubsystems.has(subsystem.lpszName)) {
+            const data: SUBSYSTEM = {
+                lpSubsystem: subsystem.lpszName,
+                lpSharedMemory: sharedMemory,
+                lpExports: subsystem.lpExports,
+                lpfnInit: subsystem.lpfnInit,
+                lpfnExit: subsystem.lpfnExit,
+            }
+
+            this.peb.lpSubsystems.set(subsystem.lpszName, data);
+
+            await NtAwait(subsystem.lpfnInit?.(this.peb, data));
         }
     }
 }

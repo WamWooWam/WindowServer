@@ -270,7 +270,7 @@ export async function NtCreateFile(
     const file = await NtCreateFileObject(peb.hProcess, lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     if (!file) return -1;
 
-    const hFile = ObSetObject(file, peb.hProcess, () => file.close());
+    const hFile = ObSetObject(file, "FILE", peb.hProcess, () => file.close());
     return hFile;
 }
 

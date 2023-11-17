@@ -8,6 +8,9 @@ import KERNEL32, {
     GET_MODULE_HANDLE_REPLY,
     GET_PROCESS_INFO,
     GET_PROCESS_INFO_REPLY,
+    IDX_HMODULE,
+    IDX_LAST_ERROR,
+    IDX_PID,
     READ_FILE,
     READ_FILE_REPLY,
     SET_FILE_POINTER,
@@ -17,9 +20,19 @@ import KERNEL32, {
 } from "../types/kernel32.types.js";
 import { NtCreateDirectory, NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../file.js";
 import { ObCloseHandle, ObGetObject } from "../objects.js";
+import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 
-import { PEB } from "../types/types.js";
 import { PsProcess } from "../process.js";
+import { SUBSYS_KERNEL32 } from "../types/subsystems.js";
+
+function NtK32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
+    console.debug("KERNEL32 initialized");
+
+    const memory = new Uint32Array(lpSubsystem.lpSharedMemory);
+    Atomics.store(memory, IDX_PID, peb.dwProcessId);
+    Atomics.store(memory, IDX_HMODULE, peb.hProcess);
+    Atomics.store(memory, IDX_LAST_ERROR, 0);
+}
 
 function GetModuleHandle(peb: PEB, { lpModuleName }: GET_MODULE_HANDLE): GET_MODULE_HANDLE_REPLY {
     if (lpModuleName == null) return { hModule: 0 };
@@ -102,15 +115,19 @@ async function CreateDirectory(peb: PEB, data: CREATE_DIRECTORY): Promise<CREATE
     return { retVal: ret };
 };
 
-const KERNEL32_EXPORTS = {
-    [KERNEL32.GetProcessInfo]: GetProcessInfo,
-    [KERNEL32.CloseHandle]: CloseHandle,
-    [KERNEL32.CreateFile]: CreateFile,
-    [KERNEL32.ReadFile]: ReadFile,
-    [KERNEL32.WriteFile]: WriteFile,
-    [KERNEL32.SetFilePointer]: SetFilePointer,
-    [KERNEL32.CreateDirectory]: CreateDirectory,
-    [KERNEL32.GetModuleHandle]: GetModuleHandle
+const KERNEL32_SUBSYSTEM: SUBSYSTEM_DEF = {
+    lpszName: SUBSYS_KERNEL32,
+    lpfnInit: NtK32Initialize,
+    lpExports: {
+        [KERNEL32.GetProcessInfo]: GetProcessInfo,
+        [KERNEL32.CloseHandle]: CloseHandle,
+        [KERNEL32.CreateFile]: CreateFile,
+        [KERNEL32.ReadFile]: ReadFile,
+        [KERNEL32.WriteFile]: WriteFile,
+        [KERNEL32.SetFilePointer]: SetFilePointer,
+        [KERNEL32.CreateDirectory]: CreateDirectory,
+        [KERNEL32.GetModuleHandle]: GetModuleHandle
+    }
 };
 
-export default KERNEL32_EXPORTS;
+export default KERNEL32_SUBSYSTEM;

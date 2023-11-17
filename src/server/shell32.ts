@@ -1,10 +1,11 @@
 import { NtCreateDirectory, NtRootPath } from "../file.js";
+import { PEB, SUBSYSTEM_DEF } from "../types/types.js";
 import SHELL32, {
     SH_CREATE_DIRECTORY_EX,
     SH_CREATE_DIRECTORY_EX_REPLY
 } from "../types/shell32.types.js";
 
-import { PEB } from "../types/types.js";
+import { SUBSYS_SHELL32 } from "../types/subsystems.js";
 
 async function SHCreateDirectoryEx(peb: PEB, data: SH_CREATE_DIRECTORY_EX): Promise<SH_CREATE_DIRECTORY_EX_REPLY> {
     const rootedPath = NtRootPath(peb.hProcess, data.pszPath);
@@ -18,8 +19,11 @@ async function SHCreateDirectoryEx(peb: PEB, data: SH_CREATE_DIRECTORY_EX): Prom
     return { retVal: 0 };
 }
 
-const SHELL32_EXPORTS = {
-    [SHELL32.SHCreateDirectoryEx]: SHCreateDirectoryEx
+const SHELL32_SUBSYSTEM: SUBSYSTEM_DEF = {
+    lpszName: SUBSYS_SHELL32,
+    lpExports: {
+        [SHELL32.SHCreateDirectoryEx]: SHCreateDirectoryEx
+    }
 };
 
-export default SHELL32_EXPORTS;
+export default SHELL32_SUBSYSTEM;

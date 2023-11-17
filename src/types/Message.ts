@@ -2,10 +2,10 @@
 // Represents a message that can be passed between a process and the host.
 //
 
-import { Subsystem } from "./types.js"
+import { SubsystemId } from "./types.js"
 
 export default interface Message<T = any> {
-    lpSubsystem: Subsystem;
+    lpSubsystem: SubsystemId;
     nType: number;
     nChannel?: number;
     nReplyChannel?: number;

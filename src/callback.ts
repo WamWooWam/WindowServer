@@ -1,4 +1,4 @@
-import { PEB, Subsystem } from "./types/types.js";
+import { PEB, SubsystemId } from "./types/types.js";
 
 import { CALLBACK_MESSAGE_TYPE } from "./types/ntdll.types.js";
 import { ObGetObject } from "./objects.js";
@@ -6,7 +6,7 @@ import { PsProcess } from "./process.js";
 
 export type HCALLBACK = number;
 
-export function NtDoCallbackAsync(peb: PEB, subsys: Subsystem, callback: HCALLBACK, data: any[]): Promise<any> {
+export function NtDoCallbackAsync(peb: PEB, subsys: SubsystemId, callback: HCALLBACK, data: any[]): Promise<any> {
     const process = ObGetObject<PsProcess>(peb.hProcess);
     
     const msg = {
