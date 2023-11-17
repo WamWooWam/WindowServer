@@ -28,25 +28,27 @@ async function main() {
     const atom = await RegisterClass(wndClass);
     console.log(atom);
 
-    const hWnd = await CreateWindowEx(
-        0,                      // dwExStyle
-        className,              // lpClassName
-        "Test Window",          // lpWindowName
-        WS_OVERLAPPEDWINDOW,    // dwStyle
+    for (let i = 0; i < 3; i++) {
+        const hWnd = await CreateWindowEx(
+            0,                      // dwExStyle
+            className,              // lpClassName
+            "Test Window",          // lpWindowName
+            WS_OVERLAPPEDWINDOW,    // dwStyle
 
-        // x, y, nWidth, nHeight
-        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+            // x, y, nWidth, nHeight
+            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
 
-        0,                      // hWndParent
-        0,                      // hMenu      
-        hModule,                // hInstance
-        null                    // lpParam
-    );
+            0,                      // hWndParent
+            0,                      // hMenu      
+            hModule,                // hInstance
+            null                    // lpParam
+        );
+        console.log(hWnd);
 
-    console.log(hWnd);
-    
-    await ShowWindow(hWnd, SW_SHOWDEFAULT);
-    
+        await ShowWindow(hWnd, SW_SHOWDEFAULT);
+    }
+
+
     let msg: MSG = {} as MSG;
     while (await GetMessage(msg, 0, 0, 0)) {
         await TranslateMessage(msg);

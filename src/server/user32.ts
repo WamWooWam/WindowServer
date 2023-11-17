@@ -19,6 +19,7 @@ import { NtCreateWindowEx } from "../win32k/window.js";
 import { NtDefWindowProc } from "../win32k/def.js";
 import { NtRegisterClassEx } from "../win32k/class.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
+import W32MSG_QUEUE from "../win32k/msgqueue.js";
 import { W32PROCINFO } from "../win32k/shared.js";
 
 function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
@@ -27,8 +28,12 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
         procInfo = {
             classes: [],
             hWnds: [],
-            hDesktop: 0
+            hDesktop: 0,
+            lpMsgQueue: null
         }
+
+        const msgQueue = new W32MSG_QUEUE(peb, procInfo);
+        procInfo.lpMsgQueue = msgQueue;
 
         lpSubsystem.lpParams = procInfo;
     }

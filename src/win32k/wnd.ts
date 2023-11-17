@@ -3,6 +3,7 @@ import { HANDLE, PEB } from "../types/types.js";
 import { ObGetChildHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "../objects.js";
 import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
+import { NtDispatchMessage } from "./msg.js";
 import { RECT } from "../types/gdi32.types.js";
 
 export class WND {
@@ -90,18 +91,12 @@ export class WND {
 
         pti.hWnds.push(this._hWnd);
 
-        this.msgQueuePromise = new Promise((resolve) => {
-            this.msgQueueResolve = resolve;
-        });
-
         document.addEventListener("keypress", (ev) => {
-            this.EnqueueMessage({
+            NtDispatchMessage(peb, {
                 hWnd: this._hWnd,
                 message: 0x0100, // WM_KEYDOWN
                 wParam: ev.keyCode,
-                lParam: 0,
-                time: 0,
-                pt: { x: 0, y: 0 }
+                lParam: 0
             });
         });
 
@@ -164,34 +159,6 @@ export class WND {
 
     public WndProc(msg: number, wParam: WPARAM, lParam: LPARAM): LRESULT | Promise<LRESULT> {
         return this._lpfnWndProc(this._hWnd, msg, wParam, lParam);
-    }
-
-    private msgQueueResolve: (value?: any) => void;
-    private msgQueuePromise: Promise<any>;
-    private msgQueue: MSG[] = [];
-
-    public EnqueueMessage(msg: MSG): void {
-        this.msgQueue.push(msg);
-        this.msgQueueResolve();
-    }
-
-    public async GetMessage(): Promise<MSG> {
-        if (this.msgQueue.length > 0) {
-            return this.msgQueue.shift()!;
-        }
-
-        await (this.msgQueuePromise = new Promise((resolve) => {
-            this.msgQueueResolve = resolve;
-        }));
-        return this.msgQueue.shift()!;
-    }
-
-    public async TranslateMessage(msg: MSG): Promise<boolean> {
-        return true;
-    }
-
-    public async DispatchMessage(msg: MSG): Promise<LRESULT> {
-        return await this.WndProc(msg.message, msg.wParam, msg.lParam);
     }
 
     public destroy(): void {
