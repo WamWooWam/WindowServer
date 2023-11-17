@@ -5,6 +5,11 @@ const USER32 = {
     RegisterClass: 0x00000001,
     DefWindowProc: 0x00000002,
     CreateWindowEx: 0x00000003,
+    ShowWindow: 0x00000004,
+    GetMessage: 0x00000005,
+    PeekMessage: 0x00000006,
+    TranslateMessage: 0x00000007,
+    DispatchMessage: 0x00000008,
 }
 
 export const CW_USEDEFAULT = 0x80000000;
@@ -84,6 +89,21 @@ export const SM_CYFRAME = 33;
 export const SM_CXMINIMIZED = 57;
 export const SM_CYMINIMIZED = 58;
 
+export const SW_HIDE = 0;
+export const SW_SHOWNORMAL = 1;
+export const SW_NORMAL = 1;
+export const SW_SHOWMINIMIZED = 2;
+export const SW_SHOWMAXIMIZED = 3;
+export const SW_MAXIMIZE = 3;
+export const SW_SHOWNOACTIVATE = 4;
+export const SW_SHOW = 5;
+export const SW_MINIMIZE = 6;
+export const SW_SHOWMINNOACTIVE = 7;
+export const SW_SHOWNA = 8;
+export const SW_RESTORE = 9;
+export const SW_SHOWDEFAULT = 10;
+export const SW_FORCEMINIMIZE = 11;
+export const SW_MAX = 11;
 
 export type HWND = HANDLE;
 export type HINSTANCE = HANDLE;
@@ -99,6 +119,18 @@ export type LRESULT = number | any;
 export type ATOM = number;
 
 export type WNDPROC = (hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM) => LRESULT | Promise<LRESULT>;
+
+export interface MSG {
+    hWnd: HWND;
+    message: number;
+    wParam: WPARAM;
+    lParam: LPARAM;
+    time: number;
+    pt: {
+        x: number;
+        y: number;
+    };
+}
 
 export interface WNDCLASS {
     style: number;
@@ -168,6 +200,27 @@ export interface REGISTER_CLASS {
 
 export interface REGISTER_CLASS_REPLY {
     retVal: ATOM;
+}
+
+export interface SHOW_WINDOW {
+    hWnd: HWND;
+    nCmdShow: number;
+}
+
+export interface SHOW_WINDOW_REPLY {
+    retVal: boolean;
+}
+
+export interface GET_MESSAGE {
+    lpMsg: MSG;
+    hWnd: HWND;
+    wMsgFilterMin: number;
+    wMsgFilterMax: number;
+}
+
+export interface GET_MESSAGE_REPLY {
+    retVal: boolean;
+    lpMsg: MSG;
 }
 
 export default USER32;

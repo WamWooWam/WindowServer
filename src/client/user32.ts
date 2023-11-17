@@ -2,14 +2,20 @@ import USER32, {
     ATOM,
     CREATE_WINDOW_EX,
     CREATE_WINDOW_EX_REPLY,
+    GET_MESSAGE,
+    GET_MESSAGE_REPLY,
     HBRUSH,
     HCURSOR,
     HICON,
     HINSTANCE,
+    HWND,
     LPARAM,
     LRESULT,
+    MSG,
     REGISTER_CLASS,
     REGISTER_CLASS_REPLY,
+    SHOW_WINDOW,
+    SHOW_WINDOW_REPLY,
     WNDCLASS,
     WNDCLASS_WIRE,
     WNDPROC,
@@ -48,6 +54,22 @@ export async function RegisterClass(lpWndClass: WNDCLASS): Promise<ATOM> {
     });
 
     return msg.data.retVal;
+}
+
+export async function CreateWindow(
+    lpClassName: string,
+    lpWindowName: string,
+    dwStyle: number,
+    x: number,
+    y: number,
+    nWidth: number,
+    nHeight: number,
+    hWndParent: HANDLE,
+    hMenu: HANDLE,
+    hInstance: HINSTANCE,
+    lpParam: any
+): Promise<HANDLE> {
+    return CreateWindowEx(0, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
 }
 
 export async function CreateWindowEx(
@@ -89,6 +111,55 @@ export async function DefWindowProc(hWnd: HANDLE, uMsg: number, wParam: WPARAM, 
     const msg = await User32.SendMessage<WNDPROC_PARAMS, number>({
         nType: USER32.DefWindowProc,
         data: [hWnd, uMsg, wParam, lParam]
+    });
+
+    return msg.data;
+}
+
+export async function ShowWindow(hWnd: HANDLE, nCmdShow: number): Promise<boolean> {
+    const msg = await User32.SendMessage<SHOW_WINDOW, SHOW_WINDOW_REPLY>({
+        nType: USER32.ShowWindow,
+        data: { hWnd, nCmdShow }
+    });
+
+    return msg.data.retVal;
+}
+
+export async function GetMessage(lpMsg: MSG, hWnd: HANDLE, wMsgFilterMin: number, wMsgFilterMax: number): Promise<boolean> {
+    const msg = await User32.SendMessage<GET_MESSAGE, GET_MESSAGE_REPLY>({
+        nType: USER32.GetMessage,
+        data: { lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax }
+    });
+
+    Object.assign(lpMsg, msg.data.lpMsg);
+
+    return msg.data.retVal;
+}
+
+export async function PeekMessage(lpMsg: MSG, hWnd: HANDLE, wMsgFilterMin: number, wMsgFilterMax: number): Promise<boolean> {
+    const msg = await User32.SendMessage<GET_MESSAGE, GET_MESSAGE_REPLY>({
+        nType: USER32.PeekMessage,
+        data: { lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax }
+    });
+
+    Object.assign(lpMsg, msg.data.lpMsg);
+
+    return msg.data.retVal;
+}
+
+export async function TranslateMessage(lpMsg: MSG): Promise<boolean> {
+    const msg = await User32.SendMessage<MSG, boolean>({
+        nType: USER32.TranslateMessage,
+        data: lpMsg
+    });
+
+    return msg.data;
+}
+
+export async function DispatchMessage(lpMsg: MSG): Promise<boolean> {
+    const msg = await User32.SendMessage<MSG, boolean>({
+        nType: USER32.DispatchMessage,
+        data: lpMsg
     });
 
     return msg.data;

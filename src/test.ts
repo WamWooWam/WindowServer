@@ -1,6 +1,6 @@
-import { GetLastError, GetModuleHandle } from "./client/kernel32.js";
-import { CreateWindowEx, DefWindowProc, RegisterClass } from "./client/user32.js";
-import { CW_USEDEFAULT, HINSTANCE, HWND, LPARAM, LRESULT, WNDCLASSEX, WPARAM, WS_OVERLAPPEDWINDOW } from "./types/user32.types.js";
+import { GetModuleHandle } from "./client/kernel32.js";
+import { CreateWindowEx, DefWindowProc, DispatchMessage, GetMessage, RegisterClass, ShowWindow, TranslateMessage } from "./client/user32.js";
+import { CW_USEDEFAULT, HINSTANCE, HWND, LPARAM, LRESULT, MSG, SW_SHOWDEFAULT, WNDCLASSEX, WPARAM, WS_OVERLAPPEDWINDOW } from "./types/user32.types.js";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     return await DefWindowProc(hwnd, msg, wParam, lParam);
@@ -28,8 +28,6 @@ async function main() {
     const atom = await RegisterClass(wndClass);
     console.log(atom);
 
-    // next: CreateWindowEx
-
     const hWnd = await CreateWindowEx(
         0,                      // dwExStyle
         className,              // lpClassName
@@ -46,14 +44,14 @@ async function main() {
     );
 
     console.log(hWnd);
-
-    console.log(GetLastError());
-
-    // next: ShowWindow
-
-    // next: GetMessage
-    // next: TranslateMessage
-    // next: DispatchMessage
+    
+    await ShowWindow(hWnd, SW_SHOWDEFAULT);
+    
+    let msg: MSG = {} as MSG;
+    while (await GetMessage(msg, 0, 0, 0)) {
+        await TranslateMessage(msg);
+        await DispatchMessage(msg);
+    }
 
     return 0;
 }
