@@ -1,4 +1,4 @@
-import { CREATE_WINDOW_EX, HINSTANCE, HMENU, HWND, WNDPROC, WS_CAPTION, WS_CHILD, WS_CLIPSIBLINGS, WS_DLGFRAME, WS_EX_DLGMODALFRAME, WS_EX_STATICEDGE, WS_EX_WINDOWEDGE, WS_POPUP, WS_SIZEBOX, WS_THICKFRAME } from "../types/user32.types.js";
+import { CREATE_WINDOW_EX, HINSTANCE, HMENU, HWND, LPARAM, LRESULT, MSG, WNDPROC, WPARAM, WS_CAPTION, WS_CHILD, WS_CLIPSIBLINGS, WS_DLGFRAME, WS_EX_DLGMODALFRAME, WS_EX_STATICEDGE, WS_EX_WINDOWEDGE, WS_POPUP, WS_SIZEBOX, WS_THICKFRAME } from "../types/user32.types.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { ObGetChildHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "../objects.js";
 import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
@@ -89,6 +89,32 @@ export class WND {
         }
 
         pti.hWnds.push(this._hWnd);
+
+        this.msgQueuePromise = new Promise((resolve) => {
+            this.msgQueueResolve = resolve;
+        });
+
+        document.addEventListener("keypress", (ev) => {
+            this.EnqueueMessage({
+                hWnd: this._hWnd,
+                message: 0x0100, // WM_KEYDOWN
+                wParam: ev.keyCode,
+                lParam: 0,
+                time: 0,
+                pt: { x: 0, y: 0 }
+            });
+        });
+
+        // document.addEventListener("keyup", (ev) => {
+        //     this.EnqueueMessage({
+        //         hWnd: this._hWnd,
+        //         message: 0x0101, // WM_KEYUP
+        //         wParam: ev.keyCode,
+        //         lParam: 0,
+        //         time: 0,
+        //         pt: { x: 0, y: 0 }
+        //     });
+        // });
     }
 
     public get hWnd(): HWND {
@@ -126,7 +152,7 @@ export class WND {
     public get rcWindow(): RECT {
         return this._rcWindow;
     }
-        
+
 
     public get children(): HWND[] {
         return [...ObGetChildHandlesByType(this._hWnd, "WND")];
@@ -136,6 +162,37 @@ export class WND {
         ObSetHandleOwner(hWnd, this._hWnd);
     }
 
+    public WndProc(msg: number, wParam: WPARAM, lParam: LPARAM): LRESULT | Promise<LRESULT> {
+        return this._lpfnWndProc(this._hWnd, msg, wParam, lParam);
+    }
+
+    private msgQueueResolve: (value?: any) => void;
+    private msgQueuePromise: Promise<any>;
+    private msgQueue: MSG[] = [];
+
+    public EnqueueMessage(msg: MSG): void {
+        this.msgQueue.push(msg);
+        this.msgQueueResolve();
+    }
+
+    public async GetMessage(): Promise<MSG> {
+        if (this.msgQueue.length > 0) {
+            return this.msgQueue.shift()!;
+        }
+
+        await (this.msgQueuePromise = new Promise((resolve) => {
+            this.msgQueueResolve = resolve;
+        }));
+        return this.msgQueue.shift()!;
+    }
+
+    public async TranslateMessage(msg: MSG): Promise<boolean> {
+        return true;
+    }
+
+    public async DispatchMessage(msg: MSG): Promise<LRESULT> {
+        return await this.WndProc(msg.message, msg.wParam, msg.lParam);
+    }
 
     public destroy(): void {
     }

@@ -1,11 +1,15 @@
 import {
     CREATE_WINDOW_EX,
     HWND,
+    LRESULT,
     MINMAXINFO,
     SM_CXMINIMIZED,
     SM_CXSCREEN,
     SM_CYMINIMIZED,
     SM_CYSCREEN,
+    WM_CREATE,
+    WM_NCCREATE,
+    WNDPROC_PARAMS,
     WS_BORDER,
     WS_CAPTION,
     WS_CHILD,
@@ -16,6 +20,7 @@ import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
 import { ObDuplicateHandle, ObGetObject } from "../objects.js";
 import { POINT, RECT, SIZE } from "../types/gdi32.types.js";
 
+import { NtAwait } from "../util.js";
 import { NtFindClass } from "./class.js";
 import { NtSetLastError } from "../error.js";
 import { PEB } from "../types/types.js";
@@ -89,6 +94,15 @@ export function NTWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, maxPos:
     }
 }
 
+export async function NtSendMessageInst(peb: PEB, params: WNDPROC_PARAMS): Promise<LRESULT> {
+    const [hWnd, uMsg, wParam, lParam] = params;
+    const wnd = ObGetObject<WND>(hWnd);
+    if (wnd) {
+        return await NtAwait(wnd.WndProc(uMsg, wParam, lParam));
+    }
+
+    return 0;
+}
 
 export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promise<HWND> {
     const { dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam } = data;
@@ -202,6 +216,17 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         cy: createStruct.y
     };
 
+    await NtSendMessageInst(peb, [wnd.hWnd, WM_NCCREATE, 0, createStruct]);
+
+    // todo: wm_ncalcsize
+
+    let result = await NtSendMessageInst(peb, [wnd.hWnd, WM_CREATE, 0, createStruct]);
+    if (result === -1) {
+        wnd.destroy();
+        return 0;
+    }
+
+    console.log("wnd", wnd);
 
     return wnd.hWnd;
 }
