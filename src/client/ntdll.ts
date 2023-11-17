@@ -110,7 +110,7 @@ class SubsystemClass {
 
         const callback = this.callbackMap.get(msg.nChannel);
         if (callback) {
-            let ret = await NtAwait(callback(msg));
+            let ret = await callback(msg);
             if (ret !== undefined && msg.nReplyChannel) {
                 this.PostMessage({ nType: msg.nType, nChannel: msg.nReplyChannel, data: ret });
             }
@@ -184,7 +184,7 @@ async function LdrLoadDll(lpLibFileName: string, pPC: PROCESS_CREATE) {
     }
 
     if (module[exec.entryPoint]) {
-        let retVal = await NtAwait(module[exec.entryPoint]());
+        let retVal = await module[exec.entryPoint]();
     }
 }
 
@@ -192,7 +192,7 @@ async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
     const exec = pPC.lpExecutable;
     const module = await import("/" + exec.file);
     if (module[exec.entryPoint]) {
-        let retVal = await NtAwait(module[exec.entryPoint]());
+        let retVal = await module[exec.entryPoint]();
 
         await Ntdll.SendMessage<PROCESS_EXIT>({
             nType: NTDLL.ProcessExit,

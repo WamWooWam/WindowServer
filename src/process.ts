@@ -158,7 +158,7 @@ export class PsProcess {
             try {
                 console.log(`%s:server recieved message %s:%d, %O, calling %O`, msg.lpSubsystem, msg.lpSubsystem, msg.nType, msg, handler);
 
-                let resp = await NtAwait(handler(this.peb, msg.data));
+                let resp = await handler(this.peb, msg.data);
 
                 this.PostMessage({ lpSubsystem: msg.lpSubsystem, nType: msg.nType, nChannel: msg.nChannel, data: resp });
             } catch (e) {

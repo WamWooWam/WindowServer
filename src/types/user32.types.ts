@@ -210,8 +210,8 @@ export interface MSG {
     message: number;
     wParam: WPARAM;
     lParam: LPARAM;
-    time: number;
-    pt: {
+    time?: number;
+    pt?: {
         x: number;
         y: number;
     };
