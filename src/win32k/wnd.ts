@@ -1,4 +1,27 @@
-import { CREATE_WINDOW_EX, CW_USEDEFAULT, HINSTANCE, HMENU, HWND, LPARAM, LRESULT, MSG, SM_CXFRAME, SM_CXSIZE, WNDPROC, WPARAM, WS_CAPTION, WS_CHILD, WS_CLIPSIBLINGS, WS_DLGFRAME, WS_EX_DLGMODALFRAME, WS_EX_STATICEDGE, WS_EX_WINDOWEDGE, WS_POPUP, WS_SIZEBOX, WS_THICKFRAME } from "../types/user32.types.js";
+import {
+     CREATE_WINDOW_EX,
+     CW_USEDEFAULT,
+     HINSTANCE,
+     HMENU,
+     HWND,
+     LPARAM,
+     LRESULT,
+     MSG,
+     SM_CXFRAME,
+     SM_CXSIZE,
+     WNDPROC,
+     WPARAM,
+     WS_CAPTION,
+     WS_CHILD,
+     WS_CLIPSIBLINGS,
+     WS_DLGFRAME,
+     WS_EX_DLGMODALFRAME,
+     WS_EX_STATICEDGE,
+     WS_EX_WINDOWEDGE,
+     WS_POPUP,
+     WS_SIZEBOX,
+     WS_THICKFRAME
+} from "../types/user32.types.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { ObCloseHandle, ObGetChildHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "../objects.js";
 import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
