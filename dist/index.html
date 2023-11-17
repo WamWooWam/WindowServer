@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Page Title</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script src='filer.js'></script>
+    <script defer type="module" src='index.js'></script>
+    <style>
+        body {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            margin: 0;
+
+            background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAARSURBVBhXY2Bg+A/EYMDwHwAMAgH/CWV5JQAAAABJRU5ErkJggg==);
+            background-repeat: repeat;
+
+            overflow: hidden;
+        }
+    </style>
+    <link rel="stylesheet" href="/styles/98.css">
+</head>
+
+<body>
+    <div class="window" style="width: 300px; z-index: 9999999; position: absolute; right: 32px; bottom: 32px;">
+        <div class="title-bar">
+            <div class="title-bar-text">Window Server</div>
+        </div>
+        <div class="window-body">
+            <div class="sunken-panel" style="height: 120px; width: 100%;">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Process</th>
+                            <th>ID</th>
+                            <th>Command Line</th>
+                        </tr>
+                    </thead>
+                    <tbody id="processes">
+  
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 8px; text-align: right;">
+                <button id="spawn">Spawn</button>
+                <button id="quit">Quit</button>
+                <button id="kill">Kill</button>
+            </div>
+        </div>
+        <div class="status-bar">
+            <p class="status-bar-field" style="text-align: right;"><span id="count">0</span>&nbsp;Processes</p>
+        </div>
+    </div>
+</body>
+
+</html>

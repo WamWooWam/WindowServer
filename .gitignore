@@ -27,6 +27,7 @@ yarn-error.log*
 
 .env
 
-dist/
+dist/**/*.js
+dist/**/*.js.map
 publish/
 publish.zip

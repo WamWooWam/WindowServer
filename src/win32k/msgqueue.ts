@@ -1,9 +1,12 @@
-import { HWND, MSG } from "../types/user32.types.js";
+import { HWND, LRESULT, MSG } from "../types/user32.types.js";
 import { MSG_QUEUE, W32PROCINFO } from "./shared.js";
 
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import { WND } from "./wnd.js";
+
+type MSG_CALLBACK = (result: LRESULT) => Promise<void> | void;
+type MSG_CALLBACKS = { [msg: number]: MSG_CALLBACK[] };
 
 export default class W32MSG_QUEUE implements MSG_QUEUE {
     private _msgQueue: MSG[] = [];
@@ -20,7 +23,7 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
         this._w32ProcInfo = procInfo;
     }
 
-    public EnqueueMessage(msg: MSG): void {
+    public EnqueueMessage(msg: MSG): void {        
         this._msgQueue.push(msg);
         this._msgQueueResolve(msg);
     }
@@ -52,13 +55,12 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
         return true; // TODO: implement
     }
 
-    async DispatchMessage(lpMsg: MSG): Promise<boolean> {
+    async DispatchMessage(lpMsg: MSG): Promise<LRESULT> {
         const hWnd = this._w32ProcInfo.hWnds.find(hWnd => hWnd === lpMsg.hWnd);
         if (hWnd) {
             const wnd = ObGetObject<WND>(hWnd);
             if (wnd) {
-                await wnd.WndProc(lpMsg.message, lpMsg.wParam, lpMsg.lParam);
-                return true;
+                return await wnd.WndProc(lpMsg.message, lpMsg.wParam, lpMsg.lParam);
             }
         }
 

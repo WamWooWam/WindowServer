@@ -193,6 +193,36 @@ export const WM_KEYUP = 0x0101;
 
 export const WM_USER = 0x0400;
 
+export const BS_PUSHBUTTON = 0x00000000;
+export const BS_DEFPUSHBUTTON = 0x00000001;
+export const BS_CHECKBOX = 0x00000002;
+export const BS_AUTOCHECKBOX = 0x00000003;
+export const BS_RADIOBUTTON = 0x00000004;
+export const BS_3STATE = 0x00000005;
+export const BS_AUTO3STATE = 0x00000006;
+export const BS_GROUPBOX = 0x00000007;
+export const BS_USERBUTTON = 0x00000008;
+export const BS_AUTORADIOBUTTON = 0x00000009;   
+export const BS_PUSHBOX = 0x0000000A;
+export const BS_OWNERDRAW = 0x0000000B;
+export const BS_TYPEMASK = 0x0000000F;
+export const BS_LEFTTEXT = 0x00000020;
+export const BS_TEXT = 0x00000000;
+export const BS_ICON = 0x00000040;
+export const BS_BITMAP = 0x00000080;
+export const BS_LEFT = 0x00000100;
+export const BS_RIGHT = 0x00000200;
+export const BS_CENTER = 0x00000300;
+export const BS_TOP = 0x00000400;
+export const BS_BOTTOM = 0x00000800;
+export const BS_VCENTER = 0x00000C00;
+export const BS_PUSHLIKE = 0x00001000;
+export const BS_MULTILINE = 0x00002000;
+export const BS_NOTIFY = 0x00004000;
+export const BS_FLAT = 0x00008000;
+export const BS_RIGHTBUTTON = BS_LEFTTEXT;
+
+
 export type HWND = HANDLE;
 export type HINSTANCE = HANDLE;
 export type HICON = HANDLE;

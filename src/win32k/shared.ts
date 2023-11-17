@@ -14,13 +14,12 @@ import { PEB } from "../types/types.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 
 export interface MSG_QUEUE {
-    EnqueueMessage(msg: MSG): void;
+    EnqueueMessage(msg: MSG, callback?: (result: LRESULT) => void | Promise<void>): void;
     GetMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number): Promise<MSG>;
     PeekMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number, wRemoveMsg: number): Promise<MSG>;
     TranslateMessage(lpMsg: MSG): Promise<boolean>;
     DispatchMessage(lpMsg: MSG): Promise<LRESULT>;
 }
-
 
 export interface W32PROCINFO {
     classes: W32CLASSINFO[];

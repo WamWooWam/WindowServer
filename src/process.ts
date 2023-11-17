@@ -9,13 +9,6 @@ import { NtAllocSharedMemory } from "./sharedmem.js";
 import { NtAwait } from "./util.js";
 import { SUBSYS_NTDLL } from "./types/subsystems.js";
 
-let __procId = 0;
-const assignId = () => {
-    const id = __procId;
-    __procId += 3;
-    return id;
-}
-
 export class PsProcess {
     id: number;
     name: string;
@@ -33,9 +26,11 @@ export class PsProcess {
 
     exitCode?: number;
 
+    onTerminate?: () => void;
+
     private worker: Worker;
     private exec: Executable;
-    private peb: PEB;
+    peb: PEB;
 
     private hSharedMemory: HANDLE;
 
@@ -43,8 +38,8 @@ export class PsProcess {
     private callbackId = 0x7FFFFFFF;
 
     constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
-        this.id = assignId();
-        this.handle = ObSetObject<PsProcess>(this, "PROC", null, this.terminate.bind(this));
+        this.handle = ObSetObject<PsProcess>(this, "PROC", null, this.Terminate.bind(this));
+        this.id = this.handle;
         this.name = exec.name;
         this.version = exec.version;
         this.executable = exec.file;
@@ -66,7 +61,7 @@ export class PsProcess {
         this.CreateSubsystem(NTDLL_SUBSYSTEM);
     }
 
-    start() {
+    Start() {
         this.worker = new Worker('/client/ntdll.js', { type: "module", name: this.name });
         this.worker.onmessage = (event) => this.HandleMessage(event.data as Message);
         this.worker.onerror = (event) => console.error(event);
@@ -88,19 +83,20 @@ export class PsProcess {
         });
     }
 
-    terminate() {
-        this.worker.terminate();
+    Terminate() {
+        if (this.worker) {
+            this.worker.terminate();
+            this.onTerminate?.();
 
-        for (const [_, subsys] of this.peb.lpSubsystems) {
-            subsys.lpfnExit?.(this.peb, subsys);
+            for (const [_, subsys] of this.peb.lpSubsystems) {
+                subsys.lpfnExit?.(this.peb, subsys);
+            }
+
+            this.worker = null;
         }
 
         ObDestroyHandle(this.handle);
     }
-
-    // send(msg: Message) {
-    //     this.worker.postMessage(msg);
-    // }
 
     async SendMessage<S = any, R = any>(msg: Message<S>): Promise<Message<R>> {
         console.debug(`server sending message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
@@ -114,6 +110,11 @@ export class PsProcess {
                     resolve(msg);
                 }
             });
+            
+            if (!this.worker) {
+                console.warn(`worker is null, is the process terminated? dropping message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+                return;
+            }
 
             this.worker.postMessage({
                 lpSubsystem: msg.lpSubsystem,
@@ -126,6 +127,11 @@ export class PsProcess {
     }
 
     private PostMessage<S = any>(msg: Message<S>) {
+        if (!this.worker) {
+            console.warn(`worker is null, is the process terminated? dropping message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+            return;
+        }
+
         console.debug(`server posting message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
         this.worker.postMessage(msg);
     }
@@ -148,11 +154,11 @@ export class PsProcess {
             this.callbackMap.delete(msg.nChannel);
         }
         else {
-            this.recieve(msg);
+            this.HandleSyscall(msg);
         }
     }
 
-    async recieve(msg: Message) {
+    private async HandleSyscall(msg: Message) {
         const handler = this.peb.lpSubsystems.get(msg.lpSubsystem)?.lpExports[msg.nType];
         if (handler) {
             try {
@@ -185,7 +191,7 @@ export class PsProcess {
 
             this.peb.lpSubsystems.set(subsystem.lpszName, data);
 
-            await NtAwait(subsystem.lpfnInit?.(this.peb, data));
+            await subsystem.lpfnInit?.(this.peb, data);
         }
     }
 }

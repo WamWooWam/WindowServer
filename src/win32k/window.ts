@@ -4,9 +4,7 @@ import {
     LRESULT,
     MINMAXINFO,
     SM_CXMINIMIZED,
-    SM_CXSCREEN,
     SM_CYMINIMIZED,
-    SM_CYSCREEN,
     SW_HIDE,
     SW_SHOW,
     SW_SHOWDEFAULT,
@@ -77,15 +75,6 @@ export function NTWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, maxPos:
     if (parentWindow) {
         rc = NtIntGetClientRect(peb, wnd.hParent);
     }
-}
-
-export async function NtDispatchMessageDirect(peb: PEB, params: WNDPROC_PARAMS): Promise<LRESULT> {
-    return await NtDispatchMessage(peb, {
-        hWnd: params[0],
-        message: params[1],
-        wParam: params[2],
-        lParam: params[3],
-    })
 }
 
 export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promise<HWND> {
@@ -200,11 +189,22 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         cy: createStruct.y
     };
 
-    await NtDispatchMessageDirect(peb, [wnd.hWnd, WM_NCCREATE, 0, createStruct]);
+    await NtDispatchMessage(peb, {
+        hWnd: wnd.hWnd,
+        message: WM_NCCREATE,
+        wParam: 0,
+        lParam: createStruct
+    });
 
     // todo: wm_ncalcsize
 
-    let result = await NtDispatchMessageDirect(peb, [wnd.hWnd, WM_CREATE, 0, createStruct]);
+    let result = await NtDispatchMessage(peb, {
+        hWnd: wnd.hWnd,
+        message: WM_CREATE,
+        wParam: 0,
+        lParam: createStruct
+    });
+    
     if (result === -1) {
         wnd.Dispose();
         return 0;

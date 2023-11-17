@@ -15,10 +15,10 @@ const handleTable: Map<HANDLE, tagHANDLE> = new Map();
  
 let handleCounter = 0;
 function GenHandle(): HANDLE {
-    const handleBase = 0x80000000;
-    handleCounter += 4;
+    const handleBase = 0x0;
+    handleCounter += 1;
 
-    return handleBase + handleCounter;
+    return handleBase + (handleCounter * 4);
 }
 
 export function ObGetObject<T>(handle: HANDLE): T {

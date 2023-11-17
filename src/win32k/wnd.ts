@@ -1,29 +1,35 @@
 import {
-     CREATE_WINDOW_EX,
-     CW_USEDEFAULT,
-     HINSTANCE,
-     HMENU,
-     HWND,
-     LPARAM,
-     LRESULT,
-     MSG,
-     SM_CXFRAME,
-     SM_CXSIZE,
-     WNDPROC,
-     WPARAM,
-     WS_CAPTION,
-     WS_CHILD,
-     WS_CLIPSIBLINGS,
-     WS_DLGFRAME,
-     WS_EX_DLGMODALFRAME,
-     WS_EX_STATICEDGE,
-     WS_EX_WINDOWEDGE,
-     WS_POPUP,
-     WS_SIZEBOX,
-     WS_THICKFRAME
+    CREATE_WINDOW_EX,
+    CW_USEDEFAULT,
+    HINSTANCE,
+    HMENU,
+    HWND,
+    LPARAM,
+    LRESULT,
+    MSG,
+    SM_CXFRAME,
+    SM_CXSIZE,
+    WNDPROC,
+    WPARAM,
+    WS_CAPTION,
+    WS_CHILD,
+    WS_CLIPSIBLINGS,
+    WS_DLGFRAME,
+    WS_EX_DLGMODALFRAME,
+    WS_EX_STATICEDGE,
+    WS_EX_WINDOWEDGE,
+    WS_POPUP,
+    WS_SIZEBOX,
+    WS_THICKFRAME
 } from "../types/user32.types.js";
 import { HANDLE, PEB } from "../types/types.js";
-import { ObCloseHandle, ObGetChildHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "../objects.js";
+import {
+    ObCloseHandle,
+    ObGetChildHandlesByType,
+    ObGetObject,
+    ObSetHandleOwner,
+    ObSetObject
+} from "../objects.js";
 import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtDispatchMessage } from "./msg.js";
@@ -57,6 +63,14 @@ export class WND {
     }
 
     private _pRootElement: HTMLElement;
+
+    private _pTitleBar: HTMLElement;
+    private _pTitleBarText: HTMLElement;
+    private _pTitleBarControls: HTMLElement;
+    private _pMinimizeButton: HTMLElement;
+    private _pMaximizeButton: HTMLElement;
+    private _pCloseButton: HTMLElement;
+    private _pWindowBody: HTMLElement;
 
     constructor(
         peb: PEB,
@@ -133,6 +147,8 @@ export class WND {
 
         pti.hWnds.push(this._hWnd);
 
+        this.FixWindowCoordinates();
+
         document.addEventListener("keypress", (ev) => {
             NtDispatchMessage(peb, {
                 hWnd: this._hWnd,
@@ -141,8 +157,6 @@ export class WND {
                 lParam: 0
             });
         });
-
-        this._pRootElement = document.createElement("div");
 
         // document.addEventListener("keyup", (ev) => {
         //     this.EnqueueMessage({
@@ -197,7 +211,7 @@ export class WND {
     }
 
     public get pRootElement(): HTMLElement {
-        return this._pRootElement;
+        return this._pWindowBody ?? this._pRootElement;
     }
 
     public AddChild(hWnd: HWND): void {
@@ -297,17 +311,93 @@ export class WND {
 
         this.InvalidateRect();
     }
-    
+
     private InvalidateRect(): void {
+        if (!this._pRootElement) {
+            if (this._pClsInfo.lpszClassName === "BUTTON")
+                this._pRootElement = document.createElement("button");
+            else
+                this._pRootElement = document.createElement("div");
+        }
+
+
         // for now, dont do a dirty flag, just set the style
         this._pRootElement.style.left = `${this.rcWindow.left}px`;
         this._pRootElement.style.top = `${this.rcWindow.top}px`;
         this._pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
         this._pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
         this._pRootElement.style.position = ((this.dwStyle & (WS_CHILD | WS_POPUP)) != WS_CHILD) ? "absolute" : "relative";
-        this._pRootElement.style.border = "1px solid black";
-        this._pRootElement.style.boxSizing = "border-box";
         this._pRootElement.style.overflow = "hidden";
-        this._pRootElement.style.backgroundColor = "white";
+
+        // use 98.css styles
+
+        if (this.dwStyle & WS_SIZEBOX) {
+            this._pRootElement.style.resize = "both";
+        }
+        else {
+            this._pRootElement.style.resize = "none";
+        }
+
+        if (this.dwStyle & WS_THICKFRAME) {
+            /*
+                <div class="window" style="width: 300px">
+                    <div class="title-bar">
+                        <div class="title-bar-text">A Window With Stuff In It</div>
+                        <div class="title-bar-controls">
+                        <button aria-label="Minimize"></button>
+                        <button aria-label="Maximize"></button>
+                        <button aria-label="Close"></button>
+                        </div>
+                    </div>
+                    <div class="window-body">
+                        <p>There's so much room for activities!</p>
+                    </div>
+                </div>
+            */
+
+            if (!this._pTitleBar) {
+                const titleBar = document.createElement("div");
+                titleBar.className = "title-bar";
+
+                const titleBarText = document.createElement("div");
+                titleBarText.className = "title-bar-text";
+
+                const titleBarControls = document.createElement("div");
+                titleBarControls.className = "title-bar-controls";
+
+                const minimizeButton = document.createElement("button");
+                minimizeButton.setAttribute("aria-label", "Minimize");
+
+                const maximizeButton = document.createElement("button");
+                maximizeButton.setAttribute("aria-label", "Maximize");
+
+                const closeButton = document.createElement("button");
+                closeButton.setAttribute("aria-label", "Close");
+
+                titleBarControls.appendChild(minimizeButton);
+                titleBarControls.appendChild(maximizeButton);
+                titleBarControls.appendChild(closeButton);
+
+                titleBar.appendChild(titleBarText);
+                titleBar.appendChild(titleBarControls);
+
+                const windowBody = document.createElement("div");
+                windowBody.className = "window-body";
+
+                this._pRootElement.appendChild(titleBar);
+                this._pRootElement.appendChild(windowBody);
+
+                this._pTitleBar = titleBar;
+                this._pTitleBarText = titleBarText;
+                this._pTitleBarControls = titleBarControls;
+                this._pMinimizeButton = minimizeButton;
+                this._pMaximizeButton = maximizeButton;
+                this._pCloseButton = closeButton;
+                this._pWindowBody = windowBody;
+            }
+
+            this._pTitleBarText.innerText = this._lpszName;
+            this._pRootElement.className = "window";
+        }
     }
 }

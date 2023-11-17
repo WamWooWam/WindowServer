@@ -1,6 +1,18 @@
 import { GetModuleHandle } from "./client/kernel32.js";
 import { CreateWindowEx, DefWindowProc, DispatchMessage, GetMessage, RegisterClass, ShowWindow, TranslateMessage } from "./client/user32.js";
-import { CW_USEDEFAULT, HINSTANCE, HWND, LPARAM, LRESULT, MSG, SW_SHOWDEFAULT, WM_CREATE, WNDCLASSEX, WPARAM, WS_OVERLAPPEDWINDOW } from "./types/user32.types.js";
+import {
+    CW_USEDEFAULT,
+    HINSTANCE,
+    HWND,
+    LPARAM,
+    LRESULT,
+    MSG,
+    SW_SHOWDEFAULT,
+    WM_CREATE,
+    WNDCLASSEX,
+    WPARAM,
+    WS_OVERLAPPEDWINDOW
+} from "./types/user32.types.js";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
