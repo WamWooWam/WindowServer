@@ -1,3 +1,4 @@
+import { NtCreateWindowEx, NtShowWindow } from "../win32k/window.js";
 import { NtDispatchMessage, NtGetMessage } from "../win32k/msg.js";
 import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import USER32, {
@@ -13,9 +14,9 @@ import USER32, {
     SHOW_WINDOW_REPLY,
     WNDCLASS_WIRE,
     WNDPROC_PARAMS,
+    WS_CHILD,
 } from "../types/user32.types.js";
 
-import { NtCreateWindowEx } from "../win32k/window.js";
 import { NtDefWindowProc } from "../win32k/def.js";
 import { NtRegisterClassEx } from "../win32k/class.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
@@ -37,6 +38,24 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
 
         lpSubsystem.lpParams = procInfo;
     }
+
+    const DefWindowProc = (hWnd: number, uMsg: number, wParam: number, lParam: number): LRESULT => {
+        return UserDefWindowProc(peb, [hWnd, uMsg, wParam, lParam]);
+    }
+
+    NtRegisterClassEx(peb, {
+        style: WS_CHILD,
+        lpszClassName: "BUTTON",
+        lpszMenuName: null,
+        lpfnWndProc: DefWindowProc,
+        hIcon: 0,
+        hCursor: 0,
+        hbrBackground: 0,
+        hInstance: 0,
+        hIconSm: 0,
+        cbClsExtra: 0,
+        cbWndExtra: 0
+    });
 }
 
 async function UserRegisterClass(peb: PEB, { lpWndClass }: REGISTER_CLASS): Promise<REGISTER_CLASS_REPLY> {
@@ -62,6 +81,8 @@ async function UserCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promise<CRE
 async function UserShowWindow(peb: PEB, data: SHOW_WINDOW): Promise<SHOW_WINDOW_REPLY> {
     console.log("ShowWindow", data);
 
+    await NtShowWindow(peb, data.hWnd, data.nCmdShow);
+
     return { retVal: true };
 }
 
@@ -73,13 +94,13 @@ async function UserGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_
 }
 
 async function UserPeekMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    console.log("PeekMessage", data);
+    console.error("PeekMessage", data);
 
     return { retVal: false, lpMsg: data.lpMsg };
 }
 
 async function UserTranslateMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    console.log("TranslateMessage", data);
+    console.warn("TranslateMessage", data);
 
     return { retVal: false, lpMsg: data.lpMsg };
 }

@@ -127,7 +127,7 @@ export function ObDestroyHandle(handle: HANDLE): boolean {
         return false;
     }
 
-    console.log(`destroying handle ${handle}, %O`, tag.value);
+    console.log(`destroying handle ${handle}, %O %O`, tag, tag.value);
 
     for (const ownedHandle of tag.ownedHandles) {
         ObDestroyHandle(ownedHandle);

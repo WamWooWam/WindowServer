@@ -1,9 +1,36 @@
 import { GetModuleHandle } from "./client/kernel32.js";
 import { CreateWindowEx, DefWindowProc, DispatchMessage, GetMessage, RegisterClass, ShowWindow, TranslateMessage } from "./client/user32.js";
-import { CW_USEDEFAULT, HINSTANCE, HWND, LPARAM, LRESULT, MSG, SW_SHOWDEFAULT, WNDCLASSEX, WPARAM, WS_OVERLAPPEDWINDOW } from "./types/user32.types.js";
+import { CW_USEDEFAULT, HINSTANCE, HWND, LPARAM, LRESULT, MSG, SW_SHOWDEFAULT, WM_CREATE, WNDCLASSEX, WPARAM, WS_OVERLAPPEDWINDOW } from "./types/user32.types.js";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
-    return await DefWindowProc(hwnd, msg, wParam, lParam);
+    switch (msg) {
+        case WM_CREATE: {
+            const button = await CreateWindowEx(
+                0,                      // dwExStyle
+                "BUTTON",               // lpClassName
+                "Test Button",          // lpWindowName
+                0x50000000,             // dwStyle
+
+                // x, y, nWidth, nHeight
+                10, 10, 100, 30,
+
+                hwnd,                   // hWndParent
+                0,                      // hMenu      
+                0,                      // hInstance
+                null                    // lpParam
+            );
+
+            console.log(button);
+
+            await ShowWindow(button, SW_SHOWDEFAULT);
+
+            break;
+        }
+        default:
+            return await DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+
+    return 0;
 }
 
 async function main() {
@@ -28,25 +55,23 @@ async function main() {
     const atom = await RegisterClass(wndClass);
     console.log(atom);
 
-    for (let i = 0; i < 3; i++) {
-        const hWnd = await CreateWindowEx(
-            0,                      // dwExStyle
-            className,              // lpClassName
-            "Test Window",          // lpWindowName
-            WS_OVERLAPPEDWINDOW,    // dwStyle
+    const hWnd = await CreateWindowEx(
+        0,                      // dwExStyle
+        className,              // lpClassName
+        "Test Window",          // lpWindowName
+        WS_OVERLAPPEDWINDOW,    // dwStyle
 
-            // x, y, nWidth, nHeight
-            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+        // x, y, nWidth, nHeight
+        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
 
-            0,                      // hWndParent
-            0,                      // hMenu      
-            hModule,                // hInstance
-            null                    // lpParam
-        );
-        console.log(hWnd);
+        0,                      // hWndParent
+        0,                      // hMenu      
+        hModule,                // hInstance
+        null                    // lpParam
+    );
+    console.log(hWnd);
 
-        await ShowWindow(hWnd, SW_SHOWDEFAULT);
-    }
+    await ShowWindow(hWnd, SW_SHOWDEFAULT);
 
 
     let msg: MSG = {} as MSG;

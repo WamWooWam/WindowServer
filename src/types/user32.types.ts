@@ -84,6 +84,9 @@ export const SM_CXBORDER = 5;
 export const SM_CYBORDER = 6;
 export const SM_CXDLGFRAME = 7;
 export const SM_CYDLGFRAME = 8;
+
+export const SM_CXSIZE = 30;
+export const SM_CYSIZE = 31;
 export const SM_CXFRAME = 32;
 export const SM_CYFRAME = 33;
 export const SM_CXMINIMIZED = 57;

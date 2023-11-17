@@ -1,4 +1,4 @@
-import { ATOM, HWND, LPARAM, WNDCLASS_WIRE, WNDPROC, WPARAM } from "../types/user32.types.js";
+import { ATOM, HWND, LPARAM, WNDCLASS, WNDCLASS_WIRE, WNDPROC, WPARAM } from "../types/user32.types.js";
 import { GetW32ProcInfo, W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtDoCallbackAsync } from "../callback.js";
@@ -18,7 +18,7 @@ function CreateWndProcCallback(peb: PEB, lpfnWndProc: number | WNDPROC): WNDPROC
     }
 }
 
-export function NtRegisterClassEx(peb: PEB, lpWndClass: WNDCLASS_WIRE): ATOM {
+export function NtRegisterClassEx(peb: PEB, lpWndClass: WNDCLASS_WIRE | WNDCLASS): ATOM {
     const state = GetW32ProcInfo(peb);
     const className = lpWndClass.lpszClassName as string;
 

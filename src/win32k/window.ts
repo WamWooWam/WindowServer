@@ -7,6 +7,9 @@ import {
     SM_CXSCREEN,
     SM_CYMINIMIZED,
     SM_CYSCREEN,
+    SW_HIDE,
+    SW_SHOW,
+    SW_SHOWDEFAULT,
     WM_CREATE,
     WM_NCCREATE,
     WNDPROC_PARAMS,
@@ -20,9 +23,9 @@ import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
 import { ObDuplicateHandle, ObGetObject } from "../objects.js";
 import { POINT, RECT, SIZE } from "../types/gdi32.types.js";
 
-import { NtAwait } from "../util.js";
 import { NtDispatchMessage } from "./msg.js";
 import { NtFindClass } from "./class.js";
+import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtSetLastError } from "../error.js";
 import { PEB } from "../types/types.js";
 import { WND } from "./wnd.js";
@@ -30,25 +33,6 @@ import { WND } from "./wnd.js";
 export function NtGetDesktopWindow(peb: PEB): HWND {
     const state = GetW32ProcInfo(peb);
     return state.hDesktop;
-}
-
-export function NtIntGetSystemMetrics(peb: PEB, nIndex: number): number {
-    const state = GetW32ProcInfo(peb);
-    const wnd = ObGetObject<WND>(state.hDesktop);
-    if (wnd) {
-        switch (nIndex) {
-            case SM_CXSCREEN: // SM_CXSCREEN
-                return wnd.rcClient.right - wnd.rcClient.left;
-            case SM_CYSCREEN: // SM_CYSCREEN
-                return wnd.rcClient.bottom - wnd.rcClient.top;
-            case SM_CXMINIMIZED: // SM_CXMINIMIZED
-                return 100; // hardcoded, fix
-            case SM_CXMINIMIZED: // SM_CYMINIMIZED
-                return 32; // hardcoded, fix
-        }
-    }
-
-    return 0;
 }
 
 export function NtIntGetClientRect(peb: PEB, hWnd: HWND): RECT {
@@ -222,11 +206,30 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
 
     let result = await NtDispatchMessageDirect(peb, [wnd.hWnd, WM_CREATE, 0, createStruct]);
     if (result === -1) {
-        wnd.destroy();
+        wnd.Dispose();
         return 0;
     }
 
     console.log("wnd", wnd);
 
     return wnd.hWnd;
+}
+
+export async function NtShowWindow(peb: PEB, hWnd: HWND, nCmdShow: number) {
+    const wnd = ObGetObject<WND>(hWnd);
+    if (wnd) {
+        switch (nCmdShow) {
+            case SW_HIDE:
+                wnd.Hide();
+                break;
+            case SW_SHOW:
+            case SW_SHOWDEFAULT:
+                wnd.Show();
+                break;
+            default:
+                console.warn("NtShowWindow: unknown nCmdShow", nCmdShow);
+                break;
+        }
+    }
+
 }
