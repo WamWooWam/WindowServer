@@ -10,6 +10,7 @@ const USER32 = {
     PeekMessage: 0x00000006,
     TranslateMessage: 0x00000007,
     DispatchMessage: 0x00000008,
+    PostQuitMessage: 0x00000009,
 }
 
 export const CW_USEDEFAULT = 0x80000000;
@@ -188,10 +189,48 @@ export const WM_NCACTIVATE = 0x0086;
 
 export const WM_KEYDOWN = 0x0100;
 export const WM_KEYUP = 0x0101;
+export const WM_SYSCOMMAND = 0x0112;
 
 // TODO: the rest
 
 export const WM_USER = 0x0400;
+
+
+export const SC_SIZE = 0xF000;
+export const SC_MOVE = 0xF010;
+export const SC_MINIMIZE = 0xF020;
+export const SC_MAXIMIZE = 0xF030;
+export const SC_NEXTWINDOW = 0xF040;
+export const SC_PREVWINDOW = 0xF050;
+export const SC_CLOSE = 0xF060;
+export const SC_VSCROLL = 0xF070;
+export const SC_HSCROLL = 0xF080;
+export const SC_MOUSEMENU = 0xF090;
+export const SC_KEYMENU = 0xF100;
+export const SC_ARRANGE = 0xF110;
+export const SC_RESTORE = 0xF120;
+export const SC_TASKLIST = 0xF130;
+export const SC_SCREENSAVE = 0xF140;
+export const SC_HOTKEY = 0xF150;
+export const SC_DEFAULT = 0xF160;
+export const SC_MONITORPOWER = 0xF170;
+export const SC_CONTEXTHELP = 0xF180;
+
+export const SWP_NOSIZE = 0x0001;
+export const SWP_NOMOVE = 0x0002;
+export const SWP_NOZORDER = 0x0004;
+export const SWP_NOREDRAW = 0x0008;
+export const SWP_NOACTIVATE = 0x0010;
+export const SWP_FRAMECHANGED = 0x0020;
+export const SWP_SHOWWINDOW = 0x0040;
+export const SWP_HIDEWINDOW = 0x0080;
+export const SWP_NOCOPYBITS = 0x0100;
+export const SWP_NOOWNERZORDER = 0x0200;
+export const SWP_NOSENDCHANGING = 0x0400;
+export const SWP_DRAWFRAME = SWP_FRAMECHANGED;
+export const SWP_NOREPOSITION = SWP_NOOWNERZORDER;
+export const SWP_DEFERERASE = 0x2000;
+export const SWP_ASYNCWINDOWPOS = 0x4000;
 
 export const BS_PUSHBUTTON = 0x00000000;
 export const BS_DEFPUSHBUTTON = 0x00000001;

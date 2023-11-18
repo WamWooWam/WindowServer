@@ -5,25 +5,33 @@ import {
     MINMAXINFO,
     SM_CXMINIMIZED,
     SM_CYMINIMIZED,
+    SWP_HIDEWINDOW,
+    SWP_NOACTIVATE,
+    SWP_NOMOVE,
+    SWP_NOSIZE,
+    SWP_NOZORDER,
     SW_HIDE,
     SW_SHOW,
     SW_SHOWDEFAULT,
     WM_CREATE,
+    WM_DESTROY,
     WM_NCCREATE,
     WNDPROC_PARAMS,
     WS_BORDER,
     WS_CAPTION,
     WS_CHILD,
+    WS_EX_NOPARENTNOTIFY,
     WS_MINIMIZED,
-    WS_POPUP
+    WS_POPUP,
+    WS_VISIBLE
 } from "../types/user32.types.js";
 import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
-import { ObDuplicateHandle, ObGetObject } from "../objects.js";
+import { ObDestroyHandle, ObDuplicateHandle, ObGetObject } from "../objects.js";
 import { POINT, RECT, SIZE } from "../types/gdi32.types.js";
 
-import { NtDispatchMessage } from "./msg.js";
 import { NtFindClass } from "./class.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
+import { NtSendMessage } from "./msg.js";
 import { NtSetLastError } from "../error.js";
 import { PEB } from "../types/types.js";
 import { WND } from "./wnd.js";
@@ -188,23 +196,12 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         cx: createStruct.x,
         cy: createStruct.y
     };
-
-    await NtDispatchMessage(peb, {
-        hWnd: wnd.hWnd,
-        message: WM_NCCREATE,
-        wParam: 0,
-        lParam: createStruct
-    });
+    
+    await NtSendMessage(peb, [wnd.hWnd, WM_NCCREATE, 0, createStruct]);
 
     // todo: wm_ncalcsize
 
-    let result = await NtDispatchMessage(peb, {
-        hWnd: wnd.hWnd,
-        message: WM_CREATE,
-        wParam: 0,
-        lParam: createStruct
-    });
-    
+    let result = await NtSendMessage(peb, [wnd.hWnd, WM_CREATE, 0, createStruct]);
     if (result === -1) {
         wnd.Dispose();
         return 0;
@@ -233,3 +230,65 @@ export async function NtShowWindow(peb: PEB, hWnd: HWND, nCmdShow: number) {
     }
 
 }
+
+async function NtSendParentNotify(peb: PEB, pWnd: WND, msg: number) {
+    if ((pWnd.dwStyle & (WS_CHILD | WS_POPUP)) == WS_CHILD
+        && !(pWnd.dwExStyle & WS_EX_NOPARENTNOTIFY)) {
+        const parentWnd = ObGetObject<WND>(pWnd.hParent);
+        if (!parentWnd) {
+            console.warn("NtSendParentNotify: parentWnd is null");
+            return;
+        }
+
+        const handle = ObDuplicateHandle(parentWnd.hWnd);
+        await NtSendMessage(peb, [handle, msg, pWnd.hWnd, 0]);
+
+        ObDestroyHandle(handle);
+    }
+}
+
+
+export async function NtSetWindowPos(peb: PEB, hWnd: HWND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, uFlags: number) {
+
+}
+
+export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
+    const wnd = ObGetObject<WND>(hWnd);
+
+    if ((wnd.dwStyle & WS_CHILD)) {
+        await NtSendParentNotify(peb, wnd, WM_DESTROY);
+    }
+
+    if (wnd.hOwner === null) {
+        // TODO: notify the shell
+    }
+
+    if ((wnd.dwStyle & WS_VISIBLE)) {
+        if ((wnd.dwStyle & WS_CHILD)) {
+            await NtShowWindow(peb, hWnd, SW_HIDE);
+        }
+        else {
+            await NtSetWindowPos(peb, hWnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_HIDEWINDOW);
+        }
+    }
+
+    // adjust last active
+
+    // check shell window
+
+    // destroy children
+    for (const child of wnd.children) {
+        await NtDestroyWindow(peb, child);
+    }
+
+    await NtSendMessage(peb, [wnd.hWnd, WM_DESTROY, 0, 0]);
+
+    ObDestroyHandle(wnd.hWnd);
+
+    return true;
+}
+
+
+// export async function NtFreeWindow(peb: PEB, hWnd: HWND) {
+//    
+// }

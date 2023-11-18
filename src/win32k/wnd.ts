@@ -7,8 +7,12 @@ import {
     LPARAM,
     LRESULT,
     MSG,
+    SC_CLOSE,
+    SC_MAXIMIZE,
+    SC_MINIMIZE,
     SM_CXFRAME,
     SM_CXSIZE,
+    WM_SYSCOMMAND,
     WNDPROC,
     WPARAM,
     WS_CAPTION,
@@ -18,11 +22,15 @@ import {
     WS_EX_DLGMODALFRAME,
     WS_EX_STATICEDGE,
     WS_EX_WINDOWEDGE,
+    WS_MAXIMIZEBOX,
+    WS_MINIMIZEBOX,
+    WS_OVERLAPPED,
     WS_POPUP,
     WS_SIZEBOX,
     WS_THICKFRAME
 } from "../types/user32.types.js";
 import { HANDLE, PEB } from "../types/types.js";
+import { NtPostMessage, NtSendMessage } from "./msg.js";
 import {
     ObCloseHandle,
     ObGetChildHandlesByType,
@@ -32,7 +40,6 @@ import {
 } from "../objects.js";
 import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
-import { NtDispatchMessage } from "./msg.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
 import { RECT } from "../types/gdi32.types.js";
@@ -150,7 +157,7 @@ export class WND {
         this.FixWindowCoordinates();
 
         document.addEventListener("keypress", (ev) => {
-            NtDispatchMessage(peb, {
+            NtSendMessage(peb, {
                 hWnd: this._hWnd,
                 message: 0x0100, // WM_KEYDOWN
                 wParam: ev.keyCode,
@@ -248,6 +255,33 @@ export class WND {
             ObCloseHandle(this._hOwner);
     }
 
+    private OnMinimizeButtonClick(): void {
+        NtPostMessage(this._peb, {
+            hWnd: this._hWnd,
+            message: WM_SYSCOMMAND, 
+            wParam: SC_MINIMIZE, 
+            lParam: 0
+        });
+    }
+
+    private OnMaximizeButtonClick(): void {
+        NtPostMessage(this._peb, {
+            hWnd: this._hWnd,
+            message: WM_SYSCOMMAND, 
+            wParam: SC_MAXIMIZE, 
+            lParam: 0
+        });
+    }
+
+    private OnCloseButtonClick(): void {
+        NtPostMessage(this._peb, {
+            hWnd: this._hWnd,
+            message: WM_SYSCOMMAND,
+            wParam: SC_CLOSE,
+            lParam: 0
+        });
+    }
+
     private FixWindowCoordinates(): void {
         let x = this.rcWindow.left;
         let y = this.rcWindow.top;
@@ -312,6 +346,66 @@ export class WND {
         this.InvalidateRect();
     }
 
+    private CreateTitleBar(): void {
+        if (this._pTitleBar) {
+            if (this._pTitleBar.parentNode !== this._pRootElement) {
+                this._pTitleBar.remove();
+                this._pRootElement.appendChild(this._pTitleBar);
+            }
+
+            return;
+        }
+
+        const titleBar = document.createElement("div");
+        titleBar.className = "title-bar";
+
+        const titleBarText = document.createElement("div");
+        titleBarText.className = "title-bar-text";
+
+        const titleBarControls = document.createElement("div");
+        titleBarControls.className = "title-bar-controls";
+
+        if ((this.dwStyle & WS_MINIMIZEBOX)) {
+            const minimizeButton = document.createElement("button");
+            minimizeButton.setAttribute("aria-label", "Minimize");
+            minimizeButton.addEventListener("click", () => this.OnMinimizeButtonClick());
+
+            titleBarControls.appendChild(minimizeButton);
+
+            this._pMinimizeButton = minimizeButton;
+        }
+
+        if ((this.dwStyle & WS_MAXIMIZEBOX)) {
+            const maximizeButton = document.createElement("button");
+            maximizeButton.setAttribute("aria-label", "Maximize");
+            maximizeButton.addEventListener("click", () => this.OnMaximizeButtonClick());
+
+            titleBarControls.appendChild(maximizeButton);
+
+            this._pMaximizeButton = maximizeButton;
+        }
+
+        const closeButton = document.createElement("button");
+        closeButton.setAttribute("aria-label", "Close");
+        closeButton.addEventListener("click", () => this.OnCloseButtonClick());
+        titleBarControls.appendChild(closeButton);
+
+        titleBar.appendChild(titleBarText);
+        titleBar.appendChild(titleBarControls);
+
+        const windowBody = document.createElement("div");
+        windowBody.className = "window-body";
+
+        this._pRootElement.appendChild(titleBar);
+        this._pRootElement.appendChild(windowBody);
+
+        this._pTitleBar = titleBar;
+        this._pTitleBarText = titleBarText;
+        this._pTitleBarControls = titleBarControls;
+        this._pCloseButton = closeButton;
+        this._pWindowBody = windowBody;
+    }
+
     private InvalidateRect(): void {
         if (!this._pRootElement) {
             if (this._pClsInfo.lpszClassName === "BUTTON")
@@ -319,7 +413,6 @@ export class WND {
             else
                 this._pRootElement = document.createElement("div");
         }
-
 
         // for now, dont do a dirty flag, just set the style
         this._pRootElement.style.left = `${this.rcWindow.left}px`;
@@ -338,66 +431,12 @@ export class WND {
             this._pRootElement.style.resize = "none";
         }
 
+        if (this.dwStyle & WS_CAPTION) {
+            this.CreateTitleBar();
+        }
+
         if (this.dwStyle & WS_THICKFRAME) {
-            /*
-                <div class="window" style="width: 300px">
-                    <div class="title-bar">
-                        <div class="title-bar-text">A Window With Stuff In It</div>
-                        <div class="title-bar-controls">
-                        <button aria-label="Minimize"></button>
-                        <button aria-label="Maximize"></button>
-                        <button aria-label="Close"></button>
-                        </div>
-                    </div>
-                    <div class="window-body">
-                        <p>There's so much room for activities!</p>
-                    </div>
-                </div>
-            */
-
-            if (!this._pTitleBar) {
-                const titleBar = document.createElement("div");
-                titleBar.className = "title-bar";
-
-                const titleBarText = document.createElement("div");
-                titleBarText.className = "title-bar-text";
-
-                const titleBarControls = document.createElement("div");
-                titleBarControls.className = "title-bar-controls";
-
-                const minimizeButton = document.createElement("button");
-                minimizeButton.setAttribute("aria-label", "Minimize");
-
-                const maximizeButton = document.createElement("button");
-                maximizeButton.setAttribute("aria-label", "Maximize");
-
-                const closeButton = document.createElement("button");
-                closeButton.setAttribute("aria-label", "Close");
-
-                titleBarControls.appendChild(minimizeButton);
-                titleBarControls.appendChild(maximizeButton);
-                titleBarControls.appendChild(closeButton);
-
-                titleBar.appendChild(titleBarText);
-                titleBar.appendChild(titleBarControls);
-
-                const windowBody = document.createElement("div");
-                windowBody.className = "window-body";
-
-                this._pRootElement.appendChild(titleBar);
-                this._pRootElement.appendChild(windowBody);
-
-                this._pTitleBar = titleBar;
-                this._pTitleBarText = titleBarText;
-                this._pTitleBarControls = titleBarControls;
-                this._pMinimizeButton = minimizeButton;
-                this._pMaximizeButton = maximizeButton;
-                this._pCloseButton = closeButton;
-                this._pWindowBody = windowBody;
-            }
-
-            this._pTitleBarText.innerText = this._lpszName;
-            this._pRootElement.className = "window";
+            this._pRootElement.classList.add("window");
         }
     }
 }

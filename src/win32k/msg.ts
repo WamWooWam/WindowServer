@@ -1,4 +1,4 @@
-import { GET_MESSAGE, GET_MESSAGE_REPLY, LRESULT, MSG, WM_QUIT } from "../types/user32.types.js";
+import { GET_MESSAGE, GET_MESSAGE_REPLY, LRESULT, MSG, WM_QUIT, WNDPROC_PARAMS } from "../types/user32.types.js";
 import { HANDLE, PEB } from "../types/types.js";
 
 import { GetW32ProcInfo } from "./shared.js";
@@ -27,20 +27,30 @@ export async function NtPostMessage(peb: PEB, lpMsg: MSG) {
     state.lpMsgQueue.EnqueueMessage(lpMsg);
 }
 
-export async function NtSendMessage(peb: PEB, lpMsg: MSG): Promise<LRESULT> {
+// export async function NtSendMessage(peb: PEB, lpMsg: MSG): Promise<LRESULT> {
+//     const state = GetW32ProcInfo(peb);
+//     const hWnd = state.hWnds.find(hWnd => hWnd === lpMsg.hWnd);
+//     if (hWnd) {
+//         const wnd = ObGetObject<WND>(hWnd);
+//         return await wnd.WndProc(lpMsg.message, lpMsg.wParam, lpMsg.lParam);
+//     }
+
+//     return 0;
+// }
+
+export async function NtSendMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Promise<LRESULT> {
     const state = GetW32ProcInfo(peb);
-    const hWnd = state.hWnds.find(hWnd => hWnd === lpMsg.hWnd);
-    if (hWnd) {
-        const wnd = ObGetObject<WND>(hWnd);
-        return await wnd.WndProc(lpMsg.message, lpMsg.wParam, lpMsg.lParam);
+    if (msg instanceof Array) {
+        return await state.lpMsgQueue.DispatchMessage({
+            hWnd: msg[0],
+            message: msg[1],
+            wParam: msg[2],
+            lParam: msg[3]
+        });
     }
-
-    return 0;
-}
-
-export async function NtDispatchMessage(peb: PEB, msg: MSG): Promise<LRESULT> {
-    const state = GetW32ProcInfo(peb);
-    return await state.lpMsgQueue.DispatchMessage(msg);
+    else {
+        return await state.lpMsgQueue.DispatchMessage(msg);
+    }
 }
 
 export async function NtPostQuitMessage(peb: PEB, nExitCode: number) {

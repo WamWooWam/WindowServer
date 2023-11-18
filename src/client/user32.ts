@@ -161,6 +161,13 @@ export async function DispatchMessage(lpMsg: MSG): Promise<boolean> {
     return msg.data;
 }
 
+export async function PostQuitMessage(nExitCode: number) {
+    await User32.SendMessage<number>({
+        nType: USER32.PostQuitMessage,
+        data: nExitCode
+    });
+}
+
 const user32: Executable = {
     file: "user32.js",
     type: "dll",

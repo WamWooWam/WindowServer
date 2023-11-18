@@ -1,5 +1,14 @@
 import { GetModuleHandle } from "./client/kernel32.js";
-import { CreateWindowEx, DefWindowProc, DispatchMessage, GetMessage, RegisterClass, ShowWindow, TranslateMessage } from "./client/user32.js";
+import {
+    CreateWindowEx,
+    DefWindowProc,
+    DispatchMessage,
+    GetMessage,
+    PostQuitMessage,
+    RegisterClass,
+    ShowWindow,
+    TranslateMessage
+} from "./client/user32.js";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -9,6 +18,7 @@ import {
     MSG,
     SW_SHOWDEFAULT,
     WM_CREATE,
+    WM_DESTROY,
     WNDCLASSEX,
     WPARAM,
     WS_OVERLAPPEDWINDOW
@@ -38,6 +48,11 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
 
             break;
         }
+
+        case WM_DESTROY:
+            await PostQuitMessage(0);
+            break;
+
         default:
             return await DefWindowProc(hwnd, msg, wParam, lParam);
     }
@@ -84,7 +99,6 @@ async function main() {
     console.log(hWnd);
 
     await ShowWindow(hWnd, SW_SHOWDEFAULT);
-
 
     let msg: MSG = {} as MSG;
     while (await GetMessage(msg, 0, 0, 0)) {

@@ -1,5 +1,5 @@
 import { NtCreateWindowEx, NtShowWindow } from "../win32k/window.js";
-import { NtDispatchMessage, NtGetMessage } from "../win32k/msg.js";
+import { NtGetMessage, NtPostQuitMessage, NtSendMessage } from "../win32k/msg.js";
 import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import USER32, {
     CREATE_WINDOW_EX,
@@ -108,10 +108,16 @@ async function UserTranslateMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_ME
 async function UserDispatchMessage(peb: PEB, data: MSG): Promise<GET_MESSAGE_REPLY> {
     console.log("DispatchMessage", data);
 
-    await NtDispatchMessage(peb, data);
+    await NtSendMessage(peb, data);
 
     return { retVal: false, lpMsg: data };
 } 
+
+async function UserPostQuitMessage(peb: PEB, data: number) {
+    console.log("PostQuitMessage", data);
+
+    await NtPostQuitMessage(peb, data);
+}
 
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_USER32,
@@ -124,8 +130,8 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.GetMessage]: UserGetMessage,
         [USER32.PeekMessage]: UserPeekMessage,
         [USER32.TranslateMessage]: UserTranslateMessage,
-        [USER32.DispatchMessage]: UserDispatchMessage
-
+        [USER32.DispatchMessage]: UserDispatchMessage,
+        [USER32.PostQuitMessage]: UserPostQuitMessage,
     }
 };
 
