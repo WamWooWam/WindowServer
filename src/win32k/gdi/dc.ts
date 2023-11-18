@@ -1,12 +1,15 @@
+import { BLACK_PEN, DC_BRUSH, HDC, RECT, WHITE_BRUSH } from "../../types/gdi32.types.js";
+import { GreGetObj, GreGetStockObject } from "./obj.js";
 import { HANDLE, PEB } from "../../types/types.js";
-import { HDC, RECT } from "../../types/gdi32.types.js";
 import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetObject } from "../../objects.js";
 
 import BRUSH from "./brush.js";
 import CLIP from "./clip.js";
 import FONT from "./font.js";
+import { GDIOBJ } from "./ntgdi.js";
 import { HWND } from "../../types/user32.types.js";
 import { MATRIX } from "./trans.js";
+import PEN from "./pen.js";
 import { WND } from "../wnd.js";
 
 // represents a device context
@@ -15,7 +18,7 @@ interface DC {
     pSurface: HTMLCanvasElement | OffscreenCanvas;
     pCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
     pbrFill: BRUSH;
-    pbrLine: BRUSH;
+    pbrLine: PEN;
     pfntText: FONT;
 
     pdcParent: DC;
@@ -28,7 +31,7 @@ class DC implements DC {
     pSurface: HTMLCanvasElement | OffscreenCanvas;
     pCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
     pbrFill: BRUSH;
-    pbrLine: BRUSH;
+    pbrLine: PEN;
     pfntText: FONT;
 
     pdcParent: DC;
@@ -41,8 +44,8 @@ class DC implements DC {
 
         this.pSurface = params.pSurface;
         this.pCtx = params.pCtx;
-        this.pbrFill = params.pbrFill || null;
-        this.pbrLine = params.pbrLine || null;
+        this.pbrFill = params.pbrFill || GreGetStockObject(WHITE_BRUSH);
+        this.pbrLine = params.pbrLine || GreGetStockObject(BLACK_PEN);
         this.pfntText = params.pfntText || null;
         this.pdcParent = params.pdcParent || null;
         this.pcClip = params.pcClip || null;
@@ -66,9 +69,10 @@ class DC implements DC {
 }
 
 let hDCMonitor: HDC = null;
-export function GreAllocDCForMonitor(hMonitor: HANDLE): HDC {
+export function GreAllocDCForMonitor(hMonitor: HANDLE): DC {
     if (hDCMonitor) {
-        return ObDuplicateHandle(hDCMonitor);
+        ObDuplicateHandle(hDCMonitor);
+        return ObGetObject<DC>(hDCMonitor);
     }
 
     const pCanvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -76,6 +80,7 @@ export function GreAllocDCForMonitor(hMonitor: HANDLE): HDC {
     pCanvas.height = window.innerHeight;
 
     const pCtx = pCanvas.getContext("2d");
+
     const dc = new DC(hMonitor, {
         pSurface: pCanvas,
         pCtx
@@ -90,7 +95,9 @@ export function GreAllocDCForMonitor(hMonitor: HANDLE): HDC {
         });
     });
 
-    return dc.hDC;
+    hDCMonitor = dc.hDC;
+
+    return dc;
 }
 
 export function GreAllocDCForWindow(peb: PEB, hWnd: HWND): HDC {
@@ -118,6 +125,34 @@ export function GreResizeDC(hDC: HDC, prBounds: RECT) {
 
 function GreCleanupDC(dc: DC) {
 
+}
+
+export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ {
+    switch (h._type) {
+        case "BRUSH":
+            const pbr = h as BRUSH;
+            const pbrOld = dc.pbrFill;
+            dc.pbrFill = pbr;
+            return pbrOld;
+            break;
+        case "FONT":
+            const pfnt = h as FONT;
+            break;
+        case "PEN":
+            const pen = h as PEN;
+            break;
+        // case "BITMAP":
+        //     const bmp = h as BITMAP;
+        //     break;
+        // case "REGION":
+        //     const rgn = h as REGION;
+        //     break;
+        default:
+            console.warn(`GreSelectObject: unhandled type ${h._type}`);
+            return null;
+    }
+
+    return null;
 }
 
 export default DC;

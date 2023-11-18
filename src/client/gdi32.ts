@@ -1,9 +1,14 @@
 import { GDI32, HRGN } from "../types/gdi32.types.js";
 
+import { HANDLE } from "../types/types.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
 import { SUBSYS_GDI32 } from "../types/subsystems.js";
 
 const Gdi32 = await NtRegisterSubsystem(SUBSYS_GDI32, () => { });
+
+export function GetStockObject(nIndex: number): HANDLE {
+    return 0x80000000 + nIndex;
+}
 
 export async function CreateRectRgn(x1: number, y1: number, x2: number, y2: number): Promise<HRGN> {
     return (await Gdi32.SendMessage({

@@ -292,7 +292,7 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
 
 export function NtUserGetDC(peb: PEB, hWnd: HWND): HDC {
     if (hWnd === null) {
-        return GreAllocDCForMonitor(NtGetPrimaryMonitor().hMonitor);
+        return GreAllocDCForMonitor(NtGetPrimaryMonitor().hMonitor).hDC;
     }
     
     const wnd = ObGetObject<WND>(hWnd);

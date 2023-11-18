@@ -152,3 +152,25 @@ export function ObDuplicateHandle(handle: HANDLE): HANDLE {
     tag.refCount++;
     return handle;
 }
+
+export function ObjCreateObject<T>(type: string, value: (hObj: HANDLE) => T, owner: HANDLE, dtor?: (val: T) => void): T {
+    const handle = GenHandle();
+    const tag: tagHANDLE<T> = {
+        refCount: 1,
+        value: value(handle),
+        type: type,
+        owner: owner,
+        ownedHandles: [],
+        dtor: dtor
+    };
+    handleTable.set(handle, tag);
+
+    const owningHandle = handleTable.get(owner);
+    if (owningHandle) {
+        owningHandle.ownedHandles.push(handle);
+    }
+
+    console.debug(`created handle ${handle}, %s %O %O`, type, handleTable.get(handle), tag.value);
+
+    return tag.value;
+}

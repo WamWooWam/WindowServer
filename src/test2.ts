@@ -1,5 +1,5 @@
 import { CombineRgn, CreateRectRgn, FillRgn } from "./client/gdi32.js";
-import { HDC, RGN_XOR } from "./types/gdi32.types.js";
+import { HDC, RGN } from "./types/gdi32.types.js";
 
 import { GetDC } from "./client/user32.js";
 
@@ -16,7 +16,7 @@ async function main() {
     const intersect = await CreateRectRgn(0, 0, 0, 0);
     console.log(intersect);
 
-    await CombineRgn(intersect, rgn1, rgn2, RGN_XOR);
+    await CombineRgn(intersect, rgn1, rgn2, RGN.XOR);
     console.log(intersect);
 
     await FillRgn(hdc, intersect);

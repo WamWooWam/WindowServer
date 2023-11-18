@@ -1,17 +1,27 @@
-import { RECT, RGN_COPY } from "../../types/gdi32.types.js";
+import { RECT, RGN } from "../../types/gdi32.types.js";
 
-export default interface REGION {
+import { GDIOBJ } from "./ntgdi.js";
+import { ObSetObject } from "../../objects.js";
+
+export default interface REGION extends GDIOBJ {
+    _type: "REGION";
     iType: number;
     rcBound: RECT;
     rects: RECT[];
 }
 
 export function GreCreateRgn(): REGION {
-    return {
+    const rgn: REGION = {
+        _type: "REGION",
+        _hObj: 0,
         iType: 0,
         rcBound: { left: 0, top: 0, right: 0, bottom: 0 },
         rects: []
     };
+
+    rgn._hObj = ObSetObject(rgn, "REGION", 0, null);
+
+    return rgn;
 }
 
 export function GreCreateRectRgn(rc: RECT): REGION {
@@ -19,11 +29,11 @@ export function GreCreateRectRgn(rc: RECT): REGION {
         return GreCreateRgn();
     }
 
-    return {
-        iType: 1,
-        rcBound: rc,
-        rects: [rc]
-    };
+    const rgn = GreCreateRgn();
+    GreRegAddRect(rgn, rc.left, rc.top, rc.right, rc.bottom);
+    GreRegSetExtents(rgn);
+
+    return rgn;;
 }
 
 export function GreCombineRgn(dst: REGION, src1: REGION, src2: REGION, iMode: number): number {
@@ -35,7 +45,7 @@ export function GreCombineRgn(dst: REGION, src1: REGION, src2: REGION, iMode: nu
         return -1;
     }
 
-    if (iMode == RGN_COPY) {
+    if (iMode == RGN.COPY) {
         if (!GreRegCopy(dst, src1)) {
             return -1;
         }
@@ -44,13 +54,13 @@ export function GreCombineRgn(dst: REGION, src1: REGION, src2: REGION, iMode: nu
     }
 
     switch (iMode) {
-        case 1: // RGN_AND
+        case RGN.AND: // RGN_AND
             return GreRgnIntersect(dst, src1, src2);
-        case 2: // RGN_OR
+        case RGN.OR: // RGN_OR
             return GreRegUnion(dst, src1, src2);
-        case 3: // RGN_XOR
+        case RGN.XOR: // RGN_XOR
             return GreRgnXor(dst, src1, src2);
-        case 4: // RGN_DIFF
+        case RGN.DIFF: // RGN_DIFF
             return GreRegSubtract(dst, src1, src2);
         default:
             return -1;

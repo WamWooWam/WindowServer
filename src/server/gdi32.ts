@@ -23,9 +23,11 @@ function GdiCombineRgn(peb: PEB, params: { hrgnDest: HRGN, hrgnSrc1: HRGN, hrgnS
 
 function GdiFillRegion(peb: PEB, params: { hDC: number, hrgn: number }): boolean {
     const { hDC, hrgn } = params;
+
+    const dc = ObGetObject<DC>(hDC);
     const rgn = ObGetObject<REGION>(hrgn);
 
-    GreFillRegion(hDC, rgn);
+    GreFillRegion(dc, rgn);
 
     return true;
 }
