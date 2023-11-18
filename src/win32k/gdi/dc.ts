@@ -140,7 +140,9 @@ export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ {
             break;
         case "PEN":
             const pen = h as PEN;
-            break;
+            const penOld = dc.pbrLine;
+            dc.pbrLine = pen;
+            return penOld;
         // case "BITMAP":
         //     const bmp = h as BITMAP;
         //     break;
