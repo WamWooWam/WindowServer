@@ -22,6 +22,7 @@ import USER32, {
 import Executable from "../types/Executable.js";
 import { GetModuleHandle } from "./kernel32.js";
 import { HANDLE } from "../types/types.js";
+import { HDC } from "../types/gdi32.types.js";
 import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
@@ -166,6 +167,15 @@ export async function PostQuitMessage(nExitCode: number) {
         nType: USER32.PostQuitMessage,
         data: nExitCode
     });
+}
+
+export async function GetDC(hWnd: HANDLE): Promise<HDC> {
+    const msg = await User32.SendMessage<HANDLE>({
+        nType: USER32.GetDC,
+        data: hWnd
+    });
+
+    return msg.data;
 }
 
 const user32: Executable = {

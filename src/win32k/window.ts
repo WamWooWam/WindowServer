@@ -26,10 +26,12 @@ import {
     WS_VISIBLE
 } from "../types/user32.types.js";
 import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
+import { HDC, POINT, RECT, SIZE } from "../types/gdi32.types.js";
 import { ObDestroyHandle, ObDuplicateHandle, ObGetObject } from "../objects.js";
-import { POINT, RECT, SIZE } from "../types/gdi32.types.js";
 
+import { GreAllocDCForMonitor } from "./gdi/dc.js";
 import { NtFindClass } from "./class.js";
+import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtSendMessage } from "./msg.js";
 import { NtSetLastError } from "../error.js";
@@ -286,6 +288,15 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
     ObDestroyHandle(wnd.hWnd);
 
     return true;
+}
+
+export function NtUserGetDC(peb: PEB, hWnd: HWND): HDC {
+    if (hWnd === null) {
+        return GreAllocDCForMonitor(NtGetPrimaryMonitor().hMonitor);
+    }
+    
+    const wnd = ObGetObject<WND>(hWnd);
+    return wnd.hDC;
 }
 
 

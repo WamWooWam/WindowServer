@@ -1,18 +1,18 @@
 import { HANDLE } from "./types/types.js";
 import { PsProcess } from "./process.js";
 
-type tagHANDLE = {
+type tagHANDLE<T> = {
     refCount: number;
-    value: any;
+    value: T;
     type: string;
     owner: HANDLE;
     ownedHandles: HANDLE[];
-    dtor?: () => void;
+    dtor?: (val: T) => void;
 }
 
 const INVALID_HANDLE_VALUE = -1;
-const handleTable: Map<HANDLE, tagHANDLE> = new Map();
- 
+const handleTable: Map<HANDLE, tagHANDLE<any>> = new Map();
+
 let handleCounter = 0;
 function GenHandle(): HANDLE {
     const handleBase = 0x0;
@@ -30,7 +30,7 @@ export function ObGetObject<T>(handle: HANDLE): T {
     return tag.value;
 }
 
-export function ObSetObject<T>(value: T, type: string, owner: HANDLE, dtor?: () => void): HANDLE {
+export function ObSetObject<T>(value: T, type: string, owner: HANDLE, dtor?: (val: T) => void): HANDLE {
     const handle = GenHandle();
     handleTable.set(handle, {
         refCount: 1,
@@ -45,6 +45,8 @@ export function ObSetObject<T>(value: T, type: string, owner: HANDLE, dtor?: () 
     if (owningHandle) {
         owningHandle.ownedHandles.push(handle);
     }
+
+    console.debug(`created handle ${handle}, %s %O %O`, type, handleTable.get(handle), value);
 
     return handle;
 }
@@ -127,7 +129,7 @@ export function ObDestroyHandle(handle: HANDLE): boolean {
         return false;
     }
 
-    console.log(`destroying handle ${handle}, %O %O`, tag, tag.value);
+    console.debug(`destroying handle ${handle}, %s %O %O`, tag.type, tag, tag.value);
 
     for (const ownedHandle of tag.ownedHandles) {
         ObDestroyHandle(ownedHandle);
@@ -135,7 +137,7 @@ export function ObDestroyHandle(handle: HANDLE): boolean {
 
     handleTable.delete(handle);
     if (tag.dtor) {
-        tag.dtor();
+        tag.dtor(tag.value);
     }
 
     return true;

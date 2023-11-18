@@ -11,6 +11,7 @@ const USER32 = {
     TranslateMessage: 0x00000007,
     DispatchMessage: 0x00000008,
     PostQuitMessage: 0x00000009,
+    GetDC: 0x0000000A,
 }
 
 export const CW_USEDEFAULT = 0x80000000;

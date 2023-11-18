@@ -2,10 +2,13 @@ import { NtPostProcessMessage, NtPostQuitMessage } from "./win32k/msg.js";
 import { PsCreateProcess, PsRegisterProcessHooks, PsTerminateProcess } from "./loader.js"
 
 import Executable from "./types/Executable.js";
+import { GreInit } from "./win32k/gdi/ntgdi.js";
 import { HANDLE } from "./types/types.js";
 import { WM_QUIT } from "./types/user32.types.js";
 
 (() => {
+    GreInit();
+
     const procs: HANDLE[] = [];
     const processTableEntries = new Map<HANDLE, HTMLTableRowElement>();
     let processCount = 0;
@@ -13,7 +16,7 @@ import { WM_QUIT } from "./types/user32.types.js";
     const processList = document.getElementById("processes");
 
     const SpawnProc = async () => {
-        const proc = PsCreateProcess("test.js", "", false, {}, "C:\\Windows\\System32", null);
+        const proc = PsCreateProcess("test2.js", "", false, {}, "C:\\Windows\\System32", null);
         procs.push(proc);
     }
 

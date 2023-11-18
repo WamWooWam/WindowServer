@@ -59,11 +59,6 @@ export async function NtDefWindowProc(peb: PEB, hWnd: HWND, Msg: number, wParam:
         case WM_SYSCOMMAND:
             console.log("WM_SYSCOMMAND");
             return await NtDefWndHandleSysCommand(peb, wnd, wParam, lParam);
-
-        case WM_KEYDOWN:
-            console.log("WM_KEYDOWN " + wParam.toString(16) + " " + String.fromCharCode(wParam));
-            wnd.pRootElement.appendChild(document.createTextNode(String.fromCharCode(wParam)));
-            return 0;
     }
 
     return 0; // TODO

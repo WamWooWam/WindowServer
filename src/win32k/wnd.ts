@@ -29,10 +29,13 @@ import {
     WS_SIZEBOX,
     WS_THICKFRAME
 } from "../types/user32.types.js";
+import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
+import { HDC, RECT } from "../types/gdi32.types.js";
 import { NtPostMessage, NtSendMessage } from "./msg.js";
 import {
     ObCloseHandle,
+    ObDuplicateHandle,
     ObGetChildHandlesByType,
     ObGetObject,
     ObSetHandleOwner,
@@ -42,7 +45,6 @@ import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
-import { RECT } from "../types/gdi32.types.js";
 
 export class WND {
     private _hWnd: HWND;
@@ -53,9 +55,6 @@ export class WND {
     private _rcClient: RECT;
     private _lpfnWndProc: WNDPROC;
     private _pClsInfo: W32CLASSINFO;
-
-    private _peb: PEB;
-
     private _lpszName: string;
 
     private _hParent: HWND; // parent window (if this is a WS_CHILD like a control)
@@ -65,19 +64,12 @@ export class WND {
     private _hMenu: HMENU;
     private _lpParam: any;
 
+    private _hDC: HDC;
+    private _peb: PEB;
+
     private _stateFlags = {
         sendSizeMoveMsgs: false,
     }
-
-    private _pRootElement: HTMLElement;
-
-    private _pTitleBar: HTMLElement;
-    private _pTitleBarText: HTMLElement;
-    private _pTitleBarControls: HTMLElement;
-    private _pMinimizeButton: HTMLElement;
-    private _pMaximizeButton: HTMLElement;
-    private _pCloseButton: HTMLElement;
-    private _pWindowBody: HTMLElement;
 
     constructor(
         peb: PEB,
@@ -152,29 +144,18 @@ export class WND {
             parent.AddChild(this._hWnd);
         }
 
-        pti.hWnds.push(this._hWnd);
-
         this.FixWindowCoordinates();
 
-        document.addEventListener("keypress", (ev) => {
-            NtSendMessage(peb, {
-                hWnd: this._hWnd,
-                message: 0x0100, // WM_KEYDOWN
-                wParam: ev.keyCode,
-                lParam: 0
-            });
-        });
+        // if we're a top level window, allocate a DC
+        if (!(this.dwStyle & WS_CHILD)) {
+            this._hDC = GreAllocDCForWindow(peb, this._hWnd);
+        }
+        else {
+            // use the parent's DC, with an additional transform
+            this._hDC = ObDuplicateHandle(parent._hDC);
+        }
 
-        // document.addEventListener("keyup", (ev) => {
-        //     this.EnqueueMessage({
-        //         hWnd: this._hWnd,
-        //         message: 0x0101, // WM_KEYUP
-        //         wParam: ev.keyCode,
-        //         lParam: 0,
-        //         time: 0,
-        //         pt: { x: 0, y: 0 }
-        //     });
-        // });
+        pti.hWnds.push(this._hWnd);
     }
 
     public get hWnd(): HWND {
@@ -213,12 +194,16 @@ export class WND {
         return this._rcWindow;
     }
 
-    public get children(): HWND[] {
-        return [...ObGetChildHandlesByType(this._hWnd, "WND")];
+    public get lpszName(): string {
+        return this._lpszName;
     }
 
-    public get pRootElement(): HTMLElement {
-        return this._pWindowBody ?? this._pRootElement;
+    public get hDC(): HDC {
+        return this._hDC;
+    }
+
+    public get children(): HWND[] {
+        return [...ObGetChildHandlesByType(this._hWnd, "WND")];
     }
 
     public AddChild(hWnd: HWND): void {
@@ -232,21 +217,21 @@ export class WND {
     public Show(): void {
         this.FixWindowCoordinates();
 
-        const parent = ObGetObject<WND>(this._hParent);
-        if (parent) {
-            parent.pRootElement.appendChild(this._pRootElement);
-        }
-        else if ((this.dwStyle & (WS_CHILD | WS_POPUP)) != WS_CHILD) {
-            document.body.appendChild(this._pRootElement);
-        }
+        // const parent = ObGetObject<WND>(this._hParent);
+        // if (parent) {
+        //     parent.pRootElement.appendChild(this._pRootElement);
+        // }
+        // else if ((this.dwStyle & (WS_CHILD | WS_POPUP)) != WS_CHILD) {
+        //     document.body.appendChild(this._pRootElement);
+        // }
     }
 
     public Hide(): void {
-        this._pRootElement.remove();
+        // this._pRootElement.remove();
     }
 
     public Dispose(): void {
-        this._pRootElement.remove();
+        // this._pRootElement.remove();
 
         if (this._hParent)
             ObCloseHandle(this._hParent);
@@ -258,8 +243,8 @@ export class WND {
     private OnMinimizeButtonClick(): void {
         NtPostMessage(this._peb, {
             hWnd: this._hWnd,
-            message: WM_SYSCOMMAND, 
-            wParam: SC_MINIMIZE, 
+            message: WM_SYSCOMMAND,
+            wParam: SC_MINIMIZE,
             lParam: 0
         });
     }
@@ -267,8 +252,8 @@ export class WND {
     private OnMaximizeButtonClick(): void {
         NtPostMessage(this._peb, {
             hWnd: this._hWnd,
-            message: WM_SYSCOMMAND, 
-            wParam: SC_MAXIMIZE, 
+            message: WM_SYSCOMMAND,
+            wParam: SC_MAXIMIZE,
             lParam: 0
         });
     }
@@ -346,97 +331,9 @@ export class WND {
         this.InvalidateRect();
     }
 
-    private CreateTitleBar(): void {
-        if (this._pTitleBar) {
-            if (this._pTitleBar.parentNode !== this._pRootElement) {
-                this._pTitleBar.remove();
-                this._pRootElement.appendChild(this._pTitleBar);
-            }
-
-            return;
-        }
-
-        const titleBar = document.createElement("div");
-        titleBar.className = "title-bar";
-
-        const titleBarText = document.createElement("div");
-        titleBarText.className = "title-bar-text";
-
-        const titleBarControls = document.createElement("div");
-        titleBarControls.className = "title-bar-controls";
-
-        if ((this.dwStyle & WS_MINIMIZEBOX)) {
-            const minimizeButton = document.createElement("button");
-            minimizeButton.setAttribute("aria-label", "Minimize");
-            minimizeButton.addEventListener("click", () => this.OnMinimizeButtonClick());
-
-            titleBarControls.appendChild(minimizeButton);
-
-            this._pMinimizeButton = minimizeButton;
-        }
-
-        if ((this.dwStyle & WS_MAXIMIZEBOX)) {
-            const maximizeButton = document.createElement("button");
-            maximizeButton.setAttribute("aria-label", "Maximize");
-            maximizeButton.addEventListener("click", () => this.OnMaximizeButtonClick());
-
-            titleBarControls.appendChild(maximizeButton);
-
-            this._pMaximizeButton = maximizeButton;
-        }
-
-        const closeButton = document.createElement("button");
-        closeButton.setAttribute("aria-label", "Close");
-        closeButton.addEventListener("click", () => this.OnCloseButtonClick());
-        titleBarControls.appendChild(closeButton);
-
-        titleBar.appendChild(titleBarText);
-        titleBar.appendChild(titleBarControls);
-
-        const windowBody = document.createElement("div");
-        windowBody.className = "window-body";
-
-        this._pRootElement.appendChild(titleBar);
-        this._pRootElement.appendChild(windowBody);
-
-        this._pTitleBar = titleBar;
-        this._pTitleBarText = titleBarText;
-        this._pTitleBarControls = titleBarControls;
-        this._pCloseButton = closeButton;
-        this._pWindowBody = windowBody;
-    }
-
     private InvalidateRect(): void {
-        if (!this._pRootElement) {
-            if (this._pClsInfo.lpszClassName === "BUTTON")
-                this._pRootElement = document.createElement("button");
-            else
-                this._pRootElement = document.createElement("div");
-        }
-
-        // for now, dont do a dirty flag, just set the style
-        this._pRootElement.style.left = `${this.rcWindow.left}px`;
-        this._pRootElement.style.top = `${this.rcWindow.top}px`;
-        this._pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
-        this._pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
-        this._pRootElement.style.position = ((this.dwStyle & (WS_CHILD | WS_POPUP)) != WS_CHILD) ? "absolute" : "relative";
-        this._pRootElement.style.overflow = "hidden";
-
-        // use 98.css styles
-
-        if (this.dwStyle & WS_SIZEBOX) {
-            this._pRootElement.style.resize = "both";
-        }
-        else {
-            this._pRootElement.style.resize = "none";
-        }
-
-        if (this.dwStyle & WS_CAPTION) {
-            this.CreateTitleBar();
-        }
-
-        if (this.dwStyle & WS_THICKFRAME) {
-            this._pRootElement.classList.add("window");
-        }
+        if (!this._hDC) return;
+        GreResizeDC(this._hDC, this.rcClient);
+        // todo: redraw
     }
 }

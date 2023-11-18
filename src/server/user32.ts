@@ -1,4 +1,4 @@
-import { NtCreateWindowEx, NtShowWindow } from "../win32k/window.js";
+import { NtCreateWindowEx, NtShowWindow, NtUserGetDC } from "../win32k/window.js";
 import { NtGetMessage, NtPostQuitMessage, NtSendMessage } from "../win32k/msg.js";
 import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import USER32, {
@@ -6,6 +6,7 @@ import USER32, {
     CREATE_WINDOW_EX_REPLY,
     GET_MESSAGE,
     GET_MESSAGE_REPLY,
+    HWND,
     LRESULT,
     MSG,
     REGISTER_CLASS,
@@ -119,6 +120,12 @@ async function UserPostQuitMessage(peb: PEB, data: number) {
     await NtPostQuitMessage(peb, data);
 }
 
+async function UserGetDC(peb: PEB, data: HWND) {
+    console.log("GetDC", data);
+
+    return NtUserGetDC(peb, data);
+}
+
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_USER32,
     lpfnInit: NtUser32Initialize,
@@ -132,6 +139,7 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.TranslateMessage]: UserTranslateMessage,
         [USER32.DispatchMessage]: UserDispatchMessage,
         [USER32.PostQuitMessage]: UserPostQuitMessage,
+        [USER32.GetDC]: UserGetDC
     }
 };
 
