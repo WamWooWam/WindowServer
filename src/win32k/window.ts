@@ -49,8 +49,8 @@ export function NtIntGetClientRect(peb: PEB, hWnd: HWND): RECT {
         return {
             top: 0,
             left: 0,
-            right: NtIntGetSystemMetrics(peb, SM_CXMINIMIZED),
-            bottom: NtIntGetSystemMetrics(peb, SM_CYMINIMIZED)
+            right: NtIntGetSystemMetrics(SM_CXMINIMIZED),
+            bottom: NtIntGetSystemMetrics(SM_CYMINIMIZED)
         }
     }
 

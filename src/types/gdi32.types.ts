@@ -79,8 +79,7 @@ export enum BS {
     DIBPATTERN = 5,
     DIBPATTERNPT = 6,
     PATTERN8X8 = 7,
-    DIBPATTERN8X8 = 8,
-    _MONOPATTERN = 9
+    DIBPATTERN8X8 = 8
 }
 
 export enum HS {
@@ -91,3 +90,22 @@ export enum HS {
     CROSS = 4,
     DIAGCROSS = 5
 }
+
+export enum FW {
+    DONTCARE = 0,
+    THIN = 100,
+    EXTRALIGHT = 200,
+    LIGHT = 300,
+    NORMAL = 400,
+    MEDIUM = 500,
+    SEMIBOLD = 600,
+    BOLD = 700,
+    EXTRABOLD = 800,
+    HEAVY = 900
+}
+
+export const TRANSPARENT = 1;
+export const OPAQUE = 2;
+
+export const DEFAULT_CHARSET = 1;
+export const NONANTIALIASED_QUALITY = 3;

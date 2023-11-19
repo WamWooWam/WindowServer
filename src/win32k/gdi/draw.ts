@@ -19,25 +19,18 @@ function GreRegionToPath(rgn: REGION) {
 
 export function GreFillRegion(dc: DC, reg: REGION) {
     const path = GreRegionToPath(reg);
-    const realise = GreRealiseBrush(dc, dc.pbrFill);
-
-    dc.pCtx.fillStyle = realise;
+    GreRealiseBrush(dc, dc.pbrFill);
     dc.pCtx.fill(path);
 }
 
 export function GreRectangle(dc: DC, prc: RECT) {
     if (dc.pbrFill.lbStyle !== BS.NULL) {
-        dc.pCtx.fillStyle = GreRealiseBrush(dc, dc.pbrFill);
+        GreRealiseBrush(dc, dc.pbrFill);
         dc.pCtx.fillRect(prc.left, prc.top, prc.right - prc.left, prc.bottom - prc.top);
     }
 
     if (dc.pbrLine.iStyle !== PS.NULL) {
-        const { strokeStyle, lineWidth, lineCap, lineJoin } = GreRealisePen(dc, dc.pbrLine);
-
-        dc.pCtx.strokeStyle = strokeStyle;
-        dc.pCtx.lineWidth = lineWidth;
-        dc.pCtx.lineCap = lineCap as CanvasLineCap;
-        dc.pCtx.lineJoin = lineJoin as CanvasLineJoin;
+        GreRealisePen(dc, dc.pbrLine);
         dc.pCtx.strokeRect(prc.left, prc.top, prc.right - prc.left, prc.bottom - prc.top);
     }
 }

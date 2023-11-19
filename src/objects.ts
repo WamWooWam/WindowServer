@@ -153,7 +153,7 @@ export function ObDuplicateHandle(handle: HANDLE): HANDLE {
     return handle;
 }
 
-export function ObjCreateObject<T>(type: string, value: (hObj: HANDLE) => T, owner: HANDLE, dtor?: (val: T) => void): T {
+export function ObCreateObject<T>(type: string, value: (hObj: HANDLE) => T, owner: HANDLE, dtor?: (val: T) => void): T {
     const handle = GenHandle();
     const tag: tagHANDLE<T> = {
         refCount: 1,

@@ -3,7 +3,7 @@ import { DC_PEN, PS } from "../../types/gdi32.types.js";
 import DC from "./dc.js";
 import { GDIOBJ } from "./ntgdi.js";
 import { GreGetStockObject } from "./obj.js";
-import { ObjCreateObject } from "../../objects.js";
+import { ObCreateObject } from "../../objects.js";
 
 export default interface PEN extends GDIOBJ {
     _type: "PEN";
@@ -13,7 +13,7 @@ export default interface PEN extends GDIOBJ {
 }
 
 export function GreCreateNullPen(color?: number): PEN {
-    return ObjCreateObject("PEN", (hObj) => ({
+    return ObCreateObject("PEN", (hObj) => ({
         _type: "PEN",
         _hObj: hObj,
         iStyle: PS.NULL,
@@ -23,7 +23,7 @@ export function GreCreateNullPen(color?: number): PEN {
 }
 
 export function GreCreatePen(iStyle: PS, iWidth: number, crColor: number): PEN {
-    return ObjCreateObject("PEN", (hObj) => ({
+    return ObCreateObject("PEN", (hObj) => ({
         _type: "PEN",
         _hObj: hObj,
         iStyle,
@@ -33,17 +33,12 @@ export function GreCreatePen(iStyle: PS, iWidth: number, crColor: number): PEN {
 }
 
 // create a strokeStyle from a pen
-export function GreRealisePen(dc: DC, pen: PEN): { strokeStyle: string, lineWidth: number, lineCap: string, lineJoin: string } {
-    if (pen == GreGetStockObject(DC_PEN)) {
+export function GreRealisePen(dc: DC, pen: PEN): void {
+    if ((pen._hObj != dc.pbrLine._hObj) && pen._hObj == GreGetStockObject<PEN>(DC_PEN)._hObj) {
         return GreRealisePen(dc, dc.pbrLine);
     }
 
-    const ctx = {
-        strokeStyle: null as string,
-        lineWidth: 0,
-        lineCap: "round",
-        lineJoin: "round"
-    }
+    const ctx = dc.pCtx;
     const style = pen.iStyle;
     const width = pen.iWidth;
     const color = pen.crColor;
@@ -57,6 +52,4 @@ export function GreRealisePen(dc: DC, pen: PEN): { strokeStyle: string, lineWidt
     ctx.lineWidth = width;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-
-    return ctx;
 }

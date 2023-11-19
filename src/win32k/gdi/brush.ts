@@ -4,7 +4,7 @@ import DC from "./dc.js";
 import { GDIOBJ } from "./ntgdi.js";
 import { GreGetStockObject } from "./obj.js";
 import { HANDLE } from "../../types/types.js";
-import { ObjCreateObject } from "../../objects.js";
+import { ObCreateObject } from "../../objects.js";
 
 export default interface BRUSH extends GDIOBJ {
     _type: "BRUSH";
@@ -12,10 +12,11 @@ export default interface BRUSH extends GDIOBJ {
     lbColor: number;
     lbHatch?: HS;
     pValue: string | CanvasPattern | CanvasGradient;
+    pData?: any;
 }
 
 export function GreCreateBrush() {
-    return ObjCreateObject("BRUSH", (hObj: HANDLE) => ({
+    return ObCreateObject("BRUSH", (hObj: HANDLE) => ({
         _type: "BRUSH",
         _hObj: hObj,
         lbStyle: BS.NULL,
@@ -25,7 +26,7 @@ export function GreCreateBrush() {
 }
 
 export function GreCreateSolidBrush(color: number): BRUSH {
-    return ObjCreateObject("BRUSH", (hObj: HANDLE) => ({
+    return ObCreateObject("BRUSH", (hObj: HANDLE) => ({
         _type: "BRUSH",
         _hObj: hObj,
         lbStyle: BS.SOLID,
@@ -35,7 +36,7 @@ export function GreCreateSolidBrush(color: number): BRUSH {
 }
 
 export function GreCreateHatchBrush(style: HS, color: number): BRUSH {
-    return ObjCreateObject("BRUSH", (hObj: HANDLE) => ({
+    return ObCreateObject("BRUSH", (hObj: HANDLE) => ({
         _type: "BRUSH",
         _hObj: hObj,
         lbStyle: BS.HATCHED,
@@ -46,16 +47,19 @@ export function GreCreateHatchBrush(style: HS, color: number): BRUSH {
 }
 
 // turns a brush into a canvas pattern
-export function GreRealiseBrush(dc: DC, br: BRUSH) : string | CanvasPattern | CanvasGradient {
+export function GreRealiseBrush(dc: DC, br: BRUSH): void {
     if (br == GreGetStockObject(DC_BRUSH)) {
         return GreRealiseBrush(dc, dc.pbrFill);
     }
 
-    if (br.pValue) return br.pValue;
+    if (br.pValue) {
+        dc.pCtx.fillStyle = br.pValue;
+    }
 
     switch (br.lbStyle) {
         case BS.SOLID:
-            return br.pValue = `#${br.lbColor.toString(16).padStart(6, "0")}`;
+            br.pValue = `#${br.lbColor.toString(16).padStart(6, "0")}`;
+            break;
         case BS.HATCHED:
             {
                 const canvas = document.createElement("canvas");
@@ -105,15 +109,18 @@ export function GreRealiseBrush(dc: DC, br: BRUSH) : string | CanvasPattern | Ca
                     default:
                         throw new Error(`GreRealiseBrush: unknown hatch style ${br.lbHatch}`);
                 }
-                return br.pValue = ctx.createPattern(canvas, "repeat");
+                br.pValue = ctx.createPattern(canvas, "repeat");
+                break;
             }
         case BS.PATTERN:
         case BS.DIBPATTERN:
         case BS.DIBPATTERNPT:
         case BS.DIBPATTERN8X8:
         case BS.PATTERN8X8:
-            return br.pValue;
+            break;
         default:
             throw new Error(`GreRealiseBrush: unknown brush style ${br.lbStyle}`);
     }
+
+    dc.pCtx.fillStyle = br.pValue;
 }

@@ -94,6 +94,9 @@ export const SM_CYFRAME = 33;
 export const SM_CXMINIMIZED = 57;
 export const SM_CYMINIMIZED = 58;
 
+export const SM_CYSMSIZE = 53;
+export const SM_CXSMSIZE = 54;
+
 export const SW_HIDE = 0;
 export const SW_SHOWNORMAL = 1;
 export const SW_NORMAL = 1;
@@ -242,7 +245,7 @@ export const BS_3STATE = 0x00000005;
 export const BS_AUTO3STATE = 0x00000006;
 export const BS_GROUPBOX = 0x00000007;
 export const BS_USERBUTTON = 0x00000008;
-export const BS_AUTORADIOBUTTON = 0x00000009;   
+export const BS_AUTORADIOBUTTON = 0x00000009;
 export const BS_PUSHBOX = 0x0000000A;
 export const BS_OWNERDRAW = 0x0000000B;
 export const BS_TYPEMASK = 0x0000000F;
@@ -262,6 +265,151 @@ export const BS_NOTIFY = 0x00004000;
 export const BS_FLAT = 0x00008000;
 export const BS_RIGHTBUTTON = BS_LEFTTEXT;
 
+
+export enum DC {
+    ACTIVE = 0x0001,
+    SMALLCAP = 0x0002,
+    ICON = 0x0004,
+    TEXT = 0x0008,
+    INBUTTON = 0x0010,
+    GRADIENT = 0x0020,
+    BUTTONS = 0x1000,
+}
+
+export enum DFC {
+    CAPTION = 1,
+    MENU = 2,
+    SCROLL = 3,
+    BUTTON = 4,
+}
+
+export enum DFCS {
+    CAPTIONCLOSE = 0x0000,
+    CAPTIONMIN = 0x0001,
+    CAPTIONMAX = 0x0002,
+    CAPTIONRESTORE = 0x0003,
+    CAPTIONHELP = 0x0004,
+
+    MENUARROW = 0x0000,
+    MENUCHECK = 0x0001,
+    MENUBULLET = 0x0002,
+    MENUARROWRIGHT = 0x0004,
+
+    SCROLLUP = 0x0000,
+    SCROLLDOWN = 0x0001,
+    SCROLLLEFT = 0x0002,
+    SCROLLRIGHT = 0x0003,
+    SCROLLCOMBOBOX = 0x0005,
+    SCROLLSIZEGRIP = 0x0008,
+    SCROLLSIZEGRIPRIGHT = 0x0010,
+
+    BUTTONCHECK = 0x0000,
+    BUTTONRADIOIMAGE = 0x0001,
+    BUTTONRADIOMASK = 0x0002,
+    BUTTONRADIO = 0x0004,
+    BUTTON3STATE = 0x0008,
+    BUTTONPUSH = 0x0010,
+
+    INACTIVE = 0x0100,
+    PUSHED = 0x0200,
+    CHECKED = 0x0400,
+    TRANSPARENT = 0x0800,
+    HOT = 0x1000,
+
+    ADJUSTRECT = 0x2000,
+    FLAT = 0x4000,
+    MONO = 0x8000,
+}
+
+export enum BDR {
+    RAISEDOUTER = 0x0001,
+    SUNKENOUTER = 0x0002,
+    RAISEDINNER = 0x0004,
+    SUNKENINNER = 0x0008,
+
+    OUTER = (RAISEDOUTER | SUNKENOUTER),
+    INNER = (RAISEDINNER | SUNKENINNER),
+    RAISED = (RAISEDOUTER | RAISEDINNER),
+    SUNKEN = (SUNKENOUTER | SUNKENINNER),
+}
+
+export enum EDGE {
+    RAISED = (BDR.RAISEDOUTER | BDR.RAISEDINNER),
+    SUNKEN = (BDR.SUNKENOUTER | BDR.SUNKENINNER),
+    ETCHED = (BDR.SUNKENOUTER | BDR.RAISEDINNER),
+    BUMP = (BDR.RAISEDOUTER | BDR.SUNKENINNER),
+}
+
+export enum BF {
+    LEFT = 0x0001,
+    TOP = 0x0002,
+    RIGHT = 0x0004,
+    BOTTOM = 0x0008,
+
+    TOPLEFT = (TOP | LEFT),
+    TOPRIGHT = (TOP | RIGHT),
+    BOTTOMLEFT = (BOTTOM | LEFT),
+    BOTTOMRIGHT = (BOTTOM | RIGHT),
+    RECT = (LEFT | TOP | RIGHT | BOTTOM),
+
+    DIAGONAL = 0x0010,
+
+    DIAGONAL_ENDTOPRIGHT = (DIAGONAL | TOP | RIGHT),
+    DIAGONAL_ENDTOPLEFT = (DIAGONAL | TOP | LEFT),
+    DIAGONAL_ENDBOTTOMLEFT = (DIAGONAL | BOTTOM | LEFT),
+    DIAGONAL_ENDBOTTOMRIGHT = (DIAGONAL | BOTTOM | RIGHT),
+
+    MIDDLE = 0x0800,
+    SOFT = 0x1000,
+    ADJUST = 0x2000,
+    FLAT = 0x4000,
+    MONO = 0x8000,
+}
+
+export enum COLOR {
+    SCROLLBAR = 0,
+    BACKGROUND = 1,
+    ACTIVECAPTION = 2,
+    INACTIVECAPTION = 3,
+    MENU = 4,
+    WINDOW = 5,
+    WINDOWFRAME = 6,
+    MENUTEXT = 7,
+    WINDOWTEXT = 8,
+    CAPTIONTEXT = 9,
+    ACTIVEBORDER = 10,
+    INACTIVEBORDER = 11,
+    APPWORKSPACE = 12,
+    HIGHLIGHT = 13,
+    HIGHLIGHTTEXT = 14,
+    BTNFACE = 15,
+    BTNSHADOW = 16,
+    GRAYTEXT = 17,
+    BTNTEXT = 18,
+    INACTIVECAPTIONTEXT = 19,
+    BTNHIGHLIGHT = 20,
+    DKSHADOW3D = 21,
+    LIGHT3D = 22,
+    INFOTEXT = 23,
+    INFOBK = 24,
+    
+    HOTLIGHT = 26,
+    GRADIENTACTIVECAPTION = 27,
+    GRADIENTINACTIVECAPTION = 28,
+    MENUHILIGHT = 29,
+    MENUBAR = 30,
+    DESKTOP = BACKGROUND,
+    
+    FACE3D = BTNFACE,
+    SHADOW3D = BTNSHADOW,
+    HIGHLIGHT3D = BTNHIGHLIGHT,
+    HILIGHT3D = BTNHIGHLIGHT,
+    BTNHILIGHT = BTNHIGHLIGHT,
+}
+
+export enum SPI {
+    GETNONCLIENTMETRICS = 0x0029,
+}
 
 export type HWND = HANDLE;
 export type HINSTANCE = HANDLE;
@@ -308,6 +456,23 @@ export interface WNDCLASSEX extends WNDCLASS {
     hIconSm: HANDLE;
 }
 
+export interface LOGFONT {
+    lfHeight: number;
+    lfWidth: number;
+    lfEscapement: number;
+    lfOrientation: number;
+    lfWeight: number;
+    lfItalic: number;
+    lfUnderline: number;
+    lfStrikeOut: number;
+    lfCharSet: number;
+    lfOutPrecision: number;
+    lfClipPrecision: number;
+    lfQuality: number;
+    lfPitchAndFamily: number;
+    lfFaceName: string;
+}
+
 export interface WNDCLASS_WIRE {
     cbSize?: number;
     style: number;
@@ -329,6 +494,25 @@ export interface MINMAXINFO {
     ptMaxPosition: POINT;
     ptMinTrackSize: POINT;
     ptMaxTrackSize: POINT;
+}
+
+export interface NONCLIENTMETRICS {
+    cbSize: number;
+    iBorderWidth: number;
+    iScrollWidth: number;
+    iScrollHeight: number;
+    iCaptionWidth: number;
+    iCaptionHeight: number;
+    lfCaptionFont: LOGFONT;
+    iSmCaptionWidth: number;
+    iSmCaptionHeight: number;
+    lfSmCaptionFont: LOGFONT;
+    iMenuWidth: number;
+    iMenuHeight: number;
+    lfMenuFont: LOGFONT;
+    lfStatusFont: LOGFONT;
+    lfMessageFont: LOGFONT;
+    iPaddedBorderWidth: number;
 }
 
 export interface CREATE_WINDOW_EX {

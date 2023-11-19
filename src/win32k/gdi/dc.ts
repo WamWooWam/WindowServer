@@ -1,15 +1,16 @@
-import { BLACK_PEN, DC_BRUSH, HDC, RECT, WHITE_BRUSH } from "../../types/gdi32.types.js";
+import { BLACK_PEN, DC_BRUSH, HDC, POINT, RECT, TRANSPARENT, WHITE_BRUSH } from "../../types/gdi32.types.js";
+import BRUSH, { GreRealiseBrush } from "./brush.js";
+import { COLOR, HWND } from "../../types/user32.types.js";
 import { GreGetObj, GreGetStockObject } from "./obj.js";
 import { HANDLE, PEB } from "../../types/types.js";
 import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetObject } from "../../objects.js";
+import PEN, { GreRealisePen } from "./pen.js";
 
-import BRUSH from "./brush.js";
 import CLIP from "./clip.js";
 import FONT from "./font.js";
 import { GDIOBJ } from "./ntgdi.js";
-import { HWND } from "../../types/user32.types.js";
+import { IntGetSysColor } from "../brush.js";
 import { MATRIX } from "./trans.js";
-import PEN from "./pen.js";
 import { WND } from "../wnd.js";
 
 // represents a device context
@@ -38,6 +39,10 @@ class DC implements DC {
     prBounds: RECT;
     pcClip: CLIP;
     pmTransform: MATRIX;
+    ptCurrent: POINT;
+
+    crText: number;
+    dwBkMode: number;
 
     constructor(hOwner: HANDLE, params: Partial<DC>) {
         this.hDC = ObSetObject(this, "DC", hOwner || params.pdcParent.hDC, (val) => GreCleanupDC(val));
@@ -51,6 +56,10 @@ class DC implements DC {
         this.pcClip = params.pcClip || null;
         this.pmTransform = params.pmTransform || null;
         this.prBounds = params.prBounds || { left: 0, top: 0, right: 1, bottom: 1 };
+        this.ptCurrent = { x: 0, y: 0 };
+
+        this.crText = IntGetSysColor(COLOR.WINDOWTEXT);
+        this.dwBkMode = TRANSPARENT;
 
         if (this.pdcParent) {
             this.pSurface = this.pdcParent.pSurface;
@@ -128,6 +137,10 @@ function GreCleanupDC(dc: DC) {
 }
 
 export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ {
+    if(!h) {
+        return null;
+    }
+
     switch (h._type) {
         case "BRUSH":
             const pbr = h as BRUSH;
@@ -137,6 +150,9 @@ export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ {
             break;
         case "FONT":
             const pfnt = h as FONT;
+            const pfntOld = dc.pfntText;
+            dc.pfntText = pfnt;
+            return pfntOld;
             break;
         case "PEN":
             const pen = h as PEN;
@@ -155,6 +171,27 @@ export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ {
     }
 
     return null;
+}
+
+export function GreMoveTo(dc: DC, x: number, y: number) {
+    const ptPrev = { x: dc.ptCurrent.x, y: dc.ptCurrent.y };
+    dc.ptCurrent = { x, y };
+
+    return ptPrev;
+}
+
+export function GreLineTo(dc: DC, x: number, y: number) {
+    GreRealisePen(dc, dc.pbrLine);
+
+    const ptPrev = { x: dc.ptCurrent.x, y: dc.ptCurrent.y };
+    dc.ptCurrent = { x, y };
+    dc.pCtx.beginPath();
+    dc.pCtx.moveTo(ptPrev.x, ptPrev.y);
+    dc.pCtx.lineTo(x, y);
+    dc.pCtx.closePath();
+    dc.pCtx.stroke(); 
+
+    return ptPrev;
 }
 
 export default DC;

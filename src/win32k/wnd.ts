@@ -284,8 +284,8 @@ export class WND {
                 if (false) {
 
                 } else {
-                    x = monitor.cWndStack * NtIntGetSystemMetrics(this._peb, SM_CXSIZE) + NtIntGetSystemMetrics(this._peb, SM_CXFRAME);
-                    y = monitor.cWndStack * NtIntGetSystemMetrics(this._peb, SM_CXSIZE) + NtIntGetSystemMetrics(this._peb, SM_CXFRAME);
+                    x = monitor.cWndStack * NtIntGetSystemMetrics(SM_CXSIZE) + NtIntGetSystemMetrics(SM_CXFRAME);
+                    y = monitor.cWndStack * NtIntGetSystemMetrics(SM_CXSIZE) + NtIntGetSystemMetrics(SM_CXFRAME);
 
                     if (x > ((monitor.rcWork.right - monitor.rcWork.left) / 4) ||
                         y > ((monitor.rcWork.bottom - monitor.rcWork.top) / 4)) {
