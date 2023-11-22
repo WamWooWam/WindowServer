@@ -23,7 +23,7 @@ export function GreInit() {
     const desktopDC = GreAllocDCForMonitor(monitor.hMonitor);
 
     const rect = { left: 16, top: 16, right: 216, bottom: 34 }
-    NtUserDrawCaption(null, desktopDC.hDC, rect, 0, 0, "Hello, World!", DCF.TEXT | DCF.GRADIENT | DCF.ACTIVE);
+    NtUserDrawCaption(null, desktopDC.hDC, rect, 0, 0, "Example Window", DCF.TEXT | DCF.GRADIENT | DCF.ACTIVE);
     NtUserDrawCaptionButton(null, rect, WS_OVERLAPPEDWINDOW, 0, desktopDC.hDC, false, DFCS.CAPTIONMIN);
     NtUserDrawCaptionButton(null, rect, WS_OVERLAPPEDWINDOW, 0, desktopDC.hDC, false, DFCS.CAPTIONMAX);
     NtUserDrawCaptionButton(null, rect, WS_OVERLAPPEDWINDOW, 0, desktopDC.hDC, false, DFCS.CAPTIONCLOSE);
@@ -84,7 +84,7 @@ export function NtGdiFillGradientRect(hDC: HDC, pRect: RECT, pStops: GRADIENT_ST
     }
 
     ctx.fillStyle = gradient;
-    ctx.fillRect(pRect.left, pRect.top, pRect.right - pRect.left, pRect.bottom - pRect.top);
+    ctx.fillRect(pRect.left - 0.5, pRect.top - 0.5, pRect.right - pRect.left, pRect.bottom - pRect.top);
 
     return true;
 }
@@ -120,8 +120,10 @@ export function NtGdiSetTextColor(hDC: HDC, color: number): number {
 export function NtGdiTextOut(hDC: HDC, x: number, y: number, text: string): boolean {
     const dc = GreGetObj<DC>(hDC);
     GreRealiseFont(dc, dc.pfntText);
+    dc.pCtx.resetTransform();
     dc.pCtx.fillStyle = `rgba(${dc.crText & 0xFF}, ${(dc.crText >> 8) & 0xFF}, ${(dc.crText >> 16) & 0xFF}, 1)`;
     dc.pCtx.fillText(text, Math.round(x), Math.round(y + dc.pfntText.lpLogFont.lfHeight)); // TODO: what are these numbers?
+    dc.pCtx.translate(0.5, 0.5);
     return true;
 }
 
@@ -134,7 +136,7 @@ export function NtGdiDeleteObject(hObj: HANDLE): boolean {
 export function NtGdiGetTextExtentEx(hDC: HDC, text: string, dwMax: number): { fit: number, size: SIZE } {
     const dc = GreGetObj<DC>(hDC);
     GreRealiseFont(dc, dc.pfntText);
-    
+
     // returns the number of characters that will fit in the specified width (dwMax), and the size of the text
     // TODO: wrapping text with <canvas> is hard, so this is a hack for now
 

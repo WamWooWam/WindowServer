@@ -1,4 +1,4 @@
-import { BS, DC_BRUSH, HS } from "../../types/gdi32.types.js";
+import { BS, DC_BRUSH, HS, TRANSPARENT } from "../../types/gdi32.types.js";
 
 import DC from "./dc.js";
 import { GDIOBJ } from "./ntgdi.js";
@@ -66,9 +66,15 @@ export function GreRealiseBrush(dc: DC, br: BRUSH): void {
                 canvas.width = 8;
                 canvas.height = 8;
                 const ctx = canvas.getContext("2d");
+
+                if (dc.dwBkMode === TRANSPARENT) {
+                    ctx.clearRect(0, 0, 8, 8);
+                }
+                else {
+                    ctx.fillRect(0, 0, 8, 8);
+                    // todo: bkColor
+                } 
                 ctx.fillStyle = `#${br.lbColor.toString(16).padStart(6, "0")}`;
-                ctx.fillRect(0, 0, 8, 8);
-                ctx.fillStyle = "#000000";
                 switch (br.lbHatch) {
                     case HS.BDIAGONAL:
                         ctx.moveTo(0, 0);

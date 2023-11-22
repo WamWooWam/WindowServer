@@ -267,7 +267,7 @@ export function NtUserDrawRectEdge(hdc: HDC, rc: RECT, uType: EDGE, uFlags: BF) 
     }
 
     if ((uFlags & BF.BOTTOMLEFT) == BF.BOTTOMLEFT)
-        lbPenPlus = 1;
+        ltPenPlus = 1;
     if ((uFlags & BF.TOPRIGHT) == BF.TOPRIGHT)
         rtPenPlus = 1;
     if ((uFlags & BF.BOTTOMRIGHT) == BF.BOTTOMRIGHT)
@@ -456,15 +456,17 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
                     return; /* ToolWindows don't have min/max buttons */
 
                 if (style & WS_SYSMENU)
-                    tempRect.right -= NtIntGetSystemMetrics(SM_CXSIZE) + 1;
+                    tempRect.right -= NtIntGetSystemMetrics(SM_CXSIZE);
 
                 if (style & (WS_MAXIMIZEBOX | WS_MINIMIZEBOX))
                     tempRect.right -= NtIntGetSystemMetrics(SM_CXSIZE) - 2;
 
-                tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM_CXSIZE) + 1;
+                tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM_CXSIZE) + 2;
                 tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM_CYSIZE) - 2;
                 tempRect.top += 2;
-                tempRect.right -= 1;
+                tempRect.right -= 2;
+
+                tempRect.left -= 2;
 
                 NtUserDrawFrameControl(hDC, tempRect, DFC.CAPTION,
                     ((style & WS_MINIMIZE) ? DFCS.CAPTIONRESTORE : DFCS.CAPTIONMIN) |
@@ -478,7 +480,7 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
                     return; /* ToolWindows don't have min/max buttons */
 
                 if (style & WS_SYSMENU)
-                    tempRect.right -= NtIntGetSystemMetrics(SM_CXSIZE) + 1;
+                    tempRect.right -= NtIntGetSystemMetrics(SM_CXSIZE);
 
                 tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM_CXSIZE) + 1;
                 tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM_CYSIZE) - 2;
