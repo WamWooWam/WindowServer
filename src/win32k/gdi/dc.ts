@@ -89,6 +89,7 @@ export function GreAllocDCForMonitor(hMonitor: HANDLE): DC {
     pCanvas.height = window.innerHeight;
 
     const pCtx = pCanvas.getContext("2d");
+    pCtx.translate(0.5, 0.5);
 
     const dc = new DC(hMonitor, {
         pSurface: pCanvas,
@@ -189,8 +190,16 @@ export function GreLineTo(dc: DC, x: number, y: number) {
     const ptPrev = { x: dc.ptCurrent.x, y: dc.ptCurrent.y };
     dc.ptCurrent = { x, y };
     dc.pCtx.beginPath();
-    dc.pCtx.moveTo(ptPrev.x, ptPrev.y);
-    dc.pCtx.lineTo(x, y);
+
+    // there's an off-by-one error somewhere, so we need to draw the line ourselves
+    const dx = x - ptPrev.x;
+    const dy = y - ptPrev.y;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+
+    for (let i = 0; i < steps; i++) {
+        dc.pCtx.lineTo(ptPrev.x + (dx * i / steps), ptPrev.y + (dy * i / steps));
+    }
+
     dc.pCtx.closePath();
     dc.pCtx.stroke(); 
 
