@@ -45,7 +45,7 @@ export class WND {
 
     private _hParent: HWND; // parent window (if this is a WS.CHILD like a control)
     private _hOwner: HWND; // owner window (if this is a WS.POPUP like a dialog)
-    private _phwndChildren: HWND[]; 
+    private _phwndChildren: HWND[];
 
     private _hMenu: HMENU;
     private _lpParam: any;
@@ -163,6 +163,12 @@ export class WND {
         return this._dwStyle;
     }
 
+    public set dwStyle(value: number) {
+        let oldStyle = this._dwStyle;
+        this._dwStyle = value;
+        this.UpdateWindowStyle(oldStyle, value);
+    }
+
     public get dwExStyle(): number {
         return this._dwExStyle;
     }
@@ -264,33 +270,6 @@ export class WND {
             ObCloseHandle(this._hOwner);
     }
 
-    // private OnMinimizeButtonClick(): void {
-    //     NtPostMessage(this._peb, {
-    //         hWnd: this._hWnd,
-    //         message: WM.SYSCOMMAND,
-    //         wParam: SC.MINIMIZE,
-    //         lParam: 0
-    //     });
-    // }
-
-    // private OnMaximizeButtonClick(): void {
-    //     NtPostMessage(this._peb, {
-    //         hWnd: this._hWnd,
-    //         message: WM.SYSCOMMAND,
-    //         wParam: SC.MAXIMIZE,
-    //         lParam: 0
-    //     });
-    // }
-
-    // private OnCloseButtonClick(): void {
-    //     NtPostMessage(this._peb, {
-    //         hWnd: this._hWnd,
-    //         message: WM.SYSCOMMAND,
-    //         wParam: SC.CLOSE,
-    //         lParam: 0
-    //     });
-    // }
-
     private FixWindowCoordinates(): void {
         let x = this.rcWindow.left;
         let y = this.rcWindow.top;
@@ -357,7 +336,6 @@ export class WND {
         if (!this._pRootElement) {
             await NtSendMessage(this._peb, [this._hWnd, WMP.CREATEELEMENT, 0, 0])
 
-
             if (this._hParent) {
                 await NtSendMessage(this._peb, [this._hParent, WMP.ADDCHILD, this._hWnd, 0]);
             }
@@ -389,5 +367,13 @@ export class WND {
             return;
 
         GreResizeDC(this._hDC, this.rcClient);
+    }
+
+    public UpdateWindowStyle(dwOldStyle: number, dwNewStyle: number): void {
+        if (!this._pRootElement)
+            return;
+
+        NtPostMessage(this._peb, [this._hWnd, WMP.UPDATEWINDOWSTYLE, dwNewStyle, dwOldStyle]);
+        NtPostMessage(this._peb, [this._hWnd, WM.STYLECHANGED, -16, { oldStyle: dwOldStyle, newStyle: dwNewStyle }]);
     }
 }

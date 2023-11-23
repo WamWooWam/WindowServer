@@ -1,8 +1,7 @@
 import { GreInit } from "./gdi/ntgdi.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 
-export function NtUserInit() {
+export async function NtUserInit() {
     GreInit();
-
     NtGetPrimaryMonitor();
 }

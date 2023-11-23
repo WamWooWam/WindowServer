@@ -86,13 +86,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         }
     }
 
-    let lpClassInfo: W32CLASSINFO = null;
-    if (typeof lpClassName === "number") {
-        lpClassInfo = state.classes[lpClassName];
-    }
-    else {
-        lpClassInfo = NtFindClass(state, lpClassName);
-    }
+    let lpClassInfo = NtFindClass(state, lpClassName);
 
     if (lpClassInfo == null) {
         // Class not registered
@@ -358,5 +352,5 @@ export function NtUserGetDC(peb: PEB, hWnd: HWND): HDC {
     }
 
     const wnd = ObGetObject<WND>(hWnd);
-    return wnd.hDC;
+    return ObDuplicateHandle(wnd.hDC);
 }

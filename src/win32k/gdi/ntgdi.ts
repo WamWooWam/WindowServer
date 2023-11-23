@@ -6,6 +6,7 @@ import { ObCloseHandle, ObDestroyHandle } from "../../objects.js";
 import PEN, { GreCreatePen } from "./pen.js";
 
 import { GreCreateSolidBrush } from "./brush.js";
+import { GreRectangle } from "./draw.js";
 import { HANDLE } from "../../types/types.js";
 import { LOGFONT } from "../../types/user32.types.js";
 
@@ -135,4 +136,9 @@ export function NtGdiGetTextExtentEx(hDC: HDC, text: string, dwMax: number): { f
     const fit = Math.floor(dwMax / width);
 
     return { fit, size };
+}
+
+export function NtGdiRectangle(hDC: HDC, rect: RECT) {
+    const dc = GreGetObj<DC>(hDC);
+    GreRectangle(dc, rect);
 }

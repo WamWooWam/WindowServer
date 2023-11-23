@@ -16,6 +16,6 @@ export function ButtonWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: 
                 return 0;
             }
         default:
-            return NtDefWindowProc(wnd.peb, hWnd, uMsg, wParam, lParam);
+            return NtDefWindowProc(hWnd, uMsg, wParam, lParam);
     }
 }

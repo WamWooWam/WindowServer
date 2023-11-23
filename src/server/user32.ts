@@ -1,7 +1,9 @@
+import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import { NtCreateWindowEx, NtDestroyWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC } from "../win32k/window.js";
 import { NtGetMessage, NtPostQuitMessage, NtSendMessage } from "../win32k/msg.js";
-import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
+import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
 import USER32, {
+    CREATE_DESKTOP,
     CREATE_WINDOW_EX,
     CREATE_WINDOW_EX_REPLY,
     GET_MESSAGE,
@@ -11,8 +13,10 @@ import USER32, {
     MSG,
     REGISTER_CLASS,
     REGISTER_CLASS_REPLY,
+    SET_WINDOW_POS,
     SHOW_WINDOW,
     SHOW_WINDOW_REPLY,
+    WNDCLASSEX,
     WNDCLASS_WIRE,
     WNDPROC_PARAMS,
     WS,
@@ -25,6 +29,38 @@ import { NtRegisterClassEx } from "../win32k/class.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 import W32MSG_QUEUE from "../win32k/msgqueue.js";
 import { W32PROCINFO } from "../win32k/shared.js";
+
+const DefaultClasses: WNDCLASSEX[] = [
+    {
+        style: WS.CHILD,
+        lpszClassName: 0x8001,
+        lpszMenuName: null,
+        lpfnWndProc: NtUserDesktopWndProc,
+        hIcon: 0,
+        hCursor: 0,
+        hbrBackground: 0,
+        hInstance: 0,
+        hIconSm: 0,
+        cbClsExtra: 0,
+        cbWndExtra: 0,
+        cbSize: 0
+    },
+    {
+        style: WS.CHILD,
+        lpszClassName: "BUTTON",
+        lpszMenuName: null,
+        lpfnWndProc: ButtonWndProc,
+        hIcon: 0,
+        hCursor: 0,
+        hbrBackground: 0,
+        hInstance: 0,
+        hIconSm: 0,
+        cbClsExtra: 0,
+        cbWndExtra: 0,
+        cbSize: 0
+    }
+];
+
 
 function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
     let procInfo = lpSubsystem.lpParams as W32PROCINFO;
@@ -41,23 +77,9 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
         lpSubsystem.lpParams = procInfo;
     }
 
-    const DefWindowProc = (hWnd: number, uMsg: number, wParam: number, lParam: number): LRESULT => {
-        return UserDefWindowProc(peb, [hWnd, uMsg, wParam, lParam]);
+    for (const wndClass of DefaultClasses) {
+        NtRegisterClassEx(peb, wndClass);
     }
-
-    NtRegisterClassEx(peb, {
-        style: WS.CHILD,
-        lpszClassName: "BUTTON",
-        lpszMenuName: null,
-        lpfnWndProc: ButtonWndProc,
-        hIcon: 0,
-        hCursor: 0,
-        hbrBackground: 0,
-        hInstance: 0,
-        hIconSm: 0,
-        cbClsExtra: 0,
-        cbWndExtra: 0
-    });
 }
 
 
@@ -82,7 +104,7 @@ async function UserRegisterClass(peb: PEB, { lpWndClass }: REGISTER_CLASS): Prom
 async function UserDefWindowProc(peb: PEB, data: WNDPROC_PARAMS): Promise<LRESULT> {
     console.log("DefWindowProc", data);
 
-    return await NtDefWindowProc(peb, ...data);
+    return await NtDefWindowProc(...data);
 }
 
 async function UserCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promise<CREATE_WINDOW_EX_REPLY> {
@@ -143,8 +165,12 @@ function UserGetSystemMetrics(peb: PEB, nIndex: number): number {
     return NtIntGetSystemMetrics(nIndex);
 }
 
-function UserSetWindowPos(peb: PEB, params: { hWnd: HWND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, uFlags: number }) {
+function UserSetWindowPos(peb: PEB, params: SET_WINDOW_POS) {
     return NtSetWindowPos(peb, params.hWnd, params.hWndInsertAfter, params.x, params.y, params.cx, params.cy, params.uFlags);
+}
+
+async function UserCreateDesktop(peb: PEB, params: CREATE_DESKTOP): Promise<HANDLE> {
+    return await NtUserCreateDesktop(peb, params);
 }
 
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
@@ -163,7 +189,8 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.PostQuitMessage]: UserPostQuitMessage,
         [USER32.GetDC]: UserGetDC,
         [USER32.GetSystemMetrics]: UserGetSystemMetrics,
-        [USER32.SetWindowPos]: UserSetWindowPos
+        [USER32.SetWindowPos]: UserSetWindowPos,
+        [USER32.CreateDesktop]: UserCreateDesktop
     }
 };
 

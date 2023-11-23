@@ -43,7 +43,7 @@ export function NtRegisterClassEx(peb: PEB, lpWndClass: WNDCLASS_WIRE | WNDCLASS
     return state.classes.length - 1;
 }
 
-export function NtFindClass(state: W32PROCINFO, className: string): W32CLASSINFO | null {
+export function NtFindClass(state: W32PROCINFO, className: string | number): W32CLASSINFO | null {
     // TODO: handle global classes    
     return state.classes.find(c => c.lpszClassName === className) || null;
 }

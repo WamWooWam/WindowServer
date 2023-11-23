@@ -1,9 +1,8 @@
-import BRUSH, { GreRealiseBrush } from "./brush.js";
-import { BS, HDC, PS, RECT } from "../../types/gdi32.types.js";
+import { BS, PS, RECT } from "../../types/gdi32.types.js";
 
 import DC from "./dc.js";
+import { GreRealiseBrush } from "./brush.js";
 import { GreRealisePen } from "./pen.js";
-import { ObGetObject } from "../../objects.js";
 import REGION from "./rgn.js";
 
 function GreRegionToPath(rgn: REGION) {

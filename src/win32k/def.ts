@@ -31,17 +31,18 @@ async function NtDefWndHandleSysCommand(peb: PEB, wnd: WND, wParam: WPARAM, lPar
     return 0; // TODO
 }
 
-export async function NtDefWindowProc(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
-    const state = GetW32ProcInfo(peb);
+export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
 
     if (Msg > WM.USER && Msg < WMP.CREATEELEMENT) // not for us!
         return 0;
-
+        
     const wnd = ObGetObject<WND>(hWnd);
     if (!wnd) {
         return -1;
     }
-
+    
+    const peb = wnd.peb;
+    const state = GetW32ProcInfo(peb);
     console.warn(`NtDefWindowProc: Msg=0x${Msg.toString(16)}`);
 
     switch (Msg) {
@@ -54,6 +55,10 @@ export async function NtDefWindowProc(peb: PEB, hWnd: HWND, Msg: number, wParam:
         case WMP.REMOVECHILD:
             console.log("WMP_REMOVECHILD");
             return NtDefRemoveChild(peb, hWnd, wParam);
+        case WMP.UPDATEWINDOWSTYLE:
+            console.log("WMP_UPDATEWINDOWSTYLE");
+            return NtDefUpdateWindowStyle(peb, hWnd, wParam, lParam);           
+
         case WM.NCCREATE:
             console.log("WM_NCCREATE");
             return 0;
@@ -107,10 +112,8 @@ function NtDefRemoveChild(peb: PEB, hWnd: HWND, hWndChild: HWND): LRESULT {
 }
 
 function NtDefCreateWindowTitleBar(pRootElement: HTMLElement, wnd: WND, data: WND_DATA): LRESULT {
-    const titleBar = document.createElement("div");
-    titleBar.className = "title-bar";
-
-    const titleBarText = document.createElement("div");
+    const titleBar = document.createElement("title-bar");
+    const titleBarText = document.createElement("p");
     titleBarText.className = "title-bar-text";
     titleBarText.innerText = wnd.lpszName;
 
@@ -177,7 +180,7 @@ function NtDefCreateElement(peb: PEB, hWnd: HWND, uMsg: number, wParam: WPARAM, 
         };
     }
 
-    const pRootElement = document.createElement("div");
+    const pRootElement = document.createElement("window");
 
     // use 98.css styles
     if (wnd.dwStyle & WS.SIZEBOX) {
@@ -197,5 +200,84 @@ function NtDefCreateElement(peb: PEB, hWnd: HWND, uMsg: number, wParam: WPARAM, 
 
     wnd.pRootElement = pRootElement;  
 
+    NtDefUpdateWindowStyle(peb, hWnd, wnd.dwStyle, 0);
+
     return 1;
+}
+
+function NtDefUpdateWindowStyle(peb: PEB, hWnd: HWND, dwNewStyle: number, dwOldStyle: number): LRESULT {
+    const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return -1;
+    }
+
+    const data = wnd.data as WND_DATA;
+    if (!data) {
+        return -1;
+    }
+
+    const pRootElement = wnd.pRootElement;
+    const { pTitleBar, pTitleBarText, pTitleBarControls, pCloseButton, pMinimizeButton, pMaximizeButton, pWindowBody } = data;
+
+    if (dwNewStyle & WS.CAPTION) {
+        if (!pTitleBar) {
+            NtDefCreateWindowTitleBar(pRootElement, wnd, data);
+        }
+    }
+    else {
+        if (pTitleBar) {
+            pRootElement.removeChild(pTitleBar);
+            pRootElement.removeChild(pWindowBody);
+        }
+    }
+
+    if (dwNewStyle & WS.MINIMIZEBOX) {
+        if (!pMinimizeButton) {
+            const minimizeButton = document.createElement("button");
+            minimizeButton.setAttribute("aria-label", "Minimize");
+            // minimizeButton.addEventListener("click", () => wnd.OnMinimizeButtonClick());
+    
+            pTitleBarControls.appendChild(minimizeButton);
+    
+            data.pMinimizeButton = minimizeButton;
+        }
+    }
+    else {
+        if (pMinimizeButton) {
+            pTitleBarControls.removeChild(pMinimizeButton);
+        }
+    }
+
+    if (dwNewStyle & WS.MAXIMIZEBOX) {
+        if (!pMaximizeButton) {
+            const maximizeButton = document.createElement("button");
+            maximizeButton.setAttribute("aria-label", "Maximize");
+            // maximizeButton.addEventListener("click", () => wnd.OnMaximizeButtonClick());
+    
+            pTitleBarControls.appendChild(maximizeButton);
+    
+            data.pMaximizeButton = maximizeButton;
+        }
+    }
+    else {
+        if (pMaximizeButton) {
+            pTitleBarControls.removeChild(pMaximizeButton);
+        }
+    }
+
+    if (dwNewStyle & WS.ACTIVE) {
+        pRootElement.classList.remove("inactive");
+    }
+    else {
+        pRootElement.classList.add("inactive");
+    }
+
+    if (dwNewStyle & WS.THICKFRAME) {
+        pRootElement.classList.add("window");
+    }
+    else {
+        pRootElement.classList.remove("window");
+    }
+
+    return 0;
 }

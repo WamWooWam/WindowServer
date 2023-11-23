@@ -14,6 +14,7 @@ const USER32 = {
     GetDC: 0x0000000A,
     GetSystemMetrics: 0x0000000B,
     SetWindowPos: 0x0000000C,
+    CreateDesktop: 0x0000000D,
 }
 
 export const HWND_BROADCAST = 0xFFFF;
@@ -51,7 +52,10 @@ export namespace WS {
     export const POPUPWINDOW = POPUP | BORDER | SYSMENU;
     export const CHILDWINDOW = CHILD;
 
+    export const ACTIVE = 0x40000000;
     export const MINIMIZED = 0x200000000;
+    export const MAXIMIZED = 0x100000000;
+
 
     export namespace EX {
         export const DLGMODALFRAME = 0x00000001;
@@ -583,6 +587,25 @@ export interface GET_MESSAGE {
 export interface GET_MESSAGE_REPLY {
     retVal: boolean;
     lpMsg: MSG;
+}
+
+export interface SET_WINDOW_POS {
+    hWnd: HWND;
+    hWndInsertAfter: HWND;
+    x: number;
+    y: number;
+    cx: number;
+    cy: number;
+    uFlags: number;
+}
+
+export interface CREATE_DESKTOP {
+    lpszDesktop: string;
+    lpszDevice: string;
+    pDevMode: null;
+    dwFlags: number;
+    dwDesiredAccess: number;
+    lpsa: any;
 }
 
 export default USER32;

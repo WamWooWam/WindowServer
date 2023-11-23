@@ -1,16 +1,13 @@
-import { NtPostProcessMessage, NtPostQuitMessage } from "./win32k/msg.js";
-import { PsCreateProcess, PsGetProcessId, PsRegisterProcessHooks, PsTerminateProcess } from "./loader.js"
+import { NtPostMessage, NtPostProcessMessage, NtPostQuitMessage } from "./win32k/msg.js";
+import { PsCreateProcess, PsRegisterProcessHooks, PsTerminateProcess } from "./loader.js"
 
-import Executable from "./types/Executable.js";
-import { GreInit } from "./win32k/gdi/ntgdi.js";
 import { HANDLE } from "./types/types.js";
-import { NtGetPrimaryMonitor } from "./win32k/monitor.js";
 import { NtUserInit } from "./win32k/init.js";
 import { PsProcess } from "./process.js";
-import { WM } from "./types/user32.types.js";
+import { HWND_BROADCAST, WM } from "./types/user32.types.js";
 import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from "./objects.js";
 
-(() => {
+(async () => {
     const procs: HANDLE[] = [];
     const processTableEntries = new Map<HANDLE, HTMLTableRowElement>();
     let processCount = 0;
@@ -63,7 +60,7 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
             wParam: 0,
             lParam: 0
         });
-        
+
         UpdateButtons();
     }
 
@@ -108,7 +105,7 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
 
     PsRegisterProcessHooks(ProcessCreated, ProcessDestroyed);
 
-    NtUserInit();
+    await NtUserInit();
     PsCreateProcess("wininit.js", "", false, {}, "C:\\Windows\\System32", null);
 
     setInterval(UpdateStates, 1000);

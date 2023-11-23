@@ -3,6 +3,7 @@ export enum WMP {
     CREATEELEMENT = 0x8000,
     ADDCHILD = 0x8001,
     REMOVECHILD = 0x8002,
+    UPDATEWINDOWSTYLE = 0x8003,
 }
 
 export interface WND_DATA {
