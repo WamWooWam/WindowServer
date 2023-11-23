@@ -117,6 +117,9 @@ export function GreAllocDCForWindow(peb: PEB, hWnd: HWND): HDC {
     pCanvas.height = wnd.rcClient.bottom - wnd.rcClient.top;
 
     const pCtx = pCanvas.getContext("2d");
+
+    wnd.pRootElement.appendChild(pCanvas);
+
     return new DC(hWnd, {
         pSurface: pCanvas,
         pCtx

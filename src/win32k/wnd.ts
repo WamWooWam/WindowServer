@@ -7,27 +7,12 @@ import {
     LPARAM,
     LRESULT,
     MSG,
-    SC_CLOSE,
-    SC_MAXIMIZE,
-    SC_MINIMIZE,
-    SM_CXFRAME,
-    SM_CXSIZE,
-    WM_SYSCOMMAND,
+    SC,
+    SM,
+    WM,
     WNDPROC,
     WPARAM,
-    WS_CAPTION,
-    WS_CHILD,
-    WS_CLIPSIBLINGS,
-    WS_DLGFRAME,
-    WS_EX_DLGMODALFRAME,
-    WS_EX_STATICEDGE,
-    WS_EX_WINDOWEDGE,
-    WS_MAXIMIZEBOX,
-    WS_MINIMIZEBOX,
-    WS_OVERLAPPED,
-    WS_POPUP,
-    WS_SIZEBOX,
-    WS_THICKFRAME
+    WS
 } from "../types/user32.types.js";
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
@@ -45,6 +30,7 @@ import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
+import { WMP } from "../types/user32.int.types.js";
 
 export class WND {
     private _hWnd: HWND;
@@ -57,8 +43,8 @@ export class WND {
     private _pClsInfo: W32CLASSINFO;
     private _lpszName: string;
 
-    private _hParent: HWND; // parent window (if this is a WS_CHILD like a control)
-    private _hOwner: HWND; // owner window (if this is a WS_POPUP like a dialog)
+    private _hParent: HWND; // parent window (if this is a WS.CHILD like a control)
+    private _hOwner: HWND; // owner window (if this is a WS.POPUP like a dialog)
     // private phwndChildren: HWND[]; 
 
     private _hMenu: HMENU;
@@ -71,6 +57,10 @@ export class WND {
         sendSizeMoveMsgs: false,
     }
 
+    private _pRootElement: HTMLElement;
+
+    public data: any;
+
     constructor(
         peb: PEB,
         pti: W32PROCINFO,
@@ -80,13 +70,13 @@ export class WND {
         hParent: HWND,
         hOwner: HWND,
     ) {
-        // Automatically add WS_EX_WINDOWEDGE if we have a thick frame
-        if ((cs.dwExStyle & WS_EX_DLGMODALFRAME) ||
-            ((!(cs.dwExStyle & WS_EX_STATICEDGE)) &&
-                (cs.dwStyle & (WS_DLGFRAME | WS_THICKFRAME))))
-            cs.dwExStyle |= WS_EX_WINDOWEDGE;
+        // Automatically add WS.EX.WINDOWEDGE if we have a thick frame
+        if ((cs.dwExStyle & WS.EX.DLGMODALFRAME) ||
+            ((!(cs.dwExStyle & WS.EX.STATICEDGE)) &&
+                (cs.dwStyle & (WS.DLGFRAME | WS.THICKFRAME))))
+            cs.dwExStyle |= WS.EX.WINDOWEDGE;
         else
-            cs.dwExStyle &= ~WS_EX_WINDOWEDGE;
+            cs.dwExStyle &= ~WS.EX.WINDOWEDGE;
 
         this._hWnd = ObSetObject(this, "WND", hParent || peb.hProcess, () => this.Dispose());
         this._hInstance = cs.hInstance;
@@ -118,25 +108,25 @@ export class WND {
         // ReactOS does funny stuff to specialise creating the desktop window, but I'd rather not do that
 
         // Correct the window style.
-        if ((this.dwStyle & (WS_CHILD | WS_POPUP)) != WS_CHILD) {
-            this._dwStyle |= WS_CLIPSIBLINGS;
-            if (!(this.dwStyle & WS_POPUP)) {
-                this._dwStyle |= WS_CAPTION;
+        if ((this.dwStyle & (WS.CHILD | WS.POPUP)) != WS.CHILD) {
+            this._dwStyle |= WS.CLIPSIBLINGS;
+            if (!(this.dwStyle & WS.POPUP)) {
+                this._dwStyle |= WS.CAPTION;
             }
         }
 
-        // WS_EX_WINDOWEDGE depends on some other styles 
-        if (this._dwExStyle & WS_EX_DLGMODALFRAME)
-            this._dwExStyle |= WS_EX_WINDOWEDGE;
-        else if (this.dwStyle & (WS_DLGFRAME | WS_THICKFRAME)) {
-            if (!((this._dwExStyle & WS_EX_STATICEDGE) &&
-                (this.dwStyle & (WS_CHILD | WS_POPUP))))
-                this._dwExStyle |= WS_EX_WINDOWEDGE;
+        // WS.EX.WINDOWEDGE depends on some other styles 
+        if (this._dwExStyle & WS.EX.DLGMODALFRAME)
+            this._dwExStyle |= WS.EX.WINDOWEDGE;
+        else if (this.dwStyle & (WS.DLGFRAME | WS.THICKFRAME)) {
+            if (!((this._dwExStyle & WS.EX.STATICEDGE) &&
+                (this.dwStyle & (WS.CHILD | WS.POPUP))))
+                this._dwExStyle |= WS.EX.WINDOWEDGE;
         }
         else
-            this._dwExStyle &= ~WS_EX_WINDOWEDGE;
+            this._dwExStyle &= ~WS.EX.WINDOWEDGE;
 
-        if (!(this.dwStyle & (WS_CHILD | WS_POPUP)))
+        if (!(this.dwStyle & (WS.CHILD | WS.POPUP)))
             this._stateFlags.sendSizeMoveMsgs = true;
 
         const parent = ObGetObject<WND>(this._hParent);
@@ -146,16 +136,11 @@ export class WND {
 
         this.FixWindowCoordinates();
 
-        // if we're a top level window, allocate a DC
-        if (!(this.dwStyle & WS_CHILD)) {
-            this._hDC = GreAllocDCForWindow(peb, this._hWnd);
-        }
-        else {
-            // use the parent's DC, with an additional transform
-            this._hDC = ObDuplicateHandle(parent._hDC);
-        }
-
         pti.hWnds.push(this._hWnd);
+    }
+
+    public get peb(): PEB {
+        return this._peb;
     }
 
     public get hWnd(): HWND {
@@ -206,6 +191,14 @@ export class WND {
         return [...ObGetChildHandlesByType(this._hWnd, "WND")];
     }
 
+    public get pRootElement() {
+        return this._pRootElement;
+    }
+
+    public set pRootElement(value: HTMLElement) {
+        this._pRootElement = value;
+    }
+
     public AddChild(hWnd: HWND): void {
         ObSetHandleOwner(hWnd, this._hWnd);
     }
@@ -217,21 +210,15 @@ export class WND {
     public Show(): void {
         this.FixWindowCoordinates();
 
-        // const parent = ObGetObject<WND>(this._hParent);
-        // if (parent) {
-        //     parent.pRootElement.appendChild(this._pRootElement);
-        // }
-        // else if ((this.dwStyle & (WS_CHILD | WS_POPUP)) != WS_CHILD) {
-        //     document.body.appendChild(this._pRootElement);
-        // }
+        this._pRootElement.style.display = "";
     }
 
     public Hide(): void {
-        // this._pRootElement.remove();
+        this._pRootElement.style.display = "none";
     }
 
     public Dispose(): void {
-        // this._pRootElement.remove();
+        this.Hide();
 
         if (this._hParent)
             ObCloseHandle(this._hParent);
@@ -240,32 +227,32 @@ export class WND {
             ObCloseHandle(this._hOwner);
     }
 
-    private OnMinimizeButtonClick(): void {
-        NtPostMessage(this._peb, {
-            hWnd: this._hWnd,
-            message: WM_SYSCOMMAND,
-            wParam: SC_MINIMIZE,
-            lParam: 0
-        });
-    }
+    // private OnMinimizeButtonClick(): void {
+    //     NtPostMessage(this._peb, {
+    //         hWnd: this._hWnd,
+    //         message: WM.SYSCOMMAND,
+    //         wParam: SC.MINIMIZE,
+    //         lParam: 0
+    //     });
+    // }
 
-    private OnMaximizeButtonClick(): void {
-        NtPostMessage(this._peb, {
-            hWnd: this._hWnd,
-            message: WM_SYSCOMMAND,
-            wParam: SC_MAXIMIZE,
-            lParam: 0
-        });
-    }
+    // private OnMaximizeButtonClick(): void {
+    //     NtPostMessage(this._peb, {
+    //         hWnd: this._hWnd,
+    //         message: WM.SYSCOMMAND,
+    //         wParam: SC.MAXIMIZE,
+    //         lParam: 0
+    //     });
+    // }
 
-    private OnCloseButtonClick(): void {
-        NtPostMessage(this._peb, {
-            hWnd: this._hWnd,
-            message: WM_SYSCOMMAND,
-            wParam: SC_CLOSE,
-            lParam: 0
-        });
-    }
+    // private OnCloseButtonClick(): void {
+    //     NtPostMessage(this._peb, {
+    //         hWnd: this._hWnd,
+    //         message: WM.SYSCOMMAND,
+    //         wParam: SC.CLOSE,
+    //         lParam: 0
+    //     });
+    // }
 
     private FixWindowCoordinates(): void {
         let x = this.rcWindow.left;
@@ -273,7 +260,7 @@ export class WND {
         let cx = this.rcWindow.right - this.rcWindow.left;
         let cy = this.rcWindow.bottom - this.rcWindow.top;
 
-        if (!(this.dwStyle & (WS_POPUP | WS_CHILD))) {
+        if (!(this.dwStyle & (WS.POPUP | WS.CHILD))) {
             const monitor = NtGetPrimaryMonitor();
 
             if (x === CW_USEDEFAULT) {
@@ -284,8 +271,8 @@ export class WND {
                 if (false) {
 
                 } else {
-                    x = monitor.cWndStack * NtIntGetSystemMetrics(SM_CXSIZE) + NtIntGetSystemMetrics(SM_CXFRAME);
-                    y = monitor.cWndStack * NtIntGetSystemMetrics(SM_CXSIZE) + NtIntGetSystemMetrics(SM_CXFRAME);
+                    x = monitor.cWndStack * NtIntGetSystemMetrics(SM.CXSIZE) + NtIntGetSystemMetrics(SM.CXFRAME);
+                    y = monitor.cWndStack * NtIntGetSystemMetrics(SM.CXSIZE) + NtIntGetSystemMetrics(SM.CXFRAME);
 
                     if (x > ((monitor.rcWork.right - monitor.rcWork.left) / 4) ||
                         y > ((monitor.rcWork.bottom - monitor.rcWork.top) / 4)) {
@@ -327,13 +314,41 @@ export class WND {
         this.rcClient.top = 0;
         this.rcClient.right = cx;
         this.rcClient.bottom = cy;
-
-        this.InvalidateRect();
     }
 
-    private InvalidateRect(): void {
+    async CreateElement() {
+        if (!this._pRootElement) {
+            await NtSendMessage(this._peb, [this._hWnd, WMP.CREATEELEMENT, 0, 0])
+
+
+            if (this._hParent) {
+                await NtSendMessage(this._peb, [this._hParent, WMP.ADDCHILD, this._hWnd, 0]);
+            }
+            else {
+                // for now, just add it to the body
+                document.body.appendChild(this._pRootElement);
+            }
+        }
+
+        // for now, dont do a dirty flag, just set the style
+        this.pRootElement.style.left = `${this.rcWindow.left}px`;
+        this.pRootElement.style.top = `${this.rcWindow.top}px`;
+        this.pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
+        this.pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
+        this.pRootElement.style.position = "absolute";
+        this.pRootElement.style.overflow = "hidden";
+
+        // if we're a top level window, allocate a DC
+        if (!(this.dwStyle & WS.CHILD)) {
+            this._hDC = GreAllocDCForWindow(this._peb, this._hWnd);
+        }
+        else {
+            // use the parent's DC, with an additional transform
+            const parent = ObGetObject<WND>(this._hParent);
+            this._hDC = ObDuplicateHandle(parent._hDC);
+        }
+
         if (!this._hDC) return;
         GreResizeDC(this._hDC, this.rcClient);
-        // todo: redraw
     }
 }

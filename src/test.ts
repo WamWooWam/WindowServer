@@ -16,17 +16,16 @@ import {
     LPARAM,
     LRESULT,
     MSG,
-    SW_SHOWDEFAULT,
-    WM_CREATE,
-    WM_DESTROY,
+    SW, 
+    WS,
+    WM,
     WNDCLASSEX,
     WPARAM,
-    WS_OVERLAPPEDWINDOW
 } from "./types/user32.types.js";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
-        case WM_CREATE: {
+        case WM.CREATE: {
             const button = await CreateWindowEx(
                 0,                      // dwExStyle
                 "BUTTON",               // lpClassName
@@ -44,12 +43,12 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
 
             console.log(button);
 
-            await ShowWindow(button, SW_SHOWDEFAULT);
+            await ShowWindow(button, SW.SHOWDEFAULT);
 
             break;
         }
 
-        case WM_DESTROY:
+        case WM.DESTROY:
             await PostQuitMessage(0);
             break;
 
@@ -86,7 +85,7 @@ async function main() {
         0,                      // dwExStyle
         className,              // lpClassName
         "Test Window",          // lpWindowName
-        WS_OVERLAPPEDWINDOW,    // dwStyle
+        WS.OVERLAPPEDWINDOW,    // dwStyle
 
         // x, y, nWidth, nHeight
         CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
@@ -98,7 +97,7 @@ async function main() {
     );
     console.log(hWnd);
 
-    await ShowWindow(hWnd, SW_SHOWDEFAULT);
+    await ShowWindow(hWnd, SW.SHOWDEFAULT);
 
     let msg: MSG = {} as MSG;
     while (await GetMessage(msg, 0, 0, 0)) {

@@ -1,4 +1,4 @@
-import { SM_CXFRAME, SM_CXMINIMIZED, SM_CXSCREEN, SM_CXSIZE, SM_CYFRAME, SM_CYSCREEN, SM_CYSIZE, SPI } from "../types/user32.types.js";
+import { SM, SPI } from "../types/user32.types.js";
 
 import { GetW32ProcInfo } from "./shared.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
@@ -10,21 +10,21 @@ import { WND } from "./wnd.js";
 export function NtIntGetSystemMetrics(nIndex: number): number {
     const monitor = NtGetPrimaryMonitor();
     switch (nIndex) {
-        case SM_CXSCREEN: // SM_CXSCREEN
+        case SM.CXSCREEN: // SM.CXSCREEN
             return monitor.rcMonitor.right - monitor.rcMonitor.left;
-        case SM_CYSCREEN: // SM_CYSCREEN
+        case SM.CYSCREEN: // SM.CYSCREEN
             return monitor.rcMonitor.bottom - monitor.rcMonitor.top;
-        case SM_CXMINIMIZED: // SM_CXMINIMIZED
+        case SM.CXMINIMIZED: // SM.CXMINIMIZED
             return 100; // hardcoded, fix
-        case SM_CXMINIMIZED: // SM_CYMINIMIZED
+        case SM.CXMINIMIZED: // SM.CYMINIMIZED
             return 32; // hardcoded, fix
-        case SM_CXSIZE:
+        case SM.CXSIZE:
             return 18; // hardcoded, fix
-        case SM_CYSIZE:
+        case SM.CYSIZE:
             return 18; // hardcoded, fix
-        case SM_CXFRAME:
+        case SM.CXFRAME:
             return 4; // hardcoded, fix
-        case SM_CYFRAME:
+        case SM.CYFRAME:
             return 4; // hardcoded, fix
         default:
             console.warn(`NtIntGetSystemMetrics: unknown index ${nIndex}`);

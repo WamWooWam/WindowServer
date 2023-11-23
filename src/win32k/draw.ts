@@ -1,4 +1,18 @@
-import { BDR, BF, COLOR, DC as DCF, DFC, DFCS, EDGE, HICON, LOGFONT, NONCLIENTMETRICS, SM_CXSIZE, SM_CXSMSIZE, SM_CYCAPTION, SM_CYSIZE, SM_CYSMSIZE, SPI, WS_EX_TOOLWINDOW, WS_MAXIMIZE, WS_MAXIMIZEBOX, WS_MINIMIZE, WS_MINIMIZEBOX, WS_SYSMENU } from "../types/user32.types.js";
+import {
+     BDR,
+     BF,
+     COLOR,
+     DC as DCF,
+     DFC,
+     DFCS,
+     EDGE,
+     HICON,
+     LOGFONT,
+     NONCLIENTMETRICS,
+     SM,
+     SPI,
+     WS
+} from "../types/user32.types.js";
 import DC, { GreSelectObject } from "./gdi/dc.js";
 import { DEFAULT_CHARSET, FW, HBRUSH, HDC, HFONT, NONANTIALIASED_QUALITY, NULL_PEN, PS, RECT, SIZE, TRANSPARENT } from "../types/gdi32.types.js";
 import { GreGetObj, GreGetStockObject } from "./gdi/obj.js";
@@ -17,7 +31,23 @@ import {
     RBOuterNormal,
     RBOuterSoft
 } from "./tbls.js";
-import { NtGdiCreateFontIndirect, NtGdiCreatePen, NtGdiDeleteObject, NtGdiFillGradientRect, NtGdiGetBkMode, NtGdiGetStockObject, NtGdiGetTextColor, NtGdiGetTextExtentEx, NtGdiLineTo, NtGdiMoveTo, NtGdiSelectObject, NtGdiSetBkMode, NtGdiSetDCPenColor, NtGdiSetTextColor, NtGdiTextOut } from "./gdi/ntgdi.js";
+import {
+     NtGdiCreateFontIndirect,
+     NtGdiCreatePen,
+     NtGdiDeleteObject,
+     NtGdiFillGradientRect,
+     NtGdiGetBkMode,
+     NtGdiGetStockObject,
+     NtGdiGetTextColor,
+     NtGdiGetTextExtentEx,
+     NtGdiLineTo,
+     NtGdiMoveTo,
+     NtGdiSelectObject,
+     NtGdiSetBkMode,
+     NtGdiSetDCPenColor,
+     NtGdiSetTextColor,
+     NtGdiTextOut
+} from "./gdi/ntgdi.js";
 import { NtIntGetSystemMetrics, NtUserSystemParametersInfo } from "./metrics.js";
 
 import BRUSH from "./gdi/brush.js";
@@ -373,7 +403,7 @@ export function NtUserDrawCaption(
 
     if (!hIcon && pWnd != null) {
         hasIcon = (uFlags & DCF.ICON) && !(uFlags * DCF.SMALLCAP) &&
-            (pWnd.dwStyle & WS_SYSMENU) && !(pWnd.dwExStyle & WS_EX_TOOLWINDOW);
+            (pWnd.dwStyle & WS.SYSMENU) && !(pWnd.dwExStyle & WS.EX.TOOLWINDOW);
     }
     else {
         hasIcon = hIcon != null;
@@ -443,7 +473,7 @@ export function NtUserDrawCaption(
 }
 
 export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, exStyle: number, hDC: HDC, bDown: boolean, type: number) {
-    if (!(style & WS_SYSMENU)) {
+    if (!(style & WS.SYSMENU)) {
         return;
     }
 
@@ -452,43 +482,43 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
     switch (type) {
         case DFCS.CAPTIONMIN:
             {
-                if (exStyle & WS_EX_TOOLWINDOW)
+                if (exStyle & WS.EX.TOOLWINDOW)
                     return; /* ToolWindows don't have min/max buttons */
 
-                if (style & WS_SYSMENU)
-                    tempRect.right -= NtIntGetSystemMetrics(SM_CXSIZE) + 1;
+                if (style & WS.SYSMENU)
+                    tempRect.right -= NtIntGetSystemMetrics(SM.CXSIZE) + 1;
 
-                if (style & (WS_MAXIMIZEBOX | WS_MINIMIZEBOX))
-                    tempRect.right -= NtIntGetSystemMetrics(SM_CXSIZE) - 2;
+                if (style & (WS.MAXIMIZEBOX | WS.MINIMIZEBOX))
+                    tempRect.right -= NtIntGetSystemMetrics(SM.CXSIZE) - 2;
 
-                tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM_CXSIZE) + 1;
-                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM_CYSIZE) - 2;
+                tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM.CXSIZE) + 1;
+                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM.CYSIZE) - 2;
                 tempRect.top += 2;
                 tempRect.right -= 1;
 
                 NtUserDrawFrameControl(hDC, tempRect, DFC.CAPTION,
-                    ((style & WS_MINIMIZE) ? DFCS.CAPTIONRESTORE : DFCS.CAPTIONMIN) |
+                    ((style & WS.MINIMIZE) ? DFCS.CAPTIONRESTORE : DFCS.CAPTIONMIN) |
                     (bDown ? DFCS.PUSHED : 0) |
-                    ((style & WS_MINIMIZEBOX) ? 0 : DFCS.INACTIVE));
+                    ((style & WS.MINIMIZEBOX) ? 0 : DFCS.INACTIVE));
                 break;
             }
         case DFCS.CAPTIONMAX:
             {
-                if (exStyle & WS_EX_TOOLWINDOW)
+                if (exStyle & WS.EX.TOOLWINDOW)
                     return; /* ToolWindows don't have min/max buttons */
 
-                if (style & WS_SYSMENU)
-                    tempRect.right -= NtIntGetSystemMetrics(SM_CXSIZE) + 1;
+                if (style & WS.SYSMENU)
+                    tempRect.right -= NtIntGetSystemMetrics(SM.CXSIZE) + 1;
 
-                tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM_CXSIZE) + 1;
-                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM_CYSIZE) - 2;
+                tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM.CXSIZE) + 1;
+                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM.CYSIZE) - 2;
                 tempRect.top += 2;
                 tempRect.right -= 1;
 
                 NtUserDrawFrameControl(hDC, tempRect, DFC.CAPTION,
-                    ((style & WS_MAXIMIZE) ? DFCS.CAPTIONRESTORE : DFCS.CAPTIONMAX) |
+                    ((style & WS.MAXIMIZE) ? DFCS.CAPTIONRESTORE : DFCS.CAPTIONMAX) |
                     (bDown ? DFCS.PUSHED : 0) |
-                    ((style & WS_MAXIMIZEBOX) ? 0 : DFCS.INACTIVE));
+                    ((style & WS.MAXIMIZEBOX) ? 0 : DFCS.INACTIVE));
                 break;
             }
         case DFCS.CAPTIONCLOSE:
@@ -497,13 +527,13 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
                 // let menuState = IntGetMenuState(pSysMenu ? UserHMGetHandle(pSysMenu) : NULL, SC.CLOSE, MF.BYCOMMAND); /* in case of error MenuState==0xFFFFFFFF */
 
                 /* A tool window has a smaller Close button */
-                if (exStyle & WS_EX_TOOLWINDOW) {
-                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM_CXSMSIZE);
-                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM_CYSMSIZE) - 2;
+                if (exStyle & WS.EX.TOOLWINDOW) {
+                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM.CXSMSIZE);
+                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM.CYSMSIZE) - 2;
                 }
                 else {
-                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM_CXSIZE);
-                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM_CYSIZE) - 2;
+                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM.CXSIZE);
+                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM.CYSIZE) - 2;
                 }
                 tempRect.top += 2;
                 tempRect.right -= 2;
@@ -556,11 +586,11 @@ function UserDrawCaptionText(
             IntGetSysColor(uFlags & DCF.ACTIVE ? COLOR.CAPTIONTEXT : COLOR.INACTIVECAPTIONTEXT));
 
     // Adjust for system menu.
-    if (pWnd && pWnd.dwStyle & WS_SYSMENU) {
-        r.right -= NtIntGetSystemMetrics(SM_CYCAPTION) - 1;
-        if ((pWnd.dwStyle & (WS_MAXIMIZEBOX | WS_MINIMIZEBOX)) && !(pWnd.dwExStyle & WS_EX_TOOLWINDOW)) {
-            r.right -= NtIntGetSystemMetrics(SM_CXSIZE) + 1;
-            r.right -= NtIntGetSystemMetrics(SM_CXSIZE) + 1;
+    if (pWnd && pWnd.dwStyle & WS.SYSMENU) {
+        r.right -= NtIntGetSystemMetrics(SM.CYCAPTION) - 1;
+        if ((pWnd.dwStyle & (WS.MAXIMIZEBOX | WS.MINIMIZEBOX)) && !(pWnd.dwExStyle & WS.EX.TOOLWINDOW)) {
+            r.right -= NtIntGetSystemMetrics(SM.CXSIZE) + 1;
+            r.right -= NtIntGetSystemMetrics(SM.CXSIZE) + 1;
         }
     }
 

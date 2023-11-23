@@ -4,7 +4,8 @@ import { PsCreateProcess, PsRegisterProcessHooks, PsTerminateProcess } from "./l
 import Executable from "./types/Executable.js";
 import { GreInit } from "./win32k/gdi/ntgdi.js";
 import { HANDLE } from "./types/types.js";
-import { WM_QUIT } from "./types/user32.types.js";
+import { PsProcess } from "./process.js";
+import { WM } from "./types/user32.types.js";
 
 (() => {
     GreInit();
@@ -16,7 +17,7 @@ import { WM_QUIT } from "./types/user32.types.js";
     const processList = document.getElementById("processes");
 
     const SpawnProc = async () => {
-        const proc = PsCreateProcess("test2.js", "", false, {}, "C:\\Windows\\System32", null);
+        const proc = PsCreateProcess("test.js", "", false, {}, "C:\\Windows\\System32", null);
         procs.push(proc);
     }
 
@@ -29,43 +30,40 @@ import { WM_QUIT } from "./types/user32.types.js";
         const proc = procs.pop();
         NtPostProcessMessage(proc, {
             hWnd: null,
-            message: WM_QUIT,
+            message: WM.QUIT,
             wParam: 0,
             lParam: 0
         });
     }
 
-    PsRegisterProcessHooks(
-        (proc) => {
-            processCount++;
-            document.getElementById("count").innerText = processCount.toString();
+    const ProcessCreated = (proc: PsProcess) => {
+        processCount++;
+        document.getElementById("count").innerText = processCount.toString();
 
-            const row = document.createElement("tr");
-            const name = document.createElement("td");
-            const id = document.createElement("td");
-            const cmdLine = document.createElement("td");
-            
-            name.innerText = proc.name;
-            id.innerText = proc.id.toString();
-            cmdLine.innerText = proc.args;
+        const html = `
+            <tr id="${proc.id}">
+                <td>${proc.name}</td>
+                <td>${proc.id}</td>
+                <td>${proc.args}</td>
+            </tr>
+        `;
+        
+        processList.insertAdjacentHTML("beforeend", html);
 
-            row.appendChild(name);
-            row.appendChild(id);
-            row.appendChild(cmdLine);
+        const id = document.getElementById(proc.id.toString());
+        processTableEntries.set(proc.handle, id as HTMLTableRowElement);
+    };
 
-            processTableEntries.set(proc.handle, row);
+    const ProcessDestroyed = (proc: PsProcess) => {
+        processCount--;
+        document.getElementById("count").innerText = processCount.toString();
 
-            processList.appendChild(row);
-        },
-        (proc) => {
-            processCount--;
-            document.getElementById("count").innerText = processCount.toString();
+        const row = processTableEntries.get(proc.handle);
+        processTableEntries.delete(proc.handle);
+        processList.removeChild(row);
+    };
 
-            const row = processTableEntries.get(proc.handle);
-            processTableEntries.delete(proc.handle);
-            processList.removeChild(row);
-        }
-    );
+    PsRegisterProcessHooks(ProcessCreated, ProcessDestroyed);
 
     document.getElementById("spawn").addEventListener("click", SpawnProc);
     document.getElementById("quit").addEventListener("click", QuitProc);

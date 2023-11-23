@@ -15,9 +15,10 @@ import USER32, {
     SHOW_WINDOW_REPLY,
     WNDCLASS_WIRE,
     WNDPROC_PARAMS,
-    WS_CHILD,
+    WS,
 } from "../types/user32.types.js";
 
+import { ButtonWndProc } from "./user32/button.js";
 import { NtDefWindowProc } from "../win32k/def.js";
 import { NtRegisterClassEx } from "../win32k/class.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
@@ -45,10 +46,10 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
     }
 
     NtRegisterClassEx(peb, {
-        style: WS_CHILD,
+        style: WS.CHILD,
         lpszClassName: "BUTTON",
         lpszMenuName: null,
-        lpfnWndProc: DefWindowProc,
+        lpfnWndProc: ButtonWndProc,
         hIcon: 0,
         hCursor: 0,
         hbrBackground: 0,

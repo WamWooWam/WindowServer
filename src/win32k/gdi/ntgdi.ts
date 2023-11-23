@@ -1,14 +1,12 @@
-import DC, { GreAllocDCForMonitor, GreLineTo, GreMoveTo, GreSelectObject } from "./dc.js";
-import { DC as DCF, DFC, DFCS, LOGFONT, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW } from "../../types/user32.types.js";
+import DC, { GreLineTo, GreMoveTo, GreSelectObject } from "./dc.js";
 import { GreCreateFontIndirect, GreRealiseFont } from "./font.js";
 import { GreGetObj, GreGetStockObject, GreInitStockObjects } from "./obj.js";
 import { HDC, HFONT, POINT, PS, RECT, SIZE } from "../../types/gdi32.types.js";
-import { NtUserDrawCaption, NtUserDrawCaptionButton, NtUserDrawFrameControl } from "../draw.js";
 import PEN, { GreCreatePen } from "./pen.js";
 
 import { GreCreateSolidBrush } from "./brush.js";
 import { HANDLE } from "../../types/types.js";
-import { NtGetPrimaryMonitor } from "../monitor.js";
+import { LOGFONT } from "../../types/user32.types.js";
 import { ObDestroyHandle } from "../../objects.js";
 
 export interface GDIOBJ {
@@ -18,15 +16,6 @@ export interface GDIOBJ {
 
 export function GreInit() {
     GreInitStockObjects();
-
-    const monitor = NtGetPrimaryMonitor();
-    const desktopDC = GreAllocDCForMonitor(monitor.hMonitor);
-
-    const rect = { left: 16, top: 16, right: 216, bottom: 34 }
-    NtUserDrawCaption(null, desktopDC.hDC, rect, 0, 0, "Hello, World!", DCF.TEXT | DCF.GRADIENT | DCF.ACTIVE);
-    NtUserDrawCaptionButton(null, rect, WS_OVERLAPPEDWINDOW, 0, desktopDC.hDC, false, DFCS.CAPTIONMIN);
-    NtUserDrawCaptionButton(null, rect, WS_OVERLAPPEDWINDOW, 0, desktopDC.hDC, false, DFCS.CAPTIONMAX);
-    NtUserDrawCaptionButton(null, rect, WS_OVERLAPPEDWINDOW, 0, desktopDC.hDC, false, DFCS.CAPTIONCLOSE);
 }
 
 export function NtGdiGetStockObject(nIndex: number): HANDLE {
