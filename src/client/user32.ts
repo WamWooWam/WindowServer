@@ -178,6 +178,25 @@ export async function GetDC(hWnd: HANDLE): Promise<HDC> {
     return msg.data;
 }
 
+// TODO: this should not require a syscall, use shared memory
+export async function GetSystemMetrics(nIndex: number): Promise<number> {
+    const msg = await User32.SendMessage<number>({
+        nType: USER32.GetSystemMetrics,
+        data: nIndex
+    });
+
+    return msg.data;
+}
+
+export async function SetWindowPos(hWnd: HANDLE, hWndInsertAfter: HANDLE, x: number, y: number, cx: number, cy: number, uFlags: number): Promise<boolean> {
+    const msg = await User32.SendMessage<any, boolean>({
+        nType: USER32.SetWindowPos,
+        data: { hWnd, hWndInsertAfter, x, y, cx, cy, uFlags }
+    });
+
+    return msg.data;
+}
+
 const user32: Executable = {
     file: "user32.js",
     type: "dll",

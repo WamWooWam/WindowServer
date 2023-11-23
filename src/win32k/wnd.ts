@@ -17,6 +17,7 @@ import {
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { HDC, RECT } from "../types/gdi32.types.js";
+import { HWNDS, W32CLASSINFO, W32PROCINFO } from "./shared.js";
 import { NtPostMessage, NtSendMessage } from "./msg.js";
 import {
     ObCloseHandle,
@@ -26,7 +27,6 @@ import {
     ObSetHandleOwner,
     ObSetObject
 } from "../objects.js";
-import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
@@ -137,6 +137,9 @@ export class WND {
         this.FixWindowCoordinates();
 
         pti.hWnds.push(this._hWnd);
+
+        // TODO: hacky asf 
+        HWNDS.push(this._hWnd);
     }
 
     public get peb(): PEB {
@@ -215,6 +218,27 @@ export class WND {
 
     public Hide(): void {
         this._pRootElement.style.display = "none";
+    }
+
+    public MoveWindow(x: number, y: number, cx: number, cy: number, bRepaint: boolean): void {
+        this.rcWindow.left = x;
+        this.rcWindow.top = y;
+        this.rcWindow.right = x + cx;
+        this.rcWindow.bottom = y + cy;
+
+        this.rcClient.left = 0;
+        this.rcClient.top = 0;
+        this.rcClient.right = cx;
+        this.rcClient.bottom = cy;
+
+        this._pRootElement.style.left = `${this.rcWindow.left}px`;
+        this._pRootElement.style.top = `${this.rcWindow.top}px`;
+        this._pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
+        this._pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
+
+        if (this._hDC) {
+            GreResizeDC(this._hDC, this.rcClient);
+        }
     }
 
     public Dispose(): void {
@@ -336,7 +360,7 @@ export class WND {
         this.pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
         this.pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
         this.pRootElement.style.position = "absolute";
-        this.pRootElement.style.overflow = "hidden";
+        // this.pRootElement.style.overflow = "hidden";
 
         // if we're a top level window, allocate a DC
         if (!(this.dwStyle & WS.CHILD)) {
@@ -348,7 +372,9 @@ export class WND {
             this._hDC = ObDuplicateHandle(parent._hDC);
         }
 
-        if (!this._hDC) return;
+        if (!this._hDC)
+            return;
+
         GreResizeDC(this._hDC, this.rcClient);
     }
 }

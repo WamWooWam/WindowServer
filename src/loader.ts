@@ -24,7 +24,7 @@ export function PsCreateProcess(
         entryPoint: "main",
         dependencies: ["ntdll.js", "kernel32.js"],
 
-        name: "test",
+        name: lpApplicationName.split('.')[0],
         version: [1, 0, 0, 0],
         rsrc: {}
     }
@@ -45,6 +45,10 @@ export function PsCreateProcess(
     processCreateHooks.forEach(hook => hook(proc));
 
     return proc.handle;
+}
+
+export function PsListProcesses(): HANDLE[] {
+    return processes.map(p => p.handle);
 }
 
 export function PsTerminateProcess(hProcess: HANDLE, uExitCode: number): boolean {

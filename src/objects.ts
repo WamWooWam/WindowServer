@@ -135,6 +135,8 @@ export function ObDestroyHandle(handle: HANDLE): boolean {
         ObDestroyHandle(ownedHandle);
     }
 
+    console.warn(`destroyed handle ${handle}, %s %O %O`, tag.type, tag, tag.value)
+
     handleTable.delete(handle);
     if (tag.dtor) {
         tag.dtor(tag.value);

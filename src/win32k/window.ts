@@ -1,7 +1,6 @@
 import {
     CREATE_WINDOW_EX,
     HWND,
-    LRESULT,
     MINMAXINFO,
     SM,
     SW,
@@ -11,20 +10,25 @@ import {
 } from "../types/user32.types.js";
 import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
 import { HDC, POINT, RECT, SIZE } from "../types/gdi32.types.js";
-import { ObDestroyHandle, ObDuplicateHandle, ObGetObject } from "../objects.js";
+import { NtPostMessage, NtSendMessage } from "./msg.js";
+import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObGetObject } from "../objects.js";
 
 import { GreAllocDCForMonitor } from "./gdi/dc.js";
 import { NtFindClass } from "./class.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
-import { NtSendMessage } from "./msg.js";
 import { NtSetLastError } from "../error.js";
 import { PEB } from "../types/types.js";
+import { WMP } from "../types/user32.int.types.js";
 import { WND } from "./wnd.js";
 
-export function NtGetDesktopWindow(peb: PEB): HWND {
-    const state = GetW32ProcInfo(peb);
-    return state.hDesktop;
+let hDesktop: HWND = null;
+export function NtGetDesktopWindow(): HWND {
+    return hDesktop;
+}
+
+export function NtSetDesktopWindow(hWnd: HWND) {
+    hDesktop = hWnd;
 }
 
 export function NtIntGetClientRect(peb: PEB, hWnd: HWND): RECT {
@@ -96,7 +100,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         return 0;
     }
 
-    let _hwndParent = state.hDesktop;
+    let _hwndParent = NtGetDesktopWindow();
     let _hwndOwner = null;
 
     if (hWndParent) {
@@ -172,7 +176,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     createStruct.lpWindowName = lpWindowName;
 
     if ((wnd.dwStyle & (WS.CHILD | WS.POPUP)) === WS.CHILD) {
-        if (_hwndParent != NtGetDesktopWindow(peb)) {
+        if (_hwndParent != NtGetDesktopWindow()) {
             createStruct.x += parentWnd.rcClient.left;
             createStruct.y += parentWnd.rcClient.top;
         }
@@ -196,6 +200,10 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     }
 
     console.log("wnd", wnd);
+
+    if (!_hwndParent) {
+        NtSetDesktopWindow(wnd.hWnd);
+    }
 
     return wnd.hWnd;
 }
@@ -229,19 +237,81 @@ async function NtSendParentNotify(peb: PEB, pWnd: WND, msg: number) {
         }
 
         const handle = ObDuplicateHandle(parentWnd.hWnd);
-        await NtSendMessage(peb, [handle, msg, pWnd.hWnd, 0]);
+        NtPostMessage(peb, [handle, msg, pWnd.hWnd, 0]);
 
-        ObDestroyHandle(handle);
+        ObCloseHandle(handle);
     }
 }
 
 
 export async function NtSetWindowPos(peb: PEB, hWnd: HWND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, uFlags: number) {
+    const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return false;
+    }
 
+    if (uFlags & SWP.NOMOVE) {
+        x = wnd.rcWindow.left;
+        y = wnd.rcWindow.top;
+    }
+
+    if (uFlags & SWP.NOSIZE) {
+        cx = wnd.rcWindow.right - wnd.rcWindow.left;
+        cy = wnd.rcWindow.bottom - wnd.rcWindow.top;
+    }
+
+    if (uFlags & SWP.NOZORDER) {
+        // TODO: anything z-order related
+    }
+
+    if (uFlags & SWP.NOACTIVATE) {
+        // TODO: check if we're the active window
+    }
+
+    if (uFlags & SWP.SHOWWINDOW) {
+        await NtShowWindow(peb, hWnd, SW.SHOWDEFAULT);
+    }
+
+    if (uFlags & SWP.HIDEWINDOW) {
+        await NtShowWindow(peb, hWnd, SW.HIDE);
+    }
+
+    if (uFlags & SWP.NOCOPYBITS) {
+        // TODO
+    }
+
+    if (uFlags & SWP.NOOWNERZORDER) {
+        // TODO
+    }
+
+    if (uFlags & SWP.FRAMECHANGED) {
+        // TODO
+    }
+
+    if (uFlags & SWP.NOSENDCHANGING) {
+        // TODO
+    }
+
+    if (uFlags & SWP.DEFERERASE) {
+        // TODO
+    }
+
+    if (uFlags & SWP.ASYNCWINDOWPOS) {
+        // TODO
+    }
+
+    if (uFlags & SWP.NOREDRAW) {
+        // TODO
+    }
+
+    wnd.MoveWindow(x, y, cx, cy, uFlags & SWP.NOREDRAW ? false : true);
 }
 
 export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
     const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return false;
+    }
 
     if ((wnd.dwStyle & WS.CHILD)) {
         await NtSendParentNotify(peb, wnd, WM.DESTROY);
@@ -260,6 +330,11 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
         }
     }
 
+    
+    if (wnd.hParent) {
+        await NtSendMessage(peb, [wnd.hParent, WMP.REMOVECHILD, wnd.hWnd, 0])
+    }
+
     // adjust last active
 
     // check shell window
@@ -271,6 +346,7 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
 
     await NtSendMessage(peb, [wnd.hWnd, WM.DESTROY, 0, 0]);
 
+    
     ObDestroyHandle(wnd.hWnd);
 
     return true;
@@ -284,8 +360,3 @@ export function NtUserGetDC(peb: PEB, hWnd: HWND): HDC {
     const wnd = ObGetObject<WND>(hWnd);
     return wnd.hDC;
 }
-
-
-// export async function NtFreeWindow(peb: PEB, hWnd: HWND) {
-//
-// }

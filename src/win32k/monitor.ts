@@ -1,4 +1,7 @@
+import { HWND_BROADCAST, WM } from "../types/user32.types.js";
+
 import { HANDLE } from "../types/types.js";
+import { NtPostMessage } from "./msg.js";
 import { ObSetObject } from "../objects.js";
 import { RECT } from "../types/gdi32.types.js";
 
@@ -38,6 +41,8 @@ export function NtGetPrimaryMonitor(): MONITOR {
             defaultMonitor.rcMonitor.bottom = document.body.clientHeight;
             defaultMonitor.rcWork.right = document.body.clientWidth;
             defaultMonitor.rcWork.bottom = document.body.clientHeight;
+
+            NtPostMessage(null, [HWND_BROADCAST, WM.DISPLAYCHANGE, 0, 0]);
         };
 
         // TODO: raise WM_DISPLAYCHANGE

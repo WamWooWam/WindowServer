@@ -4,11 +4,11 @@ import { PsCreateProcess, PsRegisterProcessHooks, PsTerminateProcess } from "./l
 import Executable from "./types/Executable.js";
 import { GreInit } from "./win32k/gdi/ntgdi.js";
 import { HANDLE } from "./types/types.js";
+import { NtGetPrimaryMonitor } from "./win32k/monitor.js";
 import { PsProcess } from "./process.js";
 import { WM } from "./types/user32.types.js";
 
 (() => {
-    GreInit();
 
     const procs: HANDLE[] = [];
     const processTableEntries = new Map<HANDLE, HTMLTableRowElement>();
@@ -47,7 +47,7 @@ import { WM } from "./types/user32.types.js";
                 <td>${proc.args}</td>
             </tr>
         `;
-        
+
         processList.insertAdjacentHTML("beforeend", html);
 
         const id = document.getElementById(proc.id.toString());
@@ -63,9 +63,15 @@ import { WM } from "./types/user32.types.js";
         processList.removeChild(row);
     };
 
-    PsRegisterProcessHooks(ProcessCreated, ProcessDestroyed);
 
     document.getElementById("spawn").addEventListener("click", SpawnProc);
     document.getElementById("quit").addEventListener("click", QuitProc);
     document.getElementById("kill").addEventListener("click", KillProc);
+    
+    NtGetPrimaryMonitor();    
+    PsRegisterProcessHooks(ProcessCreated, ProcessDestroyed);
+
+    GreInit();
+
+    PsCreateProcess("wininit.js", "", false, {}, "C:\\Windows\\System32", null);
 })();

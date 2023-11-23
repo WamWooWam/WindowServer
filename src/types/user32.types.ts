@@ -12,9 +12,14 @@ const USER32 = {
     DispatchMessage: 0x00000008,
     PostQuitMessage: 0x00000009,
     GetDC: 0x0000000A,
+    GetSystemMetrics: 0x0000000B,
+    SetWindowPos: 0x0000000C,
 }
 
+export const HWND_BROADCAST = 0xFFFF;
+
 export const CW_USEDEFAULT = 0x80000000;
+
 export namespace WS {
     export const OVERLAPPED = 0x00000000;
     export const POPUP = 0x80000000;

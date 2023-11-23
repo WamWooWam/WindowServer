@@ -1,4 +1,4 @@
-import { NtCreateWindowEx, NtShowWindow, NtUserGetDC } from "../win32k/window.js";
+import { NtCreateWindowEx, NtDestroyWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC } from "../win32k/window.js";
 import { NtGetMessage, NtPostQuitMessage, NtSendMessage } from "../win32k/msg.js";
 import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import USER32, {
@@ -20,6 +20,7 @@ import USER32, {
 
 import { ButtonWndProc } from "./user32/button.js";
 import { NtDefWindowProc } from "../win32k/def.js";
+import { NtIntGetSystemMetrics } from "../win32k/metrics.js";
 import { NtRegisterClassEx } from "../win32k/class.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 import W32MSG_QUEUE from "../win32k/msgqueue.js";
@@ -31,7 +32,6 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
         procInfo = {
             classes: [],
             hWnds: [],
-            hDesktop: 0,
             lpMsgQueue: null
         }
 
@@ -58,6 +58,18 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
         cbClsExtra: 0,
         cbWndExtra: 0
     });
+}
+
+
+function NtUser32Uninitialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
+    const procInfo = lpSubsystem.lpParams as W32PROCINFO;
+    if (!procInfo) {
+        return;
+    }
+
+    for (const hWnd of procInfo.hWnds) {
+        NtDestroyWindow(peb, hWnd);
+    }
 }
 
 async function UserRegisterClass(peb: PEB, { lpWndClass }: REGISTER_CLASS): Promise<REGISTER_CLASS_REPLY> {
@@ -113,7 +125,7 @@ async function UserDispatchMessage(peb: PEB, data: MSG): Promise<GET_MESSAGE_REP
     await NtSendMessage(peb, data);
 
     return { retVal: false, lpMsg: data };
-} 
+}
 
 async function UserPostQuitMessage(peb: PEB, data: number) {
     console.log("PostQuitMessage", data);
@@ -127,9 +139,18 @@ async function UserGetDC(peb: PEB, data: HWND) {
     return NtUserGetDC(peb, data);
 }
 
+function UserGetSystemMetrics(peb: PEB, nIndex: number): number {
+    return NtIntGetSystemMetrics(nIndex);
+}
+
+function UserSetWindowPos(peb: PEB, params: { hWnd: HWND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, uFlags: number }) {
+    return NtSetWindowPos(peb, params.hWnd, params.hWndInsertAfter, params.x, params.y, params.cx, params.cy, params.uFlags);
+}
+
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_USER32,
     lpfnInit: NtUser32Initialize,
+    lpfnExit: NtUser32Uninitialize,
     lpExports: {
         [USER32.RegisterClass]: UserRegisterClass,
         [USER32.DefWindowProc]: UserDefWindowProc,
@@ -140,7 +161,9 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.TranslateMessage]: UserTranslateMessage,
         [USER32.DispatchMessage]: UserDispatchMessage,
         [USER32.PostQuitMessage]: UserPostQuitMessage,
-        [USER32.GetDC]: UserGetDC
+        [USER32.GetDC]: UserGetDC,
+        [USER32.GetSystemMetrics]: UserGetSystemMetrics,
+        [USER32.SetWindowPos]: UserSetWindowPos
     }
 };
 

@@ -37,6 +37,8 @@ export class PsProcess {
     private callbackMap = new Map<number, (msg: Message) => any | Promise<any>>();
     private callbackId = 0x7FFFFFFF;
 
+    private state: 'running' | 'terminating' | 'terminated' = 'running';
+
     constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
         this.handle = ObSetObject<PsProcess>(this, "PROC", null, this.Terminate.bind(this));
         this.id = this.handle;
@@ -83,17 +85,23 @@ export class PsProcess {
         });
     }
 
-    Terminate() {
-        if (this.worker) {
-            this.worker.terminate();
-            this.onTerminate?.();
-
-            for (const [_, subsys] of this.peb.lpSubsystems) {
-                subsys.lpfnExit?.(this.peb, subsys);
-            }
-
-            this.worker = null;
+    async Terminate() {
+        if (this.state === 'terminating' || this.state === 'terminated') {
+            return;
         }
+
+        this.state = 'terminating';
+
+        this.onTerminate?.();
+
+        for (const [_, subsys] of this.peb.lpSubsystems) {
+            await subsys.lpfnExit?.(this.peb, subsys);
+        }
+
+        this.worker.terminate();
+        this.worker = null;
+
+        this.state = 'terminated';
 
         ObDestroyHandle(this.handle);
     }
@@ -102,6 +110,11 @@ export class PsProcess {
         console.debug(`server sending message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
 
         return new Promise((resolve, reject) => {
+            if (!this.worker) {
+                console.warn(`worker is null, is the process terminated? dropping message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+                return;
+            }
+
             const channel = this.RegisterCallback((msg) => {
                 if (msg.nType & 0x80000000) {
                     reject(msg.data);
@@ -110,11 +123,6 @@ export class PsProcess {
                     resolve(msg);
                 }
             });
-            
-            if (!this.worker) {
-                console.warn(`worker is null, is the process terminated? dropping message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
-                return;
-            }
 
             this.worker.postMessage({
                 lpSubsystem: msg.lpSubsystem,
