@@ -61,14 +61,14 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
 }
 
 
-function NtUser32Uninitialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
+async function NtUser32Uninitialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
     const procInfo = lpSubsystem.lpParams as W32PROCINFO;
     if (!procInfo) {
         return;
     }
 
     for (const hWnd of procInfo.hWnds) {
-        NtDestroyWindow(peb, hWnd);
+        await NtDestroyWindow(peb, hWnd);
     }
 }
 

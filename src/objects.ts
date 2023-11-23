@@ -176,3 +176,30 @@ export function ObCreateObject<T>(type: string, value: (hObj: HANDLE) => T, owne
 
     return tag.value;
 }
+
+export function ObGetOwnedHandleCount(handle: HANDLE): number {
+    const tag = handleTable.get(handle);
+    if (!tag) {
+        return 0;
+    }
+
+    return tag.ownedHandles.length + tag.ownedHandles.reduce((acc, h) => acc + ObGetOwnedHandleCount(h), 0);
+}
+
+export function* ObEnumObjects() {
+    for (const [handle, tag] of handleTable.entries()) {
+        yield handle;
+    }
+}
+
+export function* ObEnumObjectsByType(type: string) {
+    for (const [handle, tag] of handleTable.entries()) {
+        if (tag.type === type) {
+            yield handle;
+        }
+    }
+}
+
+export function ObDumpHandles() {
+    console.log("handleTable", handleTable);
+}

@@ -45,7 +45,7 @@ export class WND {
 
     private _hParent: HWND; // parent window (if this is a WS.CHILD like a control)
     private _hOwner: HWND; // owner window (if this is a WS.POPUP like a dialog)
-    // private phwndChildren: HWND[]; 
+    private _phwndChildren: HWND[]; 
 
     private _hMenu: HMENU;
     private _lpParam: any;
@@ -78,7 +78,7 @@ export class WND {
         else
             cs.dwExStyle &= ~WS.EX.WINDOWEDGE;
 
-        this._hWnd = ObSetObject(this, "WND", hParent || peb.hProcess, () => this.Dispose());
+        this._hWnd = ObSetObject(this, "WND", peb.hProcess, () => this.Dispose());
         this._hInstance = cs.hInstance;
         this._dwStyle = cs.dwStyle;
         this._dwExStyle = cs.dwExStyle;
@@ -90,6 +90,7 @@ export class WND {
         this._lpParam = cs.lpParam;
         this._lpszName = lpszName;
         this._peb = peb;
+        this._phwndChildren = [];
 
         this._rcClient = {
             left: cs.x,
@@ -191,7 +192,7 @@ export class WND {
     }
 
     public get children(): HWND[] {
-        return [...ObGetChildHandlesByType(this._hWnd, "WND")];
+        return [...this._phwndChildren];
     }
 
     public get pRootElement() {
@@ -203,7 +204,19 @@ export class WND {
     }
 
     public AddChild(hWnd: HWND): void {
-        ObSetHandleOwner(hWnd, this._hWnd);
+        if (!this._phwndChildren)
+            this._phwndChildren = [];
+
+        this._phwndChildren.push(hWnd);
+    }
+
+    public RemoveChild(hWnd: HWND): void {
+        if (!this._phwndChildren)
+            return;
+
+        const index = this._phwndChildren.findIndex(h => h === hWnd);
+        if (index !== -1)
+            this._phwndChildren.splice(index, 1);
     }
 
     public WndProc(msg: number, wParam: WPARAM, lParam: LPARAM): LRESULT | Promise<LRESULT> {

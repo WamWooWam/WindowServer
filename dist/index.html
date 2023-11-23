@@ -31,7 +31,7 @@
     <canvas id="canvas" style="width: 100%; height: 100%;"></canvas>
     <div class="window" style="width: 300px; z-index: 9999999; position: absolute; right: 32px; bottom: 32px;">
         <div class="title-bar">
-            <div class="title-bar-text">Window Server</div>
+            <div class="title-bar-text">Task Manager</div>
         </div>
         <div class="window-body" style="padding: 8px;">
             <div class="sunken-panel" style="height: 120px; width: 100%;">
@@ -40,7 +40,7 @@
                         <tr>
                             <th>Process</th>
                             <th>ID</th>
-                            <th>Command Line</th>
+                            <th>Owned Handles</th>
                         </tr>
                     </thead>
                     <tbody id="processes">
@@ -56,6 +56,7 @@
         </div>
         <div class="status-bar">
             <p class="status-bar-field" style="text-align: right;"><span id="count">0</span>&nbsp;Processes</p>
+            <p class="status-bar-field" style="text-align: right;"><span id="handles">0</span>&nbsp;Handles</p>
         </div>
     </div>
 </body>

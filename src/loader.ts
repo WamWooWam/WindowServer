@@ -1,6 +1,7 @@
+import { ObEnumObjectsByType, ObGetObject } from "./objects.js";
+
 import Executable from "./types/Executable.js";
 import { HANDLE } from "./types/types.js";
-import { ObGetObject } from "./objects.js";
 import { PsProcess } from "./process.js";
 
 const processes: PsProcess[] = [];
@@ -48,7 +49,7 @@ export function PsCreateProcess(
 }
 
 export function PsListProcesses(): HANDLE[] {
-    return processes.map(p => p.handle);
+    return [...ObEnumObjectsByType("PROC")];
 }
 
 export function PsTerminateProcess(hProcess: HANDLE, uExitCode: number): boolean {

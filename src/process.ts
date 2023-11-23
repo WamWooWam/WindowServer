@@ -26,7 +26,8 @@ export class PsProcess {
 
     exitCode?: number;
 
-    onTerminate?: () => void;
+    onTerminating?: () => void;
+    onTerminate?: (exitCode: number) => void;
 
     private worker: Worker;
     private exec: Executable;
@@ -92,8 +93,6 @@ export class PsProcess {
 
         this.state = 'terminating';
 
-        this.onTerminate?.();
-
         for (const [_, subsys] of this.peb.lpSubsystems) {
             await subsys.lpfnExit?.(this.peb, subsys);
         }
@@ -101,6 +100,8 @@ export class PsProcess {
         this.worker.terminate();
         this.worker = null;
 
+
+        this.onTerminate?.(0);
         this.state = 'terminated';
 
         ObDestroyHandle(this.handle);
