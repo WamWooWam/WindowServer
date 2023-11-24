@@ -21,14 +21,14 @@ export function NtGetPrimaryMonitor(): MONITOR {
             rcMonitor: {
                 left: 0,
                 top: 0,
-                right: document.body.clientWidth,
-                bottom: document.body.clientHeight
+                right: window.innerWidth,
+                bottom: window.innerHeight
             },
             rcWork: {
                 left: 0,
                 top: 0,
-                right: document.body.clientWidth,
-                bottom: document.body.clientHeight
+                right: window.innerWidth,
+                bottom: window.innerHeight
             },
             dwFlags: 1,
             cWndStack: 1
@@ -37,10 +37,10 @@ export function NtGetPrimaryMonitor(): MONITOR {
         defaultMonitor.hMonitor = ObSetObject(defaultMonitor, "MONITOR", 0);
     
         document.body.onresize = () => {
-            defaultMonitor.rcMonitor.right = document.body.clientWidth;
-            defaultMonitor.rcMonitor.bottom = document.body.clientHeight;
-            defaultMonitor.rcWork.right = document.body.clientWidth;
-            defaultMonitor.rcWork.bottom = document.body.clientHeight;
+            defaultMonitor.rcMonitor.right = window.innerWidth;
+            defaultMonitor.rcMonitor.bottom = window.innerHeight;
+            defaultMonitor.rcWork.right = window.innerWidth;
+            defaultMonitor.rcWork.bottom = window.innerHeight;
 
             NtPostMessage(null, [HWND_BROADCAST, WM.DISPLAYCHANGE, 0, 0]);
         };

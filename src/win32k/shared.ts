@@ -29,10 +29,6 @@ export interface W32PROCINFO {
     hWnds: HWND[];
 }
 
-export interface U32GLOBAL {
-    hDesktop: HWND;
-}
-
 export interface W32CLASSINFO {
     lpszClassName: string;
     lpszClassVersion: string;

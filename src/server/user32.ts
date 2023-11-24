@@ -1,6 +1,6 @@
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import { NtCreateWindowEx, NtDestroyWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC } from "../win32k/window.js";
-import { NtGetMessage, NtPostQuitMessage, NtSendMessage } from "../win32k/msg.js";
+import { NtDispatchMessage, NtGetMessage, NtPostQuitMessage } from "../win32k/msg.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
 import USER32, {
     CREATE_DESKTOP,
@@ -95,69 +95,48 @@ async function NtUser32Uninitialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
 }
 
 async function UserRegisterClass(peb: PEB, { lpWndClass }: REGISTER_CLASS): Promise<REGISTER_CLASS_REPLY> {
-    console.log("RegisterClass", lpWndClass);
-
     const atom = NtRegisterClassEx(peb, lpWndClass as WNDCLASS_WIRE);
     return { retVal: atom };
 }
 
 async function UserDefWindowProc(peb: PEB, data: WNDPROC_PARAMS): Promise<LRESULT> {
-    console.log("DefWindowProc", data);
-
     return await NtDefWindowProc(...data);
 }
 
 async function UserCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promise<CREATE_WINDOW_EX_REPLY> {
-    console.log("CreateWindowEx", data);
-
     const window = await NtCreateWindowEx(peb, data);
     return { hWnd: window };
 }
 
 async function UserShowWindow(peb: PEB, data: SHOW_WINDOW): Promise<SHOW_WINDOW_REPLY> {
-    console.log("ShowWindow", data);
-
     await NtShowWindow(peb, data.hWnd, data.nCmdShow);
 
     return { retVal: true };
 }
 
 async function UserGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    console.log("GetMessage", data);
-
     const msg = await NtGetMessage(peb, data);
     return msg;
 }
 
 async function UserPeekMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    console.error("PeekMessage", data);
-
     return { retVal: false, lpMsg: data.lpMsg };
 }
 
 async function UserTranslateMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    console.warn("TranslateMessage", data);
-
     return { retVal: false, lpMsg: data.lpMsg };
 }
 
 async function UserDispatchMessage(peb: PEB, data: MSG): Promise<GET_MESSAGE_REPLY> {
-    console.log("DispatchMessage", data);
-
-    await NtSendMessage(peb, data);
-
+    await NtDispatchMessage(peb, data);
     return { retVal: false, lpMsg: data };
 }
 
 async function UserPostQuitMessage(peb: PEB, data: number) {
-    console.log("PostQuitMessage", data);
-
     await NtPostQuitMessage(peb, data);
 }
 
 async function UserGetDC(peb: PEB, data: HWND) {
-    console.log("GetDC", data);
-
     return NtUserGetDC(peb, data);
 }
 

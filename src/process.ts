@@ -7,6 +7,7 @@ import Message from "./types/Message.js";
 import NTDLL_SUBSYSTEM from "./server/ntdll.js";
 import { NtAllocSharedMemory } from "./sharedmem.js";
 import { NtAwait } from "./util.js";
+import { NtGetDefaultDesktop } from "./win32k/desktop.js";
 import { SUBSYS_NTDLL } from "./types/subsystems.js";
 
 export class PsProcess {
@@ -58,6 +59,7 @@ export class PsProcess {
             hThread: 0,
             dwProcessId: this.id,
             dwThreadId: 0,
+            hDesktop: NtGetDefaultDesktop(),
             lpSubsystems: new Map()
         };
 
@@ -107,8 +109,8 @@ export class PsProcess {
         ObDestroyHandle(this.handle);
     }
 
-    async SendMessage<S = any, R = any>(msg: Message<S>): Promise<Message<R>> {
-        console.debug(`server sending message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+    SendMessage<S = any, R = any>(msg: Message<S>): Promise<Message<R>> {
+        // console.debug(`server sending message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
 
         return new Promise((resolve, reject) => {
             if (!this.worker) {
@@ -141,7 +143,7 @@ export class PsProcess {
             return;
         }
 
-        console.debug(`server posting message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+        // console.debug(`server posting message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
         this.worker.postMessage(msg);
     }
 
@@ -156,14 +158,14 @@ export class PsProcess {
         return id;
     }
 
-    private HandleMessage(msg: Message) {
+    private async HandleMessage(msg: Message) {
         const callback = this.callbackMap.get(msg.nChannel);
         if (callback) {
             callback(msg);
             this.callbackMap.delete(msg.nChannel);
         }
         else {
-            this.HandleSyscall(msg);
+            await this.HandleSyscall(msg);
         }
     }
 
@@ -171,7 +173,7 @@ export class PsProcess {
         const handler = this.peb.lpSubsystems.get(msg.lpSubsystem)?.lpExports[msg.nType];
         if (handler) {
             try {
-                console.log(`%s:server recieved message %s:%d, %O, calling %O`, msg.lpSubsystem, msg.lpSubsystem, msg.nType, msg, handler);
+                // console.log(`%s:server recieved message %s:%d, %O, calling %O`, msg.lpSubsystem, msg.lpSubsystem, msg.nType, msg, handler);
 
                 let resp = await handler(this.peb, msg.data);
 

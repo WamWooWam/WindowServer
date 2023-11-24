@@ -1,3 +1,4 @@
+import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
 import { GET_MESSAGE, GET_MESSAGE_REPLY, HWND_BROADCAST, LRESULT, MSG, WM, WNDPROC_PARAMS } from "../types/user32.types.js";
 import { GetW32ProcInfo, HWNDS } from "./shared.js";
 import { HANDLE, PEB } from "../types/types.js";
@@ -33,7 +34,6 @@ export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
             lParam: msg[3]
         };
     }
-
     if (_msg.hWnd === HWND_BROADCAST) {
         // sending WM_USER messages to all windows is a bad idea
         if (_msg.message > WM.USER && _msg.message < WMP.CREATEELEMENT) {
@@ -47,21 +47,26 @@ export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
                 state.lpMsgQueue.EnqueueMessage({ ..._msg, hWnd });
             }
         }
+        return;
+    }
+
+    if (_msg.hWnd && _msg.message === WM.LBUTTONDOWN || _msg.message === WM.MBUTTONDOWN || _msg.message === WM.RBUTTONDOWN) {
+        NtUserSetActiveWindow(peb, _msg.hWnd);
+        NtPostMessage(peb, [_msg.hWnd, WM.ACTIVATE, _msg.hWnd, 0]);
+    }
+
+    const wnd = ObGetObject<WND>(_msg.hWnd);
+    if (wnd) {
+        const state = GetW32ProcInfo(wnd.peb);
+        state.lpMsgQueue.EnqueueMessage(_msg);
     }
     else {
-        const wnd = ObGetObject<WND>(_msg.hWnd);
-        if (!wnd) {
-            const state = GetW32ProcInfo(peb);
-            state.lpMsgQueue.EnqueueMessage(_msg);
-        }
-        else {
-            const state = GetW32ProcInfo(wnd.peb);
-            state.lpMsgQueue.EnqueueMessage(_msg);
-        }
+        const state = GetW32ProcInfo(peb);
+        state.lpMsgQueue.EnqueueMessage(_msg);
     }
 }
 
-export async function NtSendMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Promise<LRESULT> {
+export async function NtDispatchMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Promise<LRESULT> {
     let _msg: MSG = msg as MSG;
     if (msg instanceof Array) {
         _msg = {
@@ -72,6 +77,11 @@ export async function NtSendMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Promis
         };
     }
 
+    if (_msg.hWnd && _msg.message === WM.LBUTTONDOWN || _msg.message === WM.MBUTTONDOWN || _msg.message === WM.RBUTTONDOWN) {
+        NtUserSetActiveWindow(peb, _msg.hWnd);
+        NtPostMessage(peb, [_msg.hWnd, WM.ACTIVATE, _msg.hWnd, 0]);
+    }
+    
     const wnd = ObGetObject<WND>(_msg.hWnd);
     if (wnd) {
         const state = GetW32ProcInfo(wnd.peb);
@@ -82,6 +92,30 @@ export async function NtSendMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Promis
         return await state.lpMsgQueue.DispatchMessage(_msg);
     }
 }
+
+export async function NtSendMessageTimeout(peb: PEB, msg: MSG | WNDPROC_PARAMS, dwTimeout: number): Promise<{ status: LRESULT, result: LRESULT }> {
+    return new Promise<{ status: LRESULT, result: LRESULT }>((resolve, reject) => {
+        let resolved = false;
+        let timeout: any = null;
+        const _resolve = (result: { status: LRESULT, result: LRESULT }) => {
+            if (!resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                resolve(result);
+            }
+        };
+
+        NtDispatchMessage(peb, msg).then((result) => {
+            _resolve({ status: 0, result: result });
+        });
+
+        timeout = setTimeout(() => {
+            console.warn("NtSendMessageTimeout timed out");
+            _resolve({ status: -1, result: null });
+        }, dwTimeout);
+    });
+}
+
 
 export async function NtPostQuitMessage(peb: PEB, nExitCode: number) {
     const state = GetW32ProcInfo(peb);

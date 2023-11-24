@@ -57,7 +57,7 @@ class SubsystemClass {
     }
 
     public async SendMessage<S = any, R = any>(msg: Omit<Message<S>, "lpSubsystem">): Promise<Message<R>> {
-        console.debug(`${this.name}:client sending message %s:%d, %O`, this.name, msg.nType, msg);
+        // console.debug(`${this.name}:client sending message %s:%d, %O`, this.name, msg.nType, msg);
 
         return new Promise((resolve, reject) => {
             const channel = this.RegisterCallback((msg) => {
@@ -80,7 +80,7 @@ class SubsystemClass {
     }
 
     public async PostMessage<S = any>(msg: Omit<Message<S>, "lpSubsystem">): Promise<void> {
-        console.debug(`${this.name}:client sending message %s:%d, %O`, this.name, msg.nType, msg);
+        // console.debug(`${this.name}:client sending message %s:%d, %O`, this.name, msg.nType, msg);
 
         __postMessage({
             lpSubsystem: this.name,
@@ -93,10 +93,10 @@ class SubsystemClass {
 
     public RegisterCallback(callback: (msg: Message) => void, persist: boolean = false): number {
         const id = this.callbackId++;
-        const handler = (msg: Message) => {
+        const handler = async (msg: Message) => {
             if (!persist)
                 this.callbackMap.delete(id);
-            return callback(msg);
+            return await callback(msg);
         };
 
         this.callbackMap.set(id, handler);
@@ -106,13 +106,13 @@ class SubsystemClass {
     private async HandleMessage(msg: Message): Promise<void> {
         if (msg.lpSubsystem !== this.name) return;
 
-        console.log(`${this.name}:client recieved message %s:%d -> %d, %O`, msg.lpSubsystem, msg.nType, msg.nChannel, msg);
+        // console.log(`${this.name}:client recieved message %s:%d -> %d, %O`, msg.lpSubsystem, msg.nType, msg.nChannel, msg);
 
         const callback = this.callbackMap.get(msg.nChannel);
         if (callback) {
             let ret = await callback(msg);
             if (ret !== undefined && msg.nReplyChannel) {
-                this.PostMessage({ nType: msg.nType, nChannel: msg.nReplyChannel, data: ret });
+                await this.PostMessage({ nType: msg.nType, nChannel: msg.nReplyChannel, data: ret });
             }
         } else {
             return this.handler(msg);
@@ -123,7 +123,7 @@ class SubsystemClass {
 const loadedModules: string[] = [];
 
 __addEventListener('message', (event) => {
-    console.debug(`client recieved message %s:%d, %O`, event.data.lpSubsystem, event.data.nType, event.data);
+    // console.debug(`client recieved message %s:%d, %O`, event.data.lpSubsystem, event.data.nType, event.data);
 });
 
 __addEventListener('error', (event) => {
@@ -164,7 +164,7 @@ async function LdrInitializeThunk(pPC: PROCESS_CREATE) {
 async function LdrLoadDll(lpLibFileName: string, pPC: PROCESS_CREATE) {
     if (loadedModules.includes(lpLibFileName)) return;
 
-    console.debug(`LdrLoadDll:${lpLibFileName}...`);
+    console.log(`LdrLoadDll:${lpLibFileName}...`);
 
     // TODO: search for dll in search path
     const module = await import("/client/" + lpLibFileName);

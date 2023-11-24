@@ -8,7 +8,7 @@ import { SUBSYS_USER32 } from "../types/subsystems.js";
 function CreateWndProcCallback(peb: PEB, lpfnWndProc: number | WNDPROC): WNDPROC {
     if (typeof lpfnWndProc === "number") {
         async function NT_IS_CALLING_INTO_USERSPACE(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<number> {
-            return await NtDoCallbackAsync(peb, SUBSYS_USER32, <number>lpfnWndProc, [hWnd, uMsg, wParam, lParam]);
+            return (await NtDoCallbackAsync(peb, SUBSYS_USER32, <number>lpfnWndProc, [hWnd, uMsg, wParam, lParam])).data;
         }
 
         return NT_IS_CALLING_INTO_USERSPACE;

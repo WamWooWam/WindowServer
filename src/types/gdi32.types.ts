@@ -109,3 +109,21 @@ export const OPAQUE = 2;
 
 export const DEFAULT_CHARSET = 1;
 export const NONANTIALIASED_QUALITY = 3;
+
+export function InflateRect(rect: RECT, x: number, y: number) {
+    rect.left -= x;
+    rect.top -= y;
+    rect.right += x;
+    rect.bottom += y;
+}
+
+export function OffsetRect(rect: RECT, x: number, y: number) {
+    rect.left += x;
+    rect.top += y;
+    rect.right += x;
+    rect.bottom += y;
+}
+
+export function INRECT(x: number, y: number, rect: RECT): boolean {
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}

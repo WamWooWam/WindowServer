@@ -1,4 +1,4 @@
-import { HWND, LRESULT, MSG } from "../types/user32.types.js";
+import { HWND, LRESULT, MSG, WM } from "../types/user32.types.js";
 import { MSG_QUEUE, W32PROCINFO } from "./shared.js";
 
 import { ObGetObject } from "../objects.js";
@@ -9,29 +9,37 @@ type MSG_CALLBACK = (result: LRESULT) => Promise<void> | void;
 type MSG_CALLBACKS = { [msg: number]: MSG_CALLBACK[] };
 
 export default class W32MSG_QUEUE implements MSG_QUEUE {
-    private _msgQueue: MSG[] = [];
-    private _msgQueuePromise: Promise<MSG> = null;
-    private _msgQueueResolve: (value?: any) => void = null;
+    private _messageReader: ReadableStream<MSG>;
+    private _messageWriter: WritableStream<MSG>;
 
-    private _w32ProcInfo: W32PROCINFO = null;
+    private _w32ProcInfo: W32PROCINFO;
 
     constructor(peb: PEB, procInfo: W32PROCINFO) {
-        this._msgQueuePromise = new Promise((resolve) => {
-            this._msgQueueResolve = resolve;
+        this._w32ProcInfo = procInfo;
+
+        const { readable, writable } = new TransformStream<MSG, MSG>({
+            transform: async (msg, controller) => {
+                controller.enqueue(msg);
+            }
         });
 
-        this._w32ProcInfo = procInfo;
+        this._messageReader = readable;
+        this._messageWriter = writable;
     }
 
-    public EnqueueMessage(msg: MSG): void {        
-        this._msgQueue.push(msg);
-        this._msgQueueResolve(msg);
+    public EnqueueMessage(msg: MSG): void {
+        const writer = this._messageWriter.getWriter();
+        writer.write(msg);
+        writer.releaseLock();
     }
 
     async GetMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number): Promise<MSG> {
+        // if this is called, and another GetMessage is already in progress, we need to wait for it to finish
         while (true) {
-            const msg = await this.WaitForMessage();
-            this._msgQueue.shift();
+            const reader = this._messageReader.getReader();
+            const msg = (await reader.read()).value;
+            reader.releaseLock();
+
             if (this.FilterMessage(msg, hWnd, wMsgFilterMin, wMsgFilterMax)) {
                 return msg;
             }
@@ -39,16 +47,7 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
     }
 
     async PeekMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number, wRemoveMsg: number): Promise<MSG> {
-        while (true) {
-            const msg = await this.WaitForMessage();
-            if (this.FilterMessage(msg, hWnd, wMsgFilterMin, wMsgFilterMax)) {
-                if (wRemoveMsg) {
-                    this._msgQueue.shift();
-                }
-
-                return msg;
-            }
-        }
+        throw new Error("Method not implemented.");
     }
 
     async TranslateMessage(lpMsg: MSG): Promise<boolean> {
@@ -65,17 +64,6 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
         }
 
         return false;
-    }
-
-    // TODO: this will currently die if multiple "threads" are waiting for messages
-    private WaitForMessage(): Promise<MSG> {
-        if (this._msgQueue.length > 0) {
-            return Promise.resolve(this._msgQueue[0]);
-        }
-
-        return new Promise((resolve) => {
-            this._msgQueueResolve = resolve;
-        });
     }
 
     private FilterMessage(msg: MSG, hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number): boolean {

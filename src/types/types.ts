@@ -26,6 +26,8 @@ type PEB = {
     dwProcessId: number;
     dwThreadId: number;
 
+    hDesktop: HANDLE;
+
     lpSubsystems: Map<SubsystemId, SUBSYSTEM>; // subsystem per process data
 }
 

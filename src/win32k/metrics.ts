@@ -1,10 +1,6 @@
 import { SM, SPI } from "../types/user32.types.js";
 
-import { GetW32ProcInfo } from "./shared.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
-import { ObGetObject } from "../objects.js";
-import { PEB } from "../types/types.js";
-import { WND } from "./wnd.js";
 
 // TODO: these should be stored in the shared memory of the process
 export function NtIntGetSystemMetrics(nIndex: number): number {
@@ -26,6 +22,18 @@ export function NtIntGetSystemMetrics(nIndex: number): number {
             return 4; // hardcoded, fix
         case SM.CYFRAME:
             return 4; // hardcoded, fix
+        case SM.CXMINTRACK:
+            return 112; // hardcoded, fix
+        case SM.CYMINTRACK:
+            return 27; // hardcoded, fix
+        case SM.CXMAXTRACK:
+            return (monitor.rcMonitor.right - monitor.rcMonitor.left) + 12; // hardcoded, fix
+        case SM.CYMAXTRACK:
+            return (monitor.rcMonitor.bottom - monitor.rcMonitor.top) + 12; // hardcoded, fix
+        case SM.CXBORDER:
+            return 1; // hardcoded, fix
+        case SM.CYBORDER:
+            return 1; // hardcoded, fix
         default:
             console.warn(`NtIntGetSystemMetrics: unknown index ${nIndex}`);
             return 0;

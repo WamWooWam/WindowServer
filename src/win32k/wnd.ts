@@ -18,7 +18,7 @@ import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { HDC, RECT } from "../types/gdi32.types.js";
 import { HWNDS, W32CLASSINFO, W32PROCINFO } from "./shared.js";
-import { NtPostMessage, NtSendMessage } from "./msg.js";
+import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import {
     ObCloseHandle,
     ObDuplicateHandle,
@@ -53,8 +53,15 @@ export class WND {
     private _hDC: HDC;
     private _peb: PEB;
 
-    private _stateFlags = {
+    private _zIndex: number;
+
+    public stateFlags = {
         sendSizeMoveMsgs: false,
+        /**
+         * Set if DefWindowProc is called for WM_NCHITTEST, so we can skip a user<->kernel space transition
+         * and just return the result of the kernel call
+         */
+        overridesNCHITTEST: true,
     }
 
     private _pRootElement: HTMLElement;
@@ -106,7 +113,8 @@ export class WND {
             bottom: cs.y + cs.nHeight
         };
 
-        // ReactOS does funny stuff to specialise creating the desktop window, but I'd rather not do that
+        // ReactOS does funny stuff to specialise creating the desktop window,
+        //  but I'd rather not do that for now
 
         // Correct the window style.
         if ((this.dwStyle & (WS.CHILD | WS.POPUP)) != WS.CHILD) {
@@ -128,12 +136,7 @@ export class WND {
             this._dwExStyle &= ~WS.EX.WINDOWEDGE;
 
         if (!(this.dwStyle & (WS.CHILD | WS.POPUP)))
-            this._stateFlags.sendSizeMoveMsgs = true;
-
-        const parent = ObGetObject<WND>(this._hParent);
-        if (parent) {
-            parent.AddChild(this._hWnd);
-        }
+            this.stateFlags.sendSizeMoveMsgs = true;
 
         this.FixWindowCoordinates();
 
@@ -181,12 +184,12 @@ export class WND {
         return this._hMenu;
     }
 
-    public get rcClient(): RECT {
-        return this._rcClient;
+    public get rcClient(): Readonly<RECT> {
+        return { ...this._rcClient };
     }
 
-    public get rcWindow(): RECT {
-        return this._rcWindow;
+    public get rcWindow(): Readonly<RECT> {
+        return { ...this._rcWindow };
     }
 
     public get lpszName(): string {
@@ -209,11 +212,19 @@ export class WND {
         this._pRootElement = value;
     }
 
-    public AddChild(hWnd: HWND): void {
-        if (!this._phwndChildren)
-            this._phwndChildren = [];
+    public get zIndex(): number {
+        return this._zIndex;
+    }
 
-        this._phwndChildren.push(hWnd);
+    public set zIndex(value: number) {
+        this._zIndex = value;
+        if (this._pRootElement)
+            this._pRootElement.style.zIndex = `${value}`;
+    }
+
+    public AddChild(hWnd: HWND): void {
+        this._phwndChildren.splice(0, 0, hWnd);
+        this.FixZOrder();
     }
 
     public RemoveChild(hWnd: HWND): void {
@@ -223,40 +234,80 @@ export class WND {
         const index = this._phwndChildren.findIndex(h => h === hWnd);
         if (index !== -1)
             this._phwndChildren.splice(index, 1);
+
+        this.FixZOrder();
     }
 
-    public WndProc(msg: number, wParam: WPARAM, lParam: LPARAM): LRESULT | Promise<LRESULT> {
-        return this._lpfnWndProc(this._hWnd, msg, wParam, lParam);
+    public MoveChild(hWnd: HWND, idx: number): void {
+        if (!this._phwndChildren)
+            return;
+
+        const index = this._phwndChildren.findIndex(h => h === hWnd);
+        if (index !== -1)
+            this._phwndChildren.splice(index, 1);
+
+        this._phwndChildren.splice(idx, 0, hWnd);
+
+        this.FixZOrder();
+    }
+
+    public async WndProc(msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+        return await this._lpfnWndProc(this._hWnd, msg, wParam, lParam);
     }
 
     public Show(): void {
-        this.FixWindowCoordinates();
-
-        this._pRootElement.style.display = "";
+        this.dwStyle = this.dwStyle | WS.VISIBLE;
     }
 
     public Hide(): void {
-        this._pRootElement.style.display = "none";
+        this.dwStyle = this.dwStyle & ~WS.VISIBLE;
     }
 
     public MoveWindow(x: number, y: number, cx: number, cy: number, bRepaint: boolean): void {
-        this.rcWindow.left = x;
-        this.rcWindow.top = y;
-        this.rcWindow.right = x + cx;
-        this.rcWindow.bottom = y + cy;
+        if (this.dwStyle & WS.POPUP) {
+            cx = Math.max(cx, NtIntGetSystemMetrics(SM.CXMINTRACK));
+            cy = Math.max(cy, NtIntGetSystemMetrics(SM.CYMINTRACK));
+        }
 
-        this.rcClient.left = 0;
-        this.rcClient.top = 0;
-        this.rcClient.right = cx;
-        this.rcClient.bottom = cy;
+        this._rcWindow.left = x;
+        this._rcWindow.top = y;
+        this._rcWindow.right = x + cx;
+        this._rcWindow.bottom = y + cy;
 
-        this._pRootElement.style.left = `${this.rcWindow.left}px`;
-        this._pRootElement.style.top = `${this.rcWindow.top}px`;
-        this._pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
-        this._pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
+        this._rcClient.left = 0;
+        this._rcClient.top = 0;
+        this._rcClient.right = cx;
+        this._rcClient.bottom = cy;
+
+        this.FixWindowCoordinates();
+
+        if (this._pRootElement) {
+            this._pRootElement.style.left = `${this.rcWindow.left}px`;
+            this._pRootElement.style.top = `${this.rcWindow.top}px`;
+            this._pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
+            this._pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
+        }
 
         if (this._hDC) {
             GreResizeDC(this._hDC, this.rcClient);
+        }
+    }
+
+    public FixZOrder(): void {
+        let deadWindows = [];
+        for (let i = 0; i < this._phwndChildren.length; i++) {
+            const hWnd = this._phwndChildren[i];
+            const wnd = ObGetObject<WND>(hWnd);
+            if (!wnd) {
+                deadWindows.push(hWnd);
+                continue;
+            }
+
+            wnd.zIndex = this._phwndChildren.length - i;
+        }
+
+        for (let i = 0; i < deadWindows.length; i++) {
+            this.RemoveChild(deadWindows[i]);
         }
     }
 
@@ -321,23 +372,23 @@ export class WND {
             }
         }
 
-        this.rcWindow.left = x;
-        this.rcWindow.top = y;
-        this.rcWindow.right = x + cx;
-        this.rcWindow.bottom = y + cy;
+        this._rcWindow.left = x;
+        this._rcWindow.top = y;
+        this._rcWindow.right = x + cx;
+        this._rcWindow.bottom = y + cy;
 
-        this.rcClient.left = 0;
-        this.rcClient.top = 0;
-        this.rcClient.right = cx;
-        this.rcClient.bottom = cy;
+        this._rcClient.left = 0;
+        this._rcClient.top = 0;
+        this._rcClient.right = cx;
+        this._rcClient.bottom = cy;
     }
 
     async CreateElement() {
         if (!this._pRootElement) {
-            await NtSendMessage(this._peb, [this._hWnd, WMP.CREATEELEMENT, 0, 0])
+            await NtDispatchMessage(this._peb, [this._hWnd, WMP.CREATEELEMENT, 0, 0])
 
             if (this._hParent) {
-                await NtSendMessage(this._peb, [this._hParent, WMP.ADDCHILD, this._hWnd, 0]);
+                await NtDispatchMessage(this._peb, [this._hParent, WMP.ADDCHILD, this._hWnd, 0]);
             }
             else {
                 // for now, just add it to the body
@@ -351,7 +402,7 @@ export class WND {
         this.pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
         this.pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
         this.pRootElement.style.position = "absolute";
-        // this.pRootElement.style.overflow = "hidden";
+        this.pRootElement.style.zIndex = `${this.zIndex}`;
 
         // if we're a top level window, allocate a DC
         if (!(this.dwStyle & WS.CHILD)) {
@@ -372,6 +423,8 @@ export class WND {
     public UpdateWindowStyle(dwOldStyle: number, dwNewStyle: number): void {
         if (!this._pRootElement)
             return;
+
+        this.FixWindowCoordinates();
 
         NtPostMessage(this._peb, [this._hWnd, WMP.UPDATEWINDOWSTYLE, dwNewStyle, dwOldStyle]);
         NtPostMessage(this._peb, [this._hWnd, WM.STYLECHANGED, -16, { oldStyle: dwOldStyle, newStyle: dwNewStyle }]);

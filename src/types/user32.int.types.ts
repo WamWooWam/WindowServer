@@ -13,5 +13,4 @@ export interface WND_DATA {
     pMinimizeButton: HTMLElement;
     pMaximizeButton: HTMLElement;
     pCloseButton: HTMLElement;
-    pWindowBody: HTMLElement;
 }

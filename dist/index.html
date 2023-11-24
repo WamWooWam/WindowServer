@@ -8,32 +8,52 @@
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <script src='filer.js'></script>
     <script defer type="module" src='index.js'></script>
-    <style>
-        body {
-            width: 100vw;
-            height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
-            margin: 0;
-
-            overflow: hidden;
-
-            background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAARSURBVBhXY2Bg+A/EYMDwHwAMAgH/CWV5JQAAAABJRU5ErkJggg==);
-            background-repeat: repeat;
-            image-rendering: pixelated;
-        }   
-    </style>
     <link rel="stylesheet" href="/styles/98.css">
 </head>
 
 <body>
-    <canvas id="canvas" style="width: 100%; height: 100%;"></canvas>
-    <div class="window" style="width: 300px; z-index: 9999999; position: absolute; right: 32px; bottom: 32px;">
-        <div class="title-bar">
-            <div class="title-bar-text">Task Manager</div>
-        </div>
-        <div class="window-body" style="padding: 8px;">
+    <div class="templates">
+        <template id="x-window-template">
+            <!-- TODO: prevent a roundtrip and inline the required CSS here -->
+            <link id="style" rel="stylesheet" href="/styles/98.css">
+            <div class="window window-template">
+                <div class="title-bar">
+                    <img class="title-bar-icon" src="/icons/98.png" />
+                    <span class="title-bar-text">
+                        <slot name="title-bar-text"></slot>
+                    </span>
+
+                    <div class="title-bar-controls">
+                        <button class="minimize-button" aria-label="Minimize" draggable="false"></button>
+                        <button class="maximize-button" aria-label="Maximize" draggable="false"></button>
+                        <button class="close-button" aria-label="Close" draggable="false"></button>
+                    </div>
+                </div>
+                <div class="window-body">
+                    <slot></slot>
+                </div>
+                <div class="status-bar">
+                    <slot name="status-bar"></slot>
+                </div>
+            </div>
+        </template>
+        <template id="x-desktop-template">
+            <style>
+                :host {
+                    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAARSURBVBhXY2Bg+A/EYMDwHwAMAgH/CWV5JQAAAABJRU5ErkJggg==);
+                    background-repeat: repeat;
+                    image-rendering: pixelated;
+                    overflow: hidden;
+                }
+            </style>
+            <slot></slot>
+        </template>
+    </div>
+    
+    <!-- TODO: this will eventually be a process -->
+    <x-window title="Task Manager" window-style="WS_OVERLAPPEDWINDOW | WS_ACTIVE | WS_VISIBLE"
+        style="width: 300px; z-index: 9999999; position: absolute; right: 32px; bottom: 32px;">
+        <div style="padding: 8px;">
             <div class="sunken-panel" style="height: 120px; width: 100%;">
                 <table style="width: 100%;">
                     <thead>
@@ -44,7 +64,7 @@
                         </tr>
                     </thead>
                     <tbody id="processes">
-  
+
                     </tbody>
                 </table>
             </div>
@@ -54,11 +74,11 @@
                 <button id="kill">Kill</button>
             </div>
         </div>
-        <div class="status-bar">
-            <p class="status-bar-field" style="text-align: right;"><span id="count">0</span>&nbsp;Processes</p>
-            <p class="status-bar-field" style="text-align: right;"><span id="handles">0</span>&nbsp;Handles</p>
-        </div>
-    </div>
+        <p slot="status-bar" class="status-bar-field" style="text-align: right;"><span
+                id="count">0</span>&nbsp;Processes</p>
+        <p slot="status-bar" class="status-bar-field" style="text-align: right;"><span
+                id="handles">0</span>&nbsp;Handles</p>
+    </x-window>
 </body>
 
 </html>

@@ -24,6 +24,8 @@ import {
 } from "./types/user32.types.js";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    console.log(`WndProc: msg=0x${msg.toString(16)}`);
+
     switch (msg) {
         case WM.CREATE: {
             const button = await CreateWindowEx(
