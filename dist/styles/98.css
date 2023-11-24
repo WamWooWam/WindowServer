@@ -163,6 +163,9 @@ input[type=submit]:disabled {
     margin: 0;
     margin-right: 24px;
     flex-grow: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .title-bar-controls {
@@ -861,6 +864,7 @@ table>tbody>tr>* {
 
 .window-template>.window-body {
     flex: 1;
+    overflow: hidden;
 }
 
 .title-bar-icon {

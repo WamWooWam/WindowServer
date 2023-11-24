@@ -264,7 +264,7 @@ export class WND {
     }
 
     public MoveWindow(x: number, y: number, cx: number, cy: number, bRepaint: boolean): void {
-        if (this.dwStyle & WS.POPUP) {
+        if ((this.dwStyle & (WS.POPUP | WS.CHILD)) === 0) {
             cx = Math.max(cx, NtIntGetSystemMetrics(SM.CXMINTRACK));
             cy = Math.max(cy, NtIntGetSystemMetrics(SM.CYMINTRACK));
         }
