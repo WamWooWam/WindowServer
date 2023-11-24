@@ -19,22 +19,24 @@ const __addEventListener = globalThis.addEventListener;
 const __removeEventListener = globalThis.removeEventListener;
 const __postMessage = globalThis.postMessage;
 
-globalThis.addEventListener = (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions | undefined) => {
-    console.warn(`ignoring addEventListener(${type})`);
-}
+// detouring these breaks the functions in safari :D
 
-globalThis.removeEventListener = (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions | undefined) => {
-    console.warn(`ignoring removeEventListener(${type})`);
-}
+// globalThis.addEventListener = (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions | undefined) => {
+//     console.warn(`ignoring addEventListener(${type})`);
+// }
 
-globalThis.postMessage = () => {
-    console.warn(`ignoring postMessage()`);
-}
+// globalThis.removeEventListener = (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions | undefined) => {
+//     console.warn(`ignoring removeEventListener(${type})`);
+// }
 
-delete globalThis.onmessage;
-delete globalThis.onerror;
-delete globalThis.onmessageerror;
-delete globalThis.onunhandledrejection;
+// globalThis.postMessage = () => {
+//     console.warn(`ignoring postMessage()`);
+// }
+
+// delete globalThis.onmessage;
+// delete globalThis.onerror;
+// delete globalThis.onmessageerror;
+// delete globalThis.onunhandledrejection;
 
 class SubsystemClass {
     public readonly name: string;
