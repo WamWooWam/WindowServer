@@ -35,6 +35,14 @@ function User32_HandleMessage(msg: Message) {
 
 }
 
+/**
+ * Registers a window class for subsequent use in calls to the {@link CreateWindow} or {@link CreateWindowEx} function.
+ * @param lpWndClass A pointer to a {@link WNDCLASS} structure. You must fill the structure with the appropriate class attributes before passing it to the function.
+ * @returns If the function succeeds, the return value is a class atom that uniquely identifies the class being registered. 
+ * This atom can only be used by the CreateWindow, CreateWindowEx, GetClassInfo, GetClassInfoEx, FindWindow, FindWindowEx, and UnregisterClass functions and the IActiveIMMap::FilterClientWindows method.
+ * @category User32
+ * @see https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerclassa
+*/
 export async function RegisterClass(lpWndClass: WNDCLASS): Promise<ATOM> {
     const lpWndClassWire: WNDCLASS_WIRE = {
         ...lpWndClass,
@@ -55,6 +63,26 @@ export async function RegisterClass(lpWndClass: WNDCLASS): Promise<ATOM> {
     return msg.data.retVal;
 }
 
+/**
+ * Creates an overlapped, pop-up, or child window with an extended window style; otherwise, 
+ * this function is identical to the CreateWindow function. For more information about creating
+ * a window and for full descriptions of the other parameters of CreateWindowEx, see CreateWindow.
+ * @param lpClassName A string or a class atom created by a previous call to the RegisterClass or RegisterClassEx function.
+ * @param lpWindowName The window name. If the window style specifies a title bar, the window title pointed to by lpWindowName is displayed in the title bar.
+ * @param dwStyle The style of the window being created. This parameter can be a combination of the window style values, plus the control styles indicated in the Remarks section.
+ * @param x The initial horizontal position of the window. For an overlapped or pop-up window, the x parameter is the initial x-coordinate of the window's upper-left corner, in screen coordinates.
+ * @param y The initial vertical position of the window. For an overlapped or pop-up window, the y parameter is the initial y-coordinate of the window's upper-left corner, in screen coordinates.
+ * @param nWidth The width, in device units, of the window. For overlapped windows, nWidth is the window's width, in screen coordinates, or CW_USEDEFAULT.
+ * @param nHeight The height, in device units, of the window. For overlapped windows, nHeight is the window's height, in screen coordinates, or CW_USEDEFAULT.
+ * @param hWndParent A handle to the parent or owner window of the window being created. To create a child window or an owned window, supply a valid window handle.
+ * @param hMenu A handle to a menu, or specifies a child-window identifier, depending on the window style. For an overlapped or pop-up window, hMenu identifies the menu to be used with the window;
+ * it can be NULL if the class menu is to be used. For a child window, hMenu specifies the child-window identifier, an integer value used by a dialog box control to notify its parent about events.
+ * @param hInstance A handle to the instance of the module to be associated with the window.
+ * @param lpParam Pointer to a value to be passed to the window through the CREATESTRUCT structure (lpCreateParams member) pointed to by the lParam param of the WM_CREATE message.
+ * @returns If the function succeeds, the return value is a handle to the new window. If the function fails, the return value is NULL. To get extended error information, call GetLastError.
+ * @category User32
+ * @see https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexa
+ */
 export async function CreateWindow(
     lpClassName: string,
     lpWindowName: string,
@@ -71,6 +99,27 @@ export async function CreateWindow(
     return CreateWindowEx(0, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
 }
 
+/**
+ * Creates an overlapped, pop-up, or child window with an extended window style; otherwise, 
+ * this function is identical to the CreateWindow function. For more information about creating
+ * a window and for full descriptions of the other parameters of CreateWindowEx, see CreateWindow.
+ * @param dwExStyle The extended window style of the window being created. For a list of values, see Extended Window Styles.
+ * @param lpClassName A string or a class atom created by a previous call to the RegisterClass or RegisterClassEx function.
+ * @param lpWindowName The window name. If the window style specifies a title bar, the window title pointed to by lpWindowName is displayed in the title bar.
+ * @param dwStyle The style of the window being created. This parameter can be a combination of the window style values, plus the control styles indicated in the Remarks section.
+ * @param x The initial horizontal position of the window. For an overlapped or pop-up window, the x parameter is the initial x-coordinate of the window's upper-left corner, in screen coordinates.
+ * @param y The initial vertical position of the window. For an overlapped or pop-up window, the y parameter is the initial y-coordinate of the window's upper-left corner, in screen coordinates.
+ * @param nWidth The width, in device units, of the window. For overlapped windows, nWidth is the window's width, in screen coordinates, or CW_USEDEFAULT.
+ * @param nHeight The height, in device units, of the window. For overlapped windows, nHeight is the window's height, in screen coordinates, or CW_USEDEFAULT.
+ * @param hWndParent A handle to the parent or owner window of the window being created. To create a child window or an owned window, supply a valid window handle.
+ * @param hMenu A handle to a menu, or specifies a child-window identifier, depending on the window style. For an overlapped or pop-up window, hMenu identifies the menu to be used with the window;
+ * it can be NULL if the class menu is to be used. For a child window, hMenu specifies the child-window identifier, an integer value used by a dialog box control to notify its parent about events.
+ * @param hInstance A handle to the instance of the module to be associated with the window.
+ * @param lpParam Pointer to a value to be passed to the window through the CREATESTRUCT structure (lpCreateParams member) pointed to by the lParam param of the WM_CREATE message.
+ * @returns If the function succeeds, the return value is a handle to the new window. If the function fails, the return value is NULL. To get extended error information, call GetLastError.
+ * @category User32
+ * @see https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexa
+ */
 export async function CreateWindowEx(
     dwExStyle: number,
     lpClassName: string,
@@ -106,6 +155,17 @@ export async function CreateWindowEx(
     return msg.data.hWnd;
 }
 
+/**
+ * Calls the default window procedure to provide default processing for any window messages that an application does not process.
+ * This function ensures that every message is processed. DefWindowProc is called with the same parameters received by the window procedure.
+ * @param hWnd A handle to the window procedure that received the message.
+ * @param uMsg The message.
+ * @param wParam Additional message information. The content of this parameter depends on the value of the uMsg parameter.
+ * @param lParam Additional message information. The content of this parameter depends on the value of the uMsg parameter.
+ * @returns The return value is the result of the message processing and depends on the message.
+ * @category User32
+ * @see https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-defwindowproca
+*/
 export async function DefWindowProc(hWnd: HANDLE, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     const msg = await User32.SendMessage<WNDPROC_PARAMS, number>({
         nType: USER32.DefWindowProc,
@@ -237,7 +297,9 @@ export async function DispatchMessage(lpMsg: MSG): Promise<boolean> {
  * @see https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postquitmessage
  * @example
  * ```ts
- * await PostQuitMessage(0);
+ * case WM.CLOSE:
+ *   await PostQuitMessage(0);
+ *   break;
  * ```
  */
 export async function PostQuitMessage(nExitCode: number) {
@@ -269,6 +331,13 @@ export async function GetDC(hWnd: HANDLE): Promise<HDC> {
 }
 
 // TODO: this should not require a syscall, use shared memory
+/**
+ * Retrieves the specified system metric or system configuration setting.
+ * @param nIndex The system metric or configuration setting to be retrieved. See {@link https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmetrics}
+ * @returns If the function succeeds, the return value is the requested system metric or configuration setting. If the function fails, the return value is 0.
+ * @category User32
+ * @see https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmetrics
+ */
 export async function GetSystemMetrics(nIndex: number): Promise<number> {
     const msg = await User32.SendMessage<number>({
         nType: USER32.GetSystemMetrics,

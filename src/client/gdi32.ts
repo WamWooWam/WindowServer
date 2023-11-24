@@ -10,6 +10,14 @@ export function GetStockObject(nIndex: number): HANDLE {
     return 0x80000000 + nIndex;
 }
 
+/**
+ * The CreateRectRgn function creates a rectangular region.
+ * @param x1 The coordinates of the upper-left corner of the region in logical units.
+ * @param y1 The coordinates of the upper-left corner of the region in logical units.
+ * @param x2 the coordinates of the lower-right corner of the region in logical units.
+ * @param y2 the coordinates of the lower-right corner of the region in logical units.
+ * @returns The return value identifies the region in the calling process's region list.
+ */
 export async function CreateRectRgn(x1: number, y1: number, x2: number, y2: number): Promise<HRGN> {
     return (await Gdi32.SendMessage({
         nType: GDI32.CreateRectRgn,
@@ -17,6 +25,14 @@ export async function CreateRectRgn(x1: number, y1: number, x2: number, y2: numb
     })).data;
 }
 
+/**
+ * The CombineRgn function combines two regions and stores the result in a third region. The two regions are combined according to the specified mode.
+ * @param hrgnDest A handle to a new region with dimensions defined by combining two other regions. (This region must exist before CombineRgn is called.)
+ * @param hrgnSrc1 A handle to the first of two regions to be combined.
+ * @param hrgnSrc2 A handle to the second of two regions to be combined.
+ * @param fnCombineMode A mode indicating how the two regions will be combined.
+ * @returns The return value specifies the type of the resulting region. 
+ */
 export async function CombineRgn(hrgnDest: HRGN, hrgnSrc1: HRGN, hrgnSrc2: HRGN, fnCombineMode: number): Promise<number> {
     return (await Gdi32.SendMessage({
         nType: GDI32.CombineRgn,
@@ -24,6 +40,12 @@ export async function CombineRgn(hrgnDest: HRGN, hrgnSrc1: HRGN, hrgnSrc2: HRGN,
     })).data as number;
 }
 
+/**
+ * The FillRgn function fills a region by using the specified brush.
+ * @param hDC Handle to the device context.
+ * @param hrgn Handle to the region to be filled. The region's coordinates are assumed to be device coordinates.
+ * @returns If the function succeeds, the return value is nonzero.
+ */
 export async function FillRgn(hDC: number, hrgn: number): Promise<boolean> {
     return (await Gdi32.SendMessage({
         nType: GDI32.FillRgn,

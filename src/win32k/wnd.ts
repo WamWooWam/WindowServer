@@ -114,7 +114,7 @@ export class WND {
         };
 
         // ReactOS does funny stuff to specialise creating the desktop window,
-        //  but I'd rather not do that for now
+        // but I'd rather not do that for now
 
         // Correct the window style.
         if ((this.dwStyle & (WS.CHILD | WS.POPUP)) != WS.CHILD) {

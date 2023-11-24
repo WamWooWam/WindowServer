@@ -15,6 +15,17 @@ function Shell32_HandleMessage(msg: Message) {
 }
 
 // TOOD: this should really be client-side
+/**
+ * Creates a new file system folder with the specified attributes.
+ * @deprecated This function is available through Windows XP with Service Pack 2 (SP2) and Windows Server 2003. It might be altered or unavailable in subsequent versions of Windows.
+ * @param hwnd A handle to the parent window. This parameter can be set to null if no user interface will be displayed.
+ * @param pszPath A string specifying the fully qualified path of the directory. This string is of maximum length of 248 characters.
+ * @param psa A pointer to a SECURITY_ATTRIBUTES structure with the directory's security attribute. Set this parameter to NULL if no security attributes need to be set.
+ * @returns Returns ERROR_SUCCESS if successful, or an error value otherwise.
+ * @async
+ * @category Shell32
+ * @see {@link https://docs.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shcreatedirectoryexa}
+*/
 export async function SHCreateDirectoryEx(
     hwnd: number,
     pszPath: string,
