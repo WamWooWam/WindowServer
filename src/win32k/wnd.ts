@@ -61,7 +61,7 @@ export class WND {
          * Set if DefWindowProc is called for WM_NCHITTEST, so we can skip a user<->kernel space transition
          * and just return the result of the kernel call
          */
-        overridesNCHITTEST: true,
+        overrides_NCHITTEST: true,
     }
 
     private _pRootElement: HTMLElement;

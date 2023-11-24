@@ -150,7 +150,7 @@ function NtDefNCHitTest(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARAM, lPara
         return HT.ERROR;
     }
 
-    wnd.stateFlags.overridesNCHITTEST = false;
+    wnd.stateFlags.overrides_NCHITTEST = false;
 
     const pRootElement = wnd.pRootElement as WindowElement;
     if (!pRootElement) {
@@ -256,8 +256,6 @@ async function NtDefNCLButtonDown(peb: PEB, hWnd: HWND, Msg: number, wParam: WPA
         return 0;
     }
 
-    wnd.stateFlags.overridesNCHITTEST = false;
-
     const pRootElement = wnd.pRootElement as WindowElement;
     if (!pRootElement) {
         return 0;
@@ -308,8 +306,6 @@ async function NtDefNCLButtonUp(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARA
     if (!wnd) {
         return 0;
     }
-
-    wnd.stateFlags.overridesNCHITTEST = false;
 
     const pRootElement = wnd.pRootElement as WindowElement;
     if (!pRootElement) {

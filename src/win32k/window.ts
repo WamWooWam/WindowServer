@@ -509,7 +509,7 @@ export function NtUserGetDC(peb: PEB, hWnd: HWND): HDC {
 }
 
 export async function NtDoNCHitTest(wnd: WND, x: number, y: number) {
-    if (!wnd.stateFlags.overridesNCHITTEST) {
+    if (!wnd.stateFlags.overrides_NCHITTEST) {
         return await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
     }
     else {
