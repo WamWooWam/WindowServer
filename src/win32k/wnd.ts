@@ -269,6 +269,8 @@ export class WND {
             cy = Math.max(cy, NtIntGetSystemMetrics(SM.CYMINTRACK));
         }
 
+        let previousWindow = { ...this.rcWindow };
+
         this._rcWindow.left = x;
         this._rcWindow.top = y;
         this._rcWindow.right = x + cx;
@@ -282,8 +284,7 @@ export class WND {
         this.FixWindowCoordinates();
 
         if (this._pRootElement) {
-            this._pRootElement.style.left = `${this.rcWindow.left}px`;
-            this._pRootElement.style.top = `${this.rcWindow.top}px`;
+            this._pRootElement.style.transform = `translate(${this.rcWindow.left}px, ${this.rcWindow.top}px)`;
             this._pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
             this._pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
         }
@@ -372,10 +373,10 @@ export class WND {
             }
         }
 
-        this._rcWindow.left = x;
-        this._rcWindow.top = y;
-        this._rcWindow.right = x + cx;
-        this._rcWindow.bottom = y + cy;
+        this._rcWindow.left = Math.floor(x);
+        this._rcWindow.top = Math.floor(y);
+        this._rcWindow.right = Math.floor(x + cx);
+        this._rcWindow.bottom = Math.floor(y + cy);
 
         this._rcClient.left = 0;
         this._rcClient.top = 0;
@@ -397,27 +398,26 @@ export class WND {
         }
 
         // for now, dont do a dirty flag, just set the style
-        this.pRootElement.style.left = `${this.rcWindow.left}px`;
-        this.pRootElement.style.top = `${this.rcWindow.top}px`;
+        this.pRootElement.style.transform = `translate(${this.rcWindow.left}px, ${this.rcWindow.top}px)`;
         this.pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
         this.pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
         this.pRootElement.style.position = "absolute";
         this.pRootElement.style.zIndex = `${this.zIndex}`;
 
         // if we're a top level window, allocate a DC
-        if (!(this.dwStyle & WS.CHILD)) {
-            this._hDC = GreAllocDCForWindow(this._peb, this._hWnd);
-        }
-        else {
-            // use the parent's DC, with an additional transform
-            const parent = ObGetObject<WND>(this._hParent);
-            this._hDC = ObDuplicateHandle(parent._hDC);
-        }
+        // if (!(this.dwStyle & WS.CHILD)) {
+        //     this._hDC = GreAllocDCForWindow(this._peb, this._hWnd);
+        // }
+        // else {
+        //     // use the parent's DC, with an additional transform
+        //     const parent = ObGetObject<WND>(this._hParent);
+        //     this._hDC = ObDuplicateHandle(parent._hDC);
+        // }
 
-        if (!this._hDC)
-            return;
+        // if (!this._hDC)
+        //     return;
 
-        GreResizeDC(this._hDC, this.rcClient);
+        // GreResizeDC(this._hDC, this.rcClient);
     }
 
     public UpdateWindowStyle(dwOldStyle: number, dwNewStyle: number): void {

@@ -18,12 +18,14 @@
 
 x-window {
     opacity: 0;
+    will-change: transform top left;
 }
 
 body {
     color: #222;
     font-family: Arial;
-    font-size: 12px
+    font-size: 12px;
+    margin:0px;
 }
 
 .title-bar,

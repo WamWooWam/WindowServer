@@ -12,6 +12,11 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
     const processTableEntries = new Map<HANDLE, HTMLTableRowElement>();
     let processCount = 0;
 
+    const taskmgr = document.getElementById("task-manager");
+    taskmgr.onpointerdown = (e) => e.stopPropagation();
+    taskmgr.onpointermove = (e) => e.stopPropagation();
+    taskmgr.onpointerup = (e) => e.stopPropagation();
+
     const processList = document.getElementById("processes");
 
     const UpdateStates = () => {

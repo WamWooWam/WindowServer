@@ -491,7 +491,7 @@ async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lParam: LP
         let msg = await state.lpMsgQueue.GetMessage(wnd.hWnd, 0, 0);
         if (msg.message === WM.QUIT) break;
 
-        console.log("NtDefWndDoSizeMove: got message", msg);
+        // console.log("NtDefWndDoSizeMove: got message", msg);
 
         if (msg.message === WM.KEYDOWN && (msg.wParam == VK.RETURN || msg.wParam == VK.ESCAPE))
             break;
