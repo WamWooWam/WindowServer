@@ -10,6 +10,10 @@ import { WND } from "./wnd.js";
 
 export async function NtGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
     const state = GetW32ProcInfo(peb);
+    if (!state) {
+        console.warn("User32 not initialized");
+        return { retVal: false, lpMsg: null };
+    }
 
     let msg: MSG = null;
     let retVal = false;
@@ -34,36 +38,31 @@ export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
             lParam: msg[3]
         };
     }
+
     if (_msg.hWnd === HWND_BROADCAST) {
         // sending WM_USER messages to all windows is a bad idea
-        if (_msg.message > WM.USER && _msg.message < WMP.CREATEELEMENT) {
+        if (_msg.message > WM.USER && _msg.message < WMP.CREATEELEMENT)
             return;
-        }
 
         for (const hWnd of ObEnumObjectsByType("WND")) {
             const wnd = ObGetObject<WND>(hWnd);
-            if (wnd) {
-                const state = GetW32ProcInfo(wnd.peb);
-                state.lpMsgQueue.EnqueueMessage({ ..._msg, hWnd });
-            }
+            if (!wnd) continue;
+
+            const state = GetW32ProcInfo(wnd.peb);
+            if (!state) continue;
+
+            state.lpMsgQueue.EnqueueMessage({ ..._msg, hWnd });
         }
+
         return;
     }
-
-    if (_msg.hWnd && _msg.message === WM.LBUTTONDOWN || _msg.message === WM.MBUTTONDOWN || _msg.message === WM.RBUTTONDOWN) {
-        NtUserSetActiveWindow(peb, _msg.hWnd);
-        NtPostMessage(peb, [_msg.hWnd, WM.ACTIVATE, _msg.hWnd, 0]);
-    }
-
+    
     const wnd = ObGetObject<WND>(_msg.hWnd);
-    if (wnd) {
-        const state = GetW32ProcInfo(wnd.peb);
-        state.lpMsgQueue.EnqueueMessage(_msg);
-    }
-    else {
-        const state = GetW32ProcInfo(peb);
-        state.lpMsgQueue.EnqueueMessage(_msg);
-    }
+    const _peb = wnd ? wnd.peb : peb;
+    const state = GetW32ProcInfo(_peb);
+    if (!state) return; // this process doesn't have a message queue
+
+    state.lpMsgQueue.EnqueueMessage(_msg);
 }
 
 export async function NtDispatchMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Promise<LRESULT> {
@@ -81,16 +80,13 @@ export async function NtDispatchMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Pr
         NtUserSetActiveWindow(peb, _msg.hWnd);
         NtPostMessage(peb, [_msg.hWnd, WM.ACTIVATE, _msg.hWnd, 0]);
     }
-    
+
     const wnd = ObGetObject<WND>(_msg.hWnd);
-    if (wnd) {
-        const state = GetW32ProcInfo(wnd.peb);
-        return await state.lpMsgQueue.DispatchMessage(_msg);
-    }
-    else if (!_msg.hWnd) {
-        const state = GetW32ProcInfo(peb);
-        return await state.lpMsgQueue.DispatchMessage(_msg);
-    }
+    const _peb = wnd ? wnd.peb : peb;
+    const state = GetW32ProcInfo(_peb);
+    if (!state) return; // this process doesn't have a message queue
+    
+    return await state.lpMsgQueue.DispatchMessage(_msg);
 }
 
 export async function NtSendMessageTimeout(peb: PEB, msg: MSG | WNDPROC_PARAMS, dwTimeout: number): Promise<{ status: LRESULT, result: LRESULT }> {
@@ -116,9 +112,16 @@ export async function NtSendMessageTimeout(peb: PEB, msg: MSG | WNDPROC_PARAMS, 
     });
 }
 
-
+/**
+ * Sends a quit message to the specified process' message queue
+ * @param peb The process environment block of the process to post the quit message to
+ * @param nExitCode The exit code to send with the quit message
+ * @returns true if the message was posted, false if the process doesn't have a message queue
+ */
 export async function NtPostQuitMessage(peb: PEB, nExitCode: number) {
     const state = GetW32ProcInfo(peb);
+    if (!state) return false; // this process doesn't have a message queue
+    
     const msg: MSG = {
         hWnd: null,
         message: WM.QUIT,
@@ -127,6 +130,7 @@ export async function NtPostQuitMessage(peb: PEB, nExitCode: number) {
     };
 
     state.lpMsgQueue.EnqueueMessage(msg);
+    return true;
 }
 
 export async function NtPostProcessMessage(hProcess: HANDLE, lpMsg: MSG) {

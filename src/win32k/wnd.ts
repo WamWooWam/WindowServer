@@ -269,8 +269,8 @@ export class WND {
 
     public async MoveWindow(x: number, y: number, cx: number, cy: number, bRepaint: boolean): Promise<void> {
         if ((this.dwStyle & (WS.POPUP | WS.CHILD)) === 0) {
-            cx = Math.max(cx, NtIntGetSystemMetrics(SM.CXMINTRACK));
-            cy = Math.max(cy, NtIntGetSystemMetrics(SM.CYMINTRACK));
+            cx = Math.max(cx, NtIntGetSystemMetrics(this.peb, SM.CXMINTRACK));
+            cy = Math.max(cy, NtIntGetSystemMetrics(this.peb, SM.CYMINTRACK));
         }
 
         let previousWindow = { ...this.rcWindow };
@@ -359,8 +359,8 @@ export class WND {
                 if (false) {
 
                 } else {
-                    x = monitor.cWndStack * NtIntGetSystemMetrics(SM.CXSIZE) + NtIntGetSystemMetrics(SM.CXFRAME);
-                    y = monitor.cWndStack * NtIntGetSystemMetrics(SM.CXSIZE) + NtIntGetSystemMetrics(SM.CXFRAME);
+                    x = monitor.cWndStack * NtIntGetSystemMetrics(this.peb, SM.CXSIZE) + NtIntGetSystemMetrics(this.peb, SM.CXFRAME);
+                    y = monitor.cWndStack * NtIntGetSystemMetrics(this.peb, SM.CXSIZE) + NtIntGetSystemMetrics(this.peb, SM.CXFRAME);
 
                     if (x > ((monitor.rcWork.right - monitor.rcWork.left) / 4) ||
                         y > ((monitor.rcWork.bottom - monitor.rcWork.top) / 4)) {

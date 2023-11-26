@@ -36,6 +36,11 @@ function CreateWndProcCallback(peb: PEB, lpfnWndProc: number | WNDPROC): WNDPROC
 
 export function NtRegisterClassEx(peb: PEB, lpWndClass: WNDCLASS_WIRE | WNDCLASSEX): ATOM {
     const state = GetW32ProcInfo(peb);
+    if (!state) {
+        console.warn("User32 not initialized");
+        return 0;
+    }
+
     const className = lpWndClass.lpszClassName as string;
 
     if (NtFindClass(state, className) != null) {

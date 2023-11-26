@@ -1,52 +1,55 @@
+import { MONITOR, NtGetPrimaryMonitor, NtRegisterMonitorHook } from "./monitor.js";
 import { SM, SPI } from "../types/user32.types.js";
 
-import { NtGetPrimaryMonitor } from "./monitor.js";
+import { PEB } from "../types/types.js";
+import { SUBSYS_USER32 } from "../types/subsystems.js";
+
+export function NtInitSysMetrics(peb: PEB) {
+    const monitor = NtGetPrimaryMonitor();
+
+    const memory = peb.lpSubsystems.get(SUBSYS_USER32).lpSharedMemory;
+    const view = new Int32Array(memory);
+
+    // TODO: there are many more metrics to set here
+    view[SM.CXSCREEN] = monitor.rcMonitor.right;
+    view[SM.CYSCREEN] = monitor.rcMonitor.bottom;
+    view[SM.CXMINIMIZED] = 100;
+    view[SM.CYMINIMIZED] = 32;
+    view[SM.CXSIZE] = 18;
+    view[SM.CYSIZE] = 18;
+    view[SM.CXFRAME] = 4;
+    view[SM.CYFRAME] = 4;
+    view[SM.CXMINTRACK] = 112;
+    view[SM.CYMINTRACK] = 27;
+    view[SM.CXMAXTRACK] = monitor.rcMonitor.right + 12;
+    view[SM.CYMAXTRACK] = monitor.rcMonitor.bottom + 12;
+    view[SM.CXBORDER] = 1;
+    view[SM.CYBORDER] = 1;
+    view[SM.CYCAPTION] = 18;
+    view[SM.CXDLGFRAME] = 3;
+    view[SM.CYDLGFRAME] = 3;
+
+    const hook = (monitor: MONITOR) => {
+        view[SM.CXSCREEN] = monitor.rcMonitor.right;
+        view[SM.CYSCREEN] = monitor.rcMonitor.bottom;
+        view[SM.CXMAXTRACK] = monitor.rcMonitor.right + 12;
+        view[SM.CYMAXTRACK] = monitor.rcMonitor.bottom + 12;
+    };
+
+    NtRegisterMonitorHook(hook);
+}
 
 // TODO: these should be stored in the shared memory of the process
-export function NtIntGetSystemMetrics(nIndex: number): number {
-    const monitor = NtGetPrimaryMonitor();
-    switch (nIndex) {
-        case SM.CXSCREEN: // SM.CXSCREEN
-            return monitor.rcMonitor.right - monitor.rcMonitor.left;
-        case SM.CYSCREEN: // SM.CYSCREEN
-            return monitor.rcMonitor.bottom - monitor.rcMonitor.top;
-        case SM.CXMINIMIZED: // SM.CXMINIMIZED
-            return 100; // hardcoded, fix
-        case SM.CXMINIMIZED: // SM.CYMINIMIZED
-            return 32; // hardcoded, fix
-        case SM.CXSIZE:
-            return 18; // hardcoded, fix
-        case SM.CYSIZE:
-            return 18; // hardcoded, fix
-        case SM.CXFRAME:
-            return 4; // hardcoded, fix
-        case SM.CYFRAME:
-            return 4; // hardcoded, fix
-        case SM.CXMINTRACK:
-            return 112; // hardcoded, fix
-        case SM.CYMINTRACK:
-            return 27; // hardcoded, fix
-        case SM.CXMAXTRACK:
-            return (monitor.rcMonitor.right - monitor.rcMonitor.left) + 12; // hardcoded, fix
-        case SM.CYMAXTRACK:
-            return (monitor.rcMonitor.bottom - monitor.rcMonitor.top) + 12; // hardcoded, fix
-        case SM.CXBORDER:
-            return 1; // hardcoded, fix
-        case SM.CYBORDER:
-            return 1; // hardcoded, fix
-        case SM.CYCAPTION:
-            return 18; // hardcoded, fix
-            case SM.CXDLGFRAME:
-            return 3; // hardcoded, fix
-        case SM.CYDLGFRAME:
-        return 3; // hardcoded, fix
-
-        default:
-            console.warn(`NtIntGetSystemMetrics: unknown index ${nIndex}`);
-            return 0;
+export function NtIntGetSystemMetrics(peb: PEB, nIndex: number): number {
+    if (nIndex < 0 || nIndex >= SM.CMETRICS) {
+        console.warn(`NtIntGetSystemMetrics: unknown nIndex ${nIndex}`);
+        return 0;
     }
 
-    return 0;
+    const memory = peb.lpSubsystems.get(SUBSYS_USER32).lpSharedMemory;
+    const view = new Int32Array(memory);
+
+    return view[nIndex];
 }
 
 

@@ -46,7 +46,7 @@ export function ObSetObject<T>(value: T, type: string, owner: HANDLE, dtor?: (va
         owningHandle.ownedHandles.push(handle);
     }
 
-    console.debug(`created handle ${handle}, %s %O %O`, type, handleTable.get(handle), value);
+    // console.debug(`created handle ${handle}, %s %O %O`, type, handleTable.get(handle), value);
 
     return handle;
 }
@@ -129,13 +129,13 @@ export function ObDestroyHandle(handle: HANDLE): boolean {
         return false;
     }
 
-    console.debug(`destroying handle ${handle}, %s %O %O`, tag.type, tag, tag.value);
+    // console.debug(`destroying handle ${handle}, %s %O %O`, tag.type, tag, tag.value);
 
     for (const ownedHandle of tag.ownedHandles) {
         ObDestroyHandle(ownedHandle);
     }
 
-    console.warn(`destroyed handle ${handle}, %s %O %O`, tag.type, tag, tag.value)
+    // console.warn(`destroyed handle ${handle}, %s %O %O`, tag.type, tag, tag.value)
 
     handleTable.delete(handle);
     if (tag.dtor) {
@@ -172,7 +172,7 @@ export function ObCreateObject<T>(type: string, value: (hObj: HANDLE) => T, owne
         owningHandle.ownedHandles.push(handle);
     }
 
-    console.debug(`created handle ${handle}, %s %O %O`, type, handleTable.get(handle), tag.value);
+    // console.debug(`created handle ${handle}, %s %O %O`, type, handleTable.get(handle), tag.value);
 
     return tag.value;
 }
@@ -201,5 +201,5 @@ export function* ObEnumObjectsByType(type: string) {
 }
 
 export function ObDumpHandles() {
-    console.log("handleTable", handleTable);
+    // console.log("handleTable", handleTable);
 }

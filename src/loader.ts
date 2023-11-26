@@ -18,6 +18,9 @@ export function PsCreateProcess(
 
     const mark = performance.mark("PsCreateProcess");
 
+    // get filename from path
+    const procName = lpApplicationName.split('\\').pop().split('/').pop();
+
     // TODO: this should be loaded from the executable file
     const exec: Executable = {
         file: lpApplicationName,
@@ -27,7 +30,7 @@ export function PsCreateProcess(
         entryPoint: "main",
         dependencies: ["ntdll.js", "kernel32.js"],
 
-        name: lpApplicationName.split('.')[0],
+        name: procName,
         version: [1, 0, 0, 0],
         rsrc: {}
     }

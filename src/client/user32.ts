@@ -15,6 +15,7 @@ import USER32, {
     SET_WINDOW_POS,
     SHOW_WINDOW,
     SHOW_WINDOW_REPLY,
+    SM,
     WNDCLASS,
     WNDCLASS_WIRE,
     WNDPROC,
@@ -29,8 +30,7 @@ import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 
-const User32 = await NtRegisterSubsystem(SUBSYS_USER32, User32_HandleMessage);
-
+const User32 = await NtRegisterSubsystem(SUBSYS_USER32, User32_HandleMessage, 0x1000);
 function User32_HandleMessage(msg: Message) {
 
 }
@@ -344,13 +344,13 @@ export async function GetDC(hWnd: HANDLE): Promise<HDC> {
  * @category User32
  * @see https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmetrics
  */
-export async function GetSystemMetrics(nIndex: number): Promise<number> {
-    const msg = await User32.SendMessage<number>({
-        nType: USER32.GetSystemMetrics,
-        data: nIndex
-    });
+export function GetSystemMetrics(nIndex: number): number {
+    if (nIndex < 0 || nIndex > SM.CMETRICS) {
+        throw new Error(`GetSystemMetrics: Invalid index ${nIndex}`);
+    }
 
-    return msg.data;
+    const SysMetricsSharedBufferView = new Int32Array(User32.memory.slice(16, 16 + SM.CMETRICS * 4));
+    return SysMetricsSharedBufferView[nIndex];
 }
 
 /**

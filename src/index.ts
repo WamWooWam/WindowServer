@@ -17,7 +17,36 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
     taskmgr.onpointermove = (e) => e.stopPropagation();
     taskmgr.onpointerup = (e) => e.stopPropagation();
 
+    const launchSelect = document.getElementById("launch-select") as HTMLSelectElement;
+
     const processList = document.getElementById("processes");
+    processList.onclick = (e) => {
+        const row = (e.target as HTMLElement).closest("tr");
+        const proc = ObGetObject<PsProcess>(parseInt(row.id));
+        if (!proc) return;
+
+        const index = procs.indexOf(proc.handle);
+        if (index === -1) return;
+
+        for (const row of processList.getElementsByTagName("tr")) {
+            row.className = "";
+        }
+
+        row.className = "highlighted";
+    }
+
+    const GetSelectedProcess = () => {
+        const row = processList.getElementsByClassName("highlighted")[0];
+        if (!row) return procs[procs.length - 1]
+
+        const proc = ObGetObject<PsProcess>(parseInt(row.id));
+        if (!proc) {
+            row.remove();
+            return;
+        }
+
+        return proc.handle;
+    }
 
     const UpdateStates = () => {
         const rows = processList.getElementsByTagName("tr");
@@ -44,27 +73,36 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
     }
 
     const SpawnProc = async () => {
-        const proc = PsCreateProcess("test.js", "", false, {}, "C:\\Windows\\System32", null);
-        procs.push(proc);
-
-        UpdateButtons();
+        const exe = launchSelect.value;
+        PsCreateProcess(`apps/${exe}.js`, "", false, {}, "C:\\Windows\\System32", null);
     }
 
     const KillProc = async () => {
-        const proc = procs.pop();
-        PsTerminateProcess(proc, 0);
+        if (procs.length === 1) {
+            console.warn("Refusing to kill wininit.");
+            return;
+        }
 
+        const proc = GetSelectedProcess();
+
+        PsTerminateProcess(proc, 0);
         UpdateButtons();
     }
 
     const QuitProc = async () => {
-        const proc = procs.pop();
-        NtPostProcessMessage(proc, {
-            hWnd: null,
-            message: WM.QUIT,
-            wParam: 0,
-            lParam: 0
-        });
+        if (procs.length === 1) {
+            console.warn("Refusing to kill wininit.");
+            return;
+        }
+
+        const proc = GetSelectedProcess();
+        try {
+            NtPostProcessMessage(proc, { hWnd: null, message: WM.QUIT, wParam: 0, lParam: 0 });
+        }
+        catch (e) {
+            console.warn("Failed to send quit message, was User32 initialized?")
+            PsTerminateProcess(proc, 0);
+        }
 
         UpdateButtons();
     }
@@ -72,6 +110,8 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
     const ProcessCreated = (proc: PsProcess) => {
         processCount++;
         document.getElementById("count").innerText = processCount.toString();
+
+        procs.push(proc.handle);
 
         const html = `
             <tr id="${proc.id}">

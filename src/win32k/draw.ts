@@ -1,17 +1,17 @@
 import {
-     BDR,
-     BF,
-     COLOR,
-     DC as DCF,
-     DFC,
-     DFCS,
-     EDGE,
-     HICON,
-     LOGFONT,
-     NONCLIENTMETRICS,
-     SM,
-     SPI,
-     WS
+    BDR,
+    BF,
+    COLOR,
+    DC as DCF,
+    DFC,
+    DFCS,
+    EDGE,
+    HICON,
+    LOGFONT,
+    NONCLIENTMETRICS,
+    SM,
+    SPI,
+    WS
 } from "../types/user32.types.js";
 import DC, { GreSelectObject } from "./gdi/dc.js";
 import { DEFAULT_CHARSET, FW, HBRUSH, HDC, HFONT, NONANTIALIASED_QUALITY, NULL_PEN, PS, RECT, SIZE, TRANSPARENT } from "../types/gdi32.types.js";
@@ -32,21 +32,21 @@ import {
     RBOuterSoft
 } from "./tbls.js";
 import {
-     NtGdiCreateFontIndirect,
-     NtGdiCreatePen,
-     NtGdiDeleteObject,
-     NtGdiFillGradientRect,
-     NtGdiGetBkMode,
-     NtGdiGetStockObject,
-     NtGdiGetTextColor,
-     NtGdiGetTextExtentEx,
-     NtGdiLineTo,
-     NtGdiMoveTo,
-     NtGdiSelectObject,
-     NtGdiSetBkMode,
-     NtGdiSetDCPenColor,
-     NtGdiSetTextColor,
-     NtGdiTextOut
+    NtGdiCreateFontIndirect,
+    NtGdiCreatePen,
+    NtGdiDeleteObject,
+    NtGdiFillGradientRect,
+    NtGdiGetBkMode,
+    NtGdiGetStockObject,
+    NtGdiGetTextColor,
+    NtGdiGetTextExtentEx,
+    NtGdiLineTo,
+    NtGdiMoveTo,
+    NtGdiSelectObject,
+    NtGdiSetBkMode,
+    NtGdiSetDCPenColor,
+    NtGdiSetTextColor,
+    NtGdiTextOut
 } from "./gdi/ntgdi.js";
 import { NtIntGetSystemMetrics, NtUserSystemParametersInfo } from "./metrics.js";
 
@@ -478,6 +478,7 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
     }
 
     let tempRect = { ...rect };
+    let peb = pWnd.peb;
 
     switch (type) {
         case DFCS.CAPTIONMIN:
@@ -486,13 +487,13 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
                     return; /* ToolWindows don't have min/max buttons */
 
                 if (style & WS.SYSMENU)
-                    tempRect.right -= NtIntGetSystemMetrics(SM.CXSIZE);
+                    tempRect.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE);
 
                 if (style & (WS.MAXIMIZEBOX | WS.MINIMIZEBOX))
-                    tempRect.right -= NtIntGetSystemMetrics(SM.CXSIZE) - 2;
+                    tempRect.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) - 2;
 
-                tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM.CXSIZE) + 2;
-                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM.CYSIZE) - 2;
+                tempRect.left = tempRect.right - NtIntGetSystemMetrics(peb, SM.CXSIZE) + 2;
+                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(peb, SM.CYSIZE) - 2;
                 tempRect.top += 2;
                 tempRect.right -= 2;
 
@@ -510,10 +511,10 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
                     return; /* ToolWindows don't have min/max buttons */
 
                 if (style & WS.SYSMENU)
-                    tempRect.right -= NtIntGetSystemMetrics(SM.CXSIZE);
+                    tempRect.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE);
 
-                tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM.CXSIZE) + 1;
-                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM.CYSIZE) - 2;
+                tempRect.left = tempRect.right - NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
+                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(peb, SM.CYSIZE) - 2;
                 tempRect.top += 2;
                 tempRect.right -= 1;
 
@@ -530,12 +531,12 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
 
                 /* A tool window has a smaller Close button */
                 if (exStyle & WS.EX.TOOLWINDOW) {
-                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM.CXSMSIZE);
-                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM.CYSMSIZE) - 2;
+                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(peb, SM.CXSMSIZE);
+                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(peb, SM.CYSMSIZE) - 2;
                 }
                 else {
-                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(SM.CXSIZE);
-                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(SM.CYSIZE) - 2;
+                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(peb, SM.CXSIZE);
+                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(peb, SM.CYSIZE) - 2;
                 }
                 tempRect.top += 2;
                 tempRect.right -= 2;
@@ -561,6 +562,7 @@ function UserDrawCaptionText(
     let bDeleteFont = false;
     let ret = true;
     let r = { ...rect };
+    let peb = pWnd.peb;
 
     if (!NtUserSystemParametersInfo(SPI.GETNONCLIENTMETRICS, nclm)) {
         return false;
@@ -589,10 +591,10 @@ function UserDrawCaptionText(
 
     // Adjust for system menu.
     if (pWnd && pWnd.dwStyle & WS.SYSMENU) {
-        r.right -= NtIntGetSystemMetrics(SM.CYCAPTION) - 1;
+        r.right -= NtIntGetSystemMetrics(peb, SM.CYCAPTION) - 1;
         if ((pWnd.dwStyle & (WS.MAXIMIZEBOX | WS.MINIMIZEBOX)) && !(pWnd.dwExStyle & WS.EX.TOOLWINDOW)) {
-            r.right -= NtIntGetSystemMetrics(SM.CXSIZE) + 1;
-            r.right -= NtIntGetSystemMetrics(SM.CXSIZE) + 1;
+            r.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
+            r.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
         }
     }
 

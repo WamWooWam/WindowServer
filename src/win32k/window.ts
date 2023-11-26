@@ -40,8 +40,8 @@ export function NtIntGetClientRect(peb: PEB, hWnd: HWND): RECT {
         return {
             top: 0,
             left: 0,
-            right: NtIntGetSystemMetrics(SM.CXMINIMIZED),
-            bottom: NtIntGetSystemMetrics(SM.CYMINIMIZED)
+            right: NtIntGetSystemMetrics(peb, SM.CXMINIMIZED),
+            bottom: NtIntGetSystemMetrics(peb, SM.CYMINIMIZED)
         }
     }
 
@@ -103,11 +103,11 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
     xinc = yinc = adjust;
 
     if ((adjustedStyle & WS.THICKFRAME) && (adjustedStyle & WS.CHILD) && !(adjustedStyle & WS.MINIMIZE)) {
-        xinc += NtIntGetSystemMetrics(SM.CXFRAME) - NtIntGetSystemMetrics(SM.CXDLGFRAME);
-        yinc += NtIntGetSystemMetrics(SM.CYFRAME) - NtIntGetSystemMetrics(SM.CYDLGFRAME);
+        xinc += NtIntGetSystemMetrics(peb, SM.CXFRAME) - NtIntGetSystemMetrics(peb, SM.CXDLGFRAME);
+        yinc += NtIntGetSystemMetrics(peb, SM.CYFRAME) - NtIntGetSystemMetrics(peb, SM.CYDLGFRAME);
     }
 
-    InflateRect(rc, xinc * NtIntGetSystemMetrics(SM.CXBORDER), yinc * NtIntGetSystemMetrics(SM.CYBORDER));
+    InflateRect(rc, xinc * NtIntGetSystemMetrics(peb, SM.CXBORDER), yinc * NtIntGetSystemMetrics(peb, SM.CYBORDER));
 
     xinc = -rc.left;
     yinc = -rc.top;
@@ -117,8 +117,8 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
 
     if (wnd.dwStyle & (WS.DLGFRAME | WS.BORDER)) {
         // TODO: SM_CXMINTRACK/SM_CYMINTRACK
-        minMax.ptMaxTrackSize.x = NtIntGetSystemMetrics(SM.CXMINTRACK);
-        minMax.ptMaxTrackSize.y = NtIntGetSystemMetrics(SM.CYMINTRACK);
+        minMax.ptMaxTrackSize.x = NtIntGetSystemMetrics(peb, SM.CXMINTRACK);
+        minMax.ptMaxTrackSize.y = NtIntGetSystemMetrics(peb, SM.CYMINTRACK);
     }
     else {
         minMax.ptMaxTrackSize.x = 2 * xinc;
@@ -126,8 +126,8 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
     }
 
     // TODO: SM_CXMAXTRACK/SM_CYMAXTRACK
-    minMax.ptMaxTrackSize.x = NtIntGetSystemMetrics(SM.CXMAXTRACK);
-    minMax.ptMaxTrackSize.y = NtIntGetSystemMetrics(SM.CYMAXTRACK);
+    minMax.ptMaxTrackSize.x = NtIntGetSystemMetrics(peb, SM.CXMAXTRACK);
+    minMax.ptMaxTrackSize.y = NtIntGetSystemMetrics(peb, SM.CYMAXTRACK);
 
     minMax.ptMaxPosition.x = -xinc;
     minMax.ptMaxPosition.y = -yinc;
@@ -142,8 +142,8 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
         }
     }
 
-    if (newMinMax.ptMaxSize.x == NtIntGetSystemMetrics(SM.CXSCREEN) + 2 * xinc &&
-        newMinMax.ptMaxSize.y == NtIntGetSystemMetrics(SM.CYSCREEN) + 2 * yinc) {
+    if (newMinMax.ptMaxSize.x == NtIntGetSystemMetrics(peb, SM.CXSCREEN) + 2 * xinc &&
+        newMinMax.ptMaxSize.y == NtIntGetSystemMetrics(peb, SM.CYSCREEN) + 2 * yinc) {
         newMinMax.ptMaxSize.x = (rcWork.right - rcWork.left) + 2 * xinc;
         newMinMax.ptMaxSize.y = (rcWork.bottom - rcWork.top) + 2 * yinc;
     }
@@ -188,6 +188,9 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
 
     const { dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam } = data;
     const state = GetW32ProcInfo(peb);
+    if (!state) {
+        return 0;
+    }
 
     let maxSize: SIZE = { cx: 0, cy: 0 };
     let maxPos: POINT = { x: 0, y: 0 };
@@ -315,7 +318,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
 
     // sends WM_NCCALCSIZE
     await wnd.CalculateClientSize();
-    
+
     let result = await NtDispatchMessage(peb, [wnd.hWnd, WM.CREATE, 0, createStruct]);
     if (result === -1) {
         wnd.Dispose();
@@ -575,7 +578,7 @@ export function NtUserHasWindowEdge(style: number, exStyle: number) {
     return false;
 }
 
-export function NtUserGetWindowBorders(style: number, exStyle: number, withClient: boolean) {
+export function NtUserGetWindowBorders(peb: PEB, style: number, exStyle: number, withClient: boolean) {
     let border = 0;
     let size = { cx: 0, cy: 0 };
 
@@ -589,11 +592,11 @@ export function NtUserGetWindowBorders(style: number, exStyle: number, withClien
         border++; /* The other border */
     size.cx = size.cy = border;
     if ((style & WS.THICKFRAME) && !(style & WS.MINIMIZE)) /* The resize border */ {
-        size.cx += NtIntGetSystemMetrics(SM.CXFRAME) - NtIntGetSystemMetrics(SM.CXDLGFRAME);
-        size.cy += NtIntGetSystemMetrics(SM.CYFRAME) - NtIntGetSystemMetrics(SM.CYDLGFRAME);
+        size.cx += NtIntGetSystemMetrics(peb, SM.CXFRAME) - NtIntGetSystemMetrics(peb, SM.CXDLGFRAME);
+        size.cy += NtIntGetSystemMetrics(peb, SM.CYFRAME) - NtIntGetSystemMetrics(peb, SM.CYDLGFRAME);
     }
-    size.cx *= NtIntGetSystemMetrics(SM.CXBORDER);
-    size.cy *= NtIntGetSystemMetrics(SM.CYBORDER);
+    size.cx *= NtIntGetSystemMetrics(peb, SM.CXBORDER);
+    size.cy *= NtIntGetSystemMetrics(peb, SM.CYBORDER);
 
     return size;
 }

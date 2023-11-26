@@ -11,6 +11,7 @@ export type MONITOR = {
     rcWork: RECT;
     dwFlags: number;
     cWndStack: number;
+    lpfnHooks: Function[];
 }
 
 let defaultMonitor: MONITOR = null;
@@ -31,7 +32,8 @@ export function NtGetPrimaryMonitor(): MONITOR {
                 bottom: window.innerHeight
             },
             dwFlags: 1,
-            cWndStack: 1
+            cWndStack: 1,
+            lpfnHooks: []
         };
 
         defaultMonitor.hMonitor = ObSetObject(defaultMonitor, "MONITOR", 0);
@@ -43,9 +45,11 @@ export function NtGetPrimaryMonitor(): MONITOR {
             defaultMonitor.rcWork.bottom = window.innerHeight;
 
             NtPostMessage(null, [HWND_BROADCAST, WM.DISPLAYCHANGE, 0, 0]);
-        };
 
-        // TODO: raise WM_DISPLAYCHANGE
+            for (const lpfnHook of defaultMonitor.lpfnHooks) {
+                lpfnHook(defaultMonitor);
+            }
+        };
     }
 
     return defaultMonitor;
@@ -61,6 +65,12 @@ export function NtMonitorFromPoint(pt: { x: number, y: number }): MONITOR {
 
 export function NtMonitorFromRect(lprc: RECT): MONITOR {
     return NtGetPrimaryMonitor();
+}
+
+export function NtRegisterMonitorHook(lpfnHook: Function): boolean {
+    const monitor = NtGetPrimaryMonitor();
+    monitor.lpfnHooks.push(lpfnHook);
+    return true;
 }
 
 // export function NtGetMonitorInfo(hMonitor: HANDLE, lpmi: MONITORINFO): boolean {

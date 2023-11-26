@@ -49,10 +49,10 @@
             <slot></slot>
         </template>
     </div>
-    
+
     <!-- TODO: this will eventually be a process -->
-    <x-window id="task-manager" title="Task Manager" window-style="WS_OVERLAPPEDWINDOW | WS_ACTIVE | WS_VISIBLE"
-        style="width: 300px; z-index: 9999999; position: absolute; right: 32px; bottom: 32px;">
+    <x-window id="task-manager" window-title="Task Manager" window-style="WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_ACTIVE | WS_VISIBLE"
+        style="width: 300px; z-index: 9999999; position: absolute; right: 24px; bottom: 24px;">
         <div style="padding: 8px;">
             <div class="sunken-panel" style="height: 120px; width: 100%;">
                 <table style="width: 100%;">
@@ -68,10 +68,13 @@
                     </tbody>
                 </table>
             </div>
-            <div style="margin-top: 8px; text-align: right;">
-                <button id="spawn">Spawn</button>
-                <button id="quit">Quit</button>
-                <button id="kill">Kill</button>
+            <select id="launch-select" style="width: 100%; margin-top: 8px;">
+                <option value="nchittest">WM_NCHITTEST Test Application</option>
+            </select>
+            <div style="display: flex; justify-content: flex-end; margin-top: 4px; gap: 8px;">
+                <button id="spawn" style="flex:1;">Spawn</button>
+                <button id="quit" style="flex:1;">Close</button>
+                <button id="kill" style="flex:1;">End Task</button>
             </div>
         </div>
         <p slot="status-bar" class="status-bar-field" style="text-align: right;"><span

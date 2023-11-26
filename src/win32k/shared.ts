@@ -42,11 +42,11 @@ export interface W32CLASSINFO {
     hModule: HINSTANCE;
 }
 
-export function GetW32ProcInfo(peb: PEB): W32PROCINFO {
+export function GetW32ProcInfo(peb: PEB): W32PROCINFO | null {
     let info = peb.lpSubsystems.get(SUBSYS_USER32);
-    if (!info.lpParams) {
-        throw new Error("W32PROCINFO not initialized");
-    }
+    // if (!(info?.lpParams)) {
+    //     throw new Error("W32PROCINFO not initialized");
+    // }
 
-    return info.lpParams as W32PROCINFO;
+    return info?.lpParams as W32PROCINFO;
 }

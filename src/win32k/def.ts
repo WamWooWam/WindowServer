@@ -31,19 +31,19 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
 
         const peb = wnd.peb;
         const state = GetW32ProcInfo(peb);
+        if (!state) {
+            console.warn("User32 not initialized");
+            return 0;
+        }
 
         switch (Msg) {
             case WMP.CREATEELEMENT:
-                console.log("WMP_CREATEELEMENT");
                 return await NtDefCreateElement(peb, hWnd, Msg, wParam, lParam);
             case WMP.ADDCHILD:
-                console.log("WMP_ADDCHILD");
                 return await NtDefAddChild(peb, hWnd, wParam);
             case WMP.REMOVECHILD:
-                console.log("WMP_REMOVECHILD");
                 return await NtDefRemoveChild(peb, hWnd, wParam);
             case WMP.UPDATEWINDOWSTYLE:
-                console.log("WMP_UPDATEWINDOWSTYLE");
                 return await NtDefUpdateWindowStyle(peb, hWnd, wParam, lParam);
             case WM.NCCALCSIZE:
                 return NtDefCalcNCSizing(peb, hWnd, Msg, wParam, lParam);
@@ -54,20 +54,15 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
             case WM.NCLBUTTONUP:
                 return await NtDefNCLButtonUp(peb, hWnd, Msg, wParam, lParam);
             case WM.ACTIVATE:
-                console.log("WM_ACTIVATE");
                 return 0;
             case WM.NCCREATE:
-                console.log("WM_NCCREATE");
                 return 0;
             case WM.CREATE:
-                console.log("WM_CREATE");
                 return 0;
             case WM.CLOSE:
-                console.log("WM_CLOSE");
                 await NtDestroyWindow(peb, hWnd);
                 return 0;
             case WM.SYSCOMMAND:
-                console.log("WM_SYSCOMMAND");
                 return await NtDefWndHandleSysCommand(peb, wnd, wParam, lParam);
             case WM.GETMINMAXINFO:
                 return lParam;
@@ -114,6 +109,11 @@ function NtDefRemoveChild(peb: PEB, hWnd: HWND, hWndChild: HWND): LRESULT {
 
 function NtDefCreateElement(peb: PEB, hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): LRESULT {
     const state = GetW32ProcInfo(peb);
+    if (!state) {
+        console.warn("User32 not initialized");
+        return 0;
+    }
+    
     const wnd = ObGetObject<WND>(hWnd);
 
     let data = wnd.data as WND_DATA;
@@ -130,7 +130,7 @@ function NtDefCreateElement(peb: PEB, hWnd: HWND, uMsg: number, wParam: WPARAM, 
 
     const pRootElement = new WindowElement();
     pRootElement.title = wnd.lpszName;
-    pRootElement.windowStyle = wnd.dwStyle.toString();
+    pRootElement.dwStyle = wnd.dwStyle.toString();
     wnd.pRootElement = pRootElement;
     return 1;
 }
@@ -146,7 +146,7 @@ function NtDefUpdateWindowStyle(peb: PEB, hWnd: HWND, dwNewStyle: number, dwOldS
         return -1;
     }
 
-    pRootElement.windowStyle = dwNewStyle.toString();
+    pRootElement.dwStyle = dwNewStyle.toString();
     return 0;
 }
 
@@ -346,7 +346,7 @@ async function NtDefNCLButtonUp(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARA
 }
 
 async function NtDefWndHandleSysCommand(peb: PEB, wnd: WND, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
-    console.log(`NtDefWndHandleSysCommand: probably ${SC[wParam & 0xFFF0]}`);
+    // console.log(`NtDefWndHandleSysCommand: probably ${SC[wParam & 0xFFF0]}`);
     switch (wParam & 0xFFF0) {
         case SC.MINIMIZE:
             await NtShowWindow(peb, wnd.hWnd, SW.MINIMIZE);
@@ -492,6 +492,10 @@ async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lParam: LP
 
     while (true) {
         const state = GetW32ProcInfo(peb);
+        if (!state) {
+            console.warn("User32 not initialized");
+            return 0;
+        }
 
         let dx = 0, dy = 0;
 
@@ -617,17 +621,17 @@ async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt: POINT
     let hitTest = 0;
     if ((wParam & 0xFFF0) === SC.MOVE) {
         if (wnd.dwStyle & WS.SYSMENU) {
-            rectWindow.left += NtIntGetSystemMetrics(SM.CXSIZE) + 1;
+            rectWindow.left += NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
         }
         if (wnd.dwStyle & WS.MINIMIZEBOX) {
-            rectWindow.right -= NtIntGetSystemMetrics(SM.CXSIZE) + 1;
+            rectWindow.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
         }
         if (wnd.dwStyle & WS.MAXIMIZEBOX) {
-            rectWindow.right -= NtIntGetSystemMetrics(SM.CXSIZE) + 1;
+            rectWindow.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
         }
 
         pt.x = (rectWindow.right + rectWindow.left) / 2;
-        pt.y = rectWindow.top + NtIntGetSystemMetrics(SM.CYSIZE) / 2;
+        pt.y = rectWindow.top + NtIntGetSystemMetrics(peb, SM.CYSIZE) / 2;
         hitTest = HT.CAPTION;
     }
     else {
@@ -635,11 +639,15 @@ async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt: POINT
 
         while (!hitTest) {
             const state = GetW32ProcInfo(peb);
+            if (!state) {
+                console.warn("User32 not initialized");
+                return 0;
+            }
 
             let msg = await state.lpMsgQueue.GetMessage(wnd.hWnd, 0, 0);
             if (msg.message === WM.QUIT) return 0;
 
-            console.log("DefWndStartSizeMove: got message", msg);
+            // console.log("DefWndStartSizeMove: got message", msg);
 
             switch (msg.message) {
                 case WM.MOUSEMOVE: {
@@ -657,21 +665,21 @@ async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt: POINT
                         case VK.UP:
                             hitTest = HT.TOP;
                             pt.x = (rectWindow.left + rectWindow.right) / 2;
-                            pt.y = rectWindow.top + NtIntGetSystemMetrics(SM.CYFRAME) / 2;
+                            pt.y = rectWindow.top + NtIntGetSystemMetrics(peb, SM.CYFRAME) / 2;
                             break;
                         case VK.DOWN:
                             hitTest = HT.BOTTOM;
                             pt.x = (rectWindow.left + rectWindow.right) / 2;
-                            pt.y = rectWindow.bottom - NtIntGetSystemMetrics(SM.CYFRAME) / 2;
+                            pt.y = rectWindow.bottom - NtIntGetSystemMetrics(peb, SM.CYFRAME) / 2;
                             break;
                         case VK.LEFT:
                             hitTest = HT.LEFT;
-                            pt.x = rectWindow.left + NtIntGetSystemMetrics(SM.CXFRAME) / 2;
+                            pt.x = rectWindow.left + NtIntGetSystemMetrics(peb, SM.CXFRAME) / 2;
                             pt.y = (rectWindow.top + rectWindow.bottom) / 2;
                             break;
                         case VK.RIGHT:
                             hitTest = HT.RIGHT;
-                            pt.x = rectWindow.right - NtIntGetSystemMetrics(SM.CXFRAME) / 2;
+                            pt.x = rectWindow.right - NtIntGetSystemMetrics(peb, SM.CXFRAME) / 2;
                             pt.y = (rectWindow.top + rectWindow.bottom) / 2;
                             break;
                         case VK.RETURN:
@@ -718,7 +726,7 @@ function NtDefCalcNCSizing(peb: PEB, hWnd: number, Msg: WM, wParam: WPARAM, lPar
 
     if (!(wnd.dwStyle & WS.MINIMIZE)) {
         if (NtUserHasWindowEdge(wnd.dwStyle, wnd.dwExStyle)) {
-            let windowBorders = NtUserGetWindowBorders(wnd.dwStyle, wnd.dwExStyle, false);
+            let windowBorders = NtUserGetWindowBorders(peb, wnd.dwStyle, wnd.dwExStyle, false);
             InflateRect(rect, -windowBorders.cx, -windowBorders.cy);
         }
         else if ((wnd.dwExStyle & WS.EX.STATICEDGE) || (wnd.dwStyle & WS.BORDER)) {
@@ -729,9 +737,9 @@ function NtDefCalcNCSizing(peb: PEB, hWnd: number, Msg: WM, wParam: WPARAM, lPar
             // wnd.state |= WNDS_HASCAPTION;
 
             if (wnd.dwExStyle & WS.EX.TOOLWINDOW)
-                rect.top += NtIntGetSystemMetrics(SM.CYSMCAPTION);
+                rect.top += NtIntGetSystemMetrics(peb, SM.CYSMCAPTION);
             else
-                rect.top += NtIntGetSystemMetrics(SM.CYCAPTION);
+                rect.top += NtIntGetSystemMetrics(peb, SM.CYCAPTION);
         }
 
         // TODO: HMENUS
@@ -755,11 +763,11 @@ function NtDefCalcNCSizing(peb: PEB, hWnd: number, Msg: WM, wParam: WPARAM, lPar
         // }
 
         if (wnd.dwExStyle & WS.EX.CLIENTEDGE) {
-            InflateRect(rect, -2 * NtIntGetSystemMetrics(SM.CXBORDER), -2 * NtIntGetSystemMetrics(SM.CYBORDER));
+            InflateRect(rect, -2 * NtIntGetSystemMetrics(peb, SM.CXBORDER), -2 * NtIntGetSystemMetrics(peb, SM.CYBORDER));
         }
 
         if (style & WS.VSCROLL) {
-            if (rect.right - rect.left >= NtIntGetSystemMetrics(SM.CXVSCROLL)) {
+            if (rect.right - rect.left >= NtIntGetSystemMetrics(peb, SM.CXVSCROLL)) {
                 // wnd.state |= WNDS_HASVERTICALSCROOLLBAR;
 
                 /* rectangle is in screen coords when wparam is false */
@@ -767,17 +775,17 @@ function NtDefCalcNCSizing(peb: PEB, hWnd: number, Msg: WM, wParam: WPARAM, lPar
                     exStyle ^= WS.EX.LEFTSCROLLBAR;
 
                 if ((exStyle & WS.EX.LEFTSCROLLBAR) != 0)
-                    rect.left += NtIntGetSystemMetrics(SM.CXVSCROLL);
+                    rect.left += NtIntGetSystemMetrics(peb, SM.CXVSCROLL);
                 else
-                    rect.right -= NtIntGetSystemMetrics(SM.CXVSCROLL);
+                    rect.right -= NtIntGetSystemMetrics(peb, SM.CXVSCROLL);
             }
         }
 
         if (style & WS.HSCROLL) {
-            if (rect.bottom - rect.top > NtIntGetSystemMetrics(SM.CYHSCROLL)) {
+            if (rect.bottom - rect.top > NtIntGetSystemMetrics(peb, SM.CYHSCROLL)) {
                 // wnd.state |= WNDS_HASHORIZONTALSCROLLBAR;
 
-                rect.bottom -= NtIntGetSystemMetrics(SM.CYHSCROLL);
+                rect.bottom -= NtIntGetSystemMetrics(peb, SM.CYHSCROLL);
             }
         }
 

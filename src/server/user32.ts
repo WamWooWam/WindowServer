@@ -1,6 +1,7 @@
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import { NtCreateWindowEx, NtDestroyWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
 import { NtDispatchMessage, NtGetMessage, NtPostQuitMessage } from "../win32k/msg.js";
+import { NtInitSysMetrics, NtIntGetSystemMetrics } from "../win32k/metrics.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
 import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
 import USER32, {
@@ -25,10 +26,10 @@ import USER32, {
 
 import { ButtonWndProc } from "./user32/button.js";
 import { NtDefWindowProc } from "../win32k/def.js";
-import { NtIntGetSystemMetrics } from "../win32k/metrics.js";
 import { NtRegisterClassEx } from "../win32k/class.js";
 import { ObGetObject } from "../objects.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
+import { StaticWndProc } from "./user32/static.js";
 import W32MSG_QUEUE from "../win32k/msgqueue.js";
 import { W32PROCINFO } from "../win32k/shared.js";
 import { WND } from "../win32k/wnd.js";
@@ -47,6 +48,21 @@ const DefaultClasses: WNDCLASSEX[] = [
         cbClsExtra: 0,
         cbWndExtra: 0,
         cbSize: 0
+    },
+    {
+        style: WS.CHILD,
+        lpszClassName: "STATIC",
+        lpszMenuName: null,
+        lpfnWndProc: StaticWndProc,
+        hIcon: 0,
+        hCursor: 0,
+        hbrBackground: 0,
+        hInstance: 0,
+        hIconSm: 0,
+        cbClsExtra: 0,
+        cbWndExtra: 0,
+        cbSize: 0
+    
     },
     {
         style: WS.CHILD,
@@ -80,11 +96,12 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
         lpSubsystem.lpParams = procInfo;
     }
 
+    NtInitSysMetrics(peb);
+
     for (const wndClass of DefaultClasses) {
         NtRegisterClassEx(peb, wndClass);
     }
 }
-
 
 async function NtUser32Uninitialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
     const procInfo = lpSubsystem.lpParams as W32PROCINFO;
@@ -144,7 +161,7 @@ async function UserGetDC(peb: PEB, data: HWND) {
 }
 
 function UserGetSystemMetrics(peb: PEB, nIndex: number): number {
-    return NtIntGetSystemMetrics(nIndex);
+    return NtIntGetSystemMetrics(peb, nIndex);
 }
 
 function UserSetWindowPos(peb: PEB, params: SET_WINDOW_POS) {

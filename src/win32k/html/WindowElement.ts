@@ -1,6 +1,7 @@
 import { WS } from "../../types/user32.types.js";
+import WindowElementBase from "./WindowElementBase.js";
 
-export default class WindowElement extends HTMLElement {
+export default class WindowElement extends WindowElementBase {
 
     titleBar: HTMLElement;
     titleBarText: HTMLElement;
@@ -17,7 +18,7 @@ export default class WindowElement extends HTMLElement {
     private _style: number = 0;
 
     static get observedAttributes() {
-        return ['title', 'window-style', 'icon'];
+        return [...super.observedAttributes, 'icon'];
     }
 
     constructor() {
@@ -51,17 +52,17 @@ export default class WindowElement extends HTMLElement {
     }
 
     connectedCallback() {
-        
+        super.connectedCallback();
     }
 
     disconnectedCallback() {
-        console.log('disconnectedCallback');
+        super.disconnectedCallback();
     }
 
     attributeChangedCallback(name: string, oldValue: string, newValue: string) {
-        console.log('attributeChangedCallback', name, oldValue, newValue);
+        super.attributeChangedCallback(name, oldValue, newValue);
         switch (name) {
-            case "title":
+            case "window-title":
                 this.titleBarText.innerText = newValue;
                 break;
             case "window-style":
@@ -171,22 +172,6 @@ export default class WindowElement extends HTMLElement {
         }
 
         return style;
-    }
-
-    get title(): string {
-        return this.getAttribute("title");
-    }
-
-    set title(value: string) {
-        this.setAttribute("title", value);
-    }
-
-    get windowStyle(): string {
-        return this.getAttribute("window-style");
-    }
-
-    set windowStyle(value: string) {
-        this.setAttribute("window-style", value);
     }
 }
 

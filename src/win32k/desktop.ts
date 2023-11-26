@@ -41,8 +41,8 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
     const cs: CREATE_WINDOW_EX = {
         x: 0,
         y: 0,
-        nWidth: NtIntGetSystemMetrics(SM.CXSCREEN),
-        nHeight: NtIntGetSystemMetrics(SM.CYSCREEN),
+        nWidth: NtIntGetSystemMetrics(peb, SM.CXSCREEN),
+        nHeight: NtIntGetSystemMetrics(peb, SM.CYSCREEN),
         dwStyle: WS.POPUP | WS.CLIPCHILDREN,
         dwExStyle: 0,
         hInstance: 0,
@@ -66,7 +66,7 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
     desktop.hwndDesktop = hWnd;
     desktop.lpszDesktop = pDeskParams.lpszDesktop;
     desktop.hActiveWindow = hWnd;
-    
+
     const hDesktop = ObSetObject(desktop, "DESKTOP", 0);
     peb.hDesktop = hDesktop;
 
@@ -117,8 +117,8 @@ export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: numb
             break;
         }
         case WM.DISPLAYCHANGE: {
-            const screenW = NtIntGetSystemMetrics(SM.CXSCREEN);
-            const screenH = NtIntGetSystemMetrics(SM.CYSCREEN);
+            const screenW = NtIntGetSystemMetrics(peb, SM.CXSCREEN);
+            const screenH = NtIntGetSystemMetrics(peb, SM.CYSCREEN);
 
             console.log("WM_DISPLAYCHANGE", screenW, screenH);
 
@@ -127,6 +127,9 @@ export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: numb
         }
         case WM.NCHITTEST: {
             return HT.CLIENT;
+        }
+        case WM.QUIT: {
+            return; // ignore quit messages
         }
         default:
             return await NtDefWindowProc(hWnd, msg, wParam, lParam);
@@ -142,17 +145,15 @@ function NtUserDesktopCreateElement(wnd: WND) {
 
     // we need to bubble events up to windows via window messages
     window.addEventListener("pointermove", async (e) => {
-        // debounce to ~125hz
-        const now = performance.now();
-        if (lastMouseMove && now - lastMouseMove < 8) {
-            return;
-        }
-
-        lastMouseMove = now;
-
         const x = e.clientX;
         const y = e.clientY;
 
+        const now = performance.now();
+        if (now - lastMouseMove < 8)
+            return;
+
+        lastMouseMove = now;
+        
         NtUserHitTestWindow(wnd.peb, x, y, (hWnd, result) => {
             NtPostMessage(wnd.peb, {
                 hWnd,

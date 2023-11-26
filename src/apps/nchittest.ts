@@ -1,5 +1,6 @@
-import { GetModuleHandle } from "./client/kernel32.js";
+import { GetModuleHandle } from "../client/kernel32.js";
 import {
+    CreateWindow,
     CreateWindowEx,
     DefWindowProc,
     DispatchMessage,
@@ -10,8 +11,8 @@ import {
     ScreenToClient,
     ShowWindow,
     TranslateMessage
-} from "./client/user32.js";
-import { INRECT } from "./types/gdi32.types.js";
+} from "../client/user32.js";
+import { INRECT } from "../types/gdi32.types.js";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -28,34 +29,23 @@ import {
     LOWORD,
     HIWORD,
     BS,
-} from "./types/user32.types.js";
+} from "../types/user32.types.js";
 
-async function CreateButton(text: string, x: number, y: number, width: number, height: number, parent: HWND) {
-    const button = await CreateWindowEx(
-        0,                      // dwExStyle
-        "BUTTON",               // lpClassName
-        text,                   // lpWindowName
-        BS.PUSHBUTTON | WS.CHILD | WS.VISIBLE, // dwStyle
-
-        // x, y, nWidth, nHeight
-        x, y, width, height,
-
-        parent,                 // hWndParent
-        0,                      // hMenu      
-        0,                      // hInstance
-        null                    // lpParam
-    );
+async function CreateButton(text: string, x: number, y: number, width: number, height: number, parent: HWND, nId: number) {
+    const button = await CreateWindow("BUTTON", text, BS.PUSHBUTTON | WS.CHILD | WS.VISIBLE,
+        x, y, width, height, parent, nId, 0, null);
 
     return button;
 }
 
 const rcButtons = [
-    { left: 10, top: 10, right: 110, bottom: 40 },
-    { left: 10, top: 50, right: 110, bottom: 80 },
-    { left: 10, top: 90, right: 110, bottom: 120 },
-    { left: 10, top: 130, right: 110, bottom: 160 },
-    { left: 10, top: 170, right: 110, bottom: 200 },
-    { left: 10, top: 210, right: 110, bottom: 240 },
+    { left: 10, top: 35, right: 110, bottom: 65 },
+    { left: 10, top: 70, right: 110, bottom: 100 },
+    { left: 10, top: 105, right: 110, bottom: 135 },
+    { left: 120, top: 35, right: 220, bottom: 65 },
+    { left: 120, top: 70, right: 220, bottom: 100 },
+    { left: 120, top: 105, right: 220, bottom: 135 }
+
 ];
 
 const lpszButtons = [
@@ -79,8 +69,19 @@ const htButtons = [
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
         case WM.CREATE: {
+            await CreateWindow(
+                "STATIC",
+                "Click and drag the buttons",
+                WS.CHILD | WS.VISIBLE,
+                10, 12, 200, 20,
+                hwnd,
+                0,
+                0,
+                null
+            );
+
             for (let i = 0; i < 6; i++) {
-                await CreateButton(lpszButtons[i], rcButtons[i].left, rcButtons[i].top, rcButtons[i].right - rcButtons[i].left, rcButtons[i].bottom - rcButtons[i].top, hwnd);
+                await CreateButton(lpszButtons[i], rcButtons[i].left, rcButtons[i].top, rcButtons[i].right - rcButtons[i].left, rcButtons[i].bottom - rcButtons[i].top, hwnd, i);
             }
             break;
         }
@@ -139,18 +140,18 @@ async function main() {
     console.log(atom);
 
     const hWnd = await CreateWindowEx(
-        0,                      // dwExStyle
-        className,              // lpClassName
-        "Test Window",          // lpWindowName
-        WS.OVERLAPPEDWINDOW,    // dwStyle
+        0,                           // dwExStyle
+        className,                   // lpClassName
+        "WM_NCHITTEST Test Window",  // lpWindowName
+        WS.OVERLAPPEDWINDOW,         // dwStyle
 
         // x, y, nWidth, nHeight
-        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+        CW_USEDEFAULT, CW_USEDEFAULT, 350, 350,
 
-        0,                      // hWndParent
-        0,                      // hMenu      
-        hModule,                // hInstance
-        null                    // lpParam
+        0,          // hWndParent
+        0,          // hMenu      
+        hModule,    // hInstance
+        null        // lpParam
     );
     console.log(hWnd);
 
