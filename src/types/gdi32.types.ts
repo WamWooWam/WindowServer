@@ -1,12 +1,15 @@
 import { HANDLE } from "./types.js";
 
 export const GDI32 = {
-    // RGN
     CreateRectRgn: 0x00000001,
     CombineRgn: 0x00000002,
-
-    // DC
     FillRgn: 0x00000003,
+    DeleteObject: 0x00000004,
+    SelectObject: 0x00000005,
+    CreateSolidBrush: 0x00000006,
+    CreatePen: 0x00000007,
+    TextOut: 0x00000008,
+    SetTextColor: 0x00000009,
 }
 
 export type RECT = {

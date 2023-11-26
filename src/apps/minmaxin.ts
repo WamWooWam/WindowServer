@@ -5,14 +5,11 @@ import {
     DefWindowProc,
     DispatchMessage,
     GetMessage,
-    GetWindowRect,
     PostQuitMessage,
     RegisterClass,
-    ScreenToClient,
     ShowWindow,
     TranslateMessage
 } from "../client/user32.js";
-import { INRECT } from "../types/gdi32.types.js";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -25,54 +22,17 @@ import {
     WM,
     WNDCLASSEX,
     WPARAM,
-    HT,
-    LOWORD,
-    HIWORD,
-    BS,
     SS,
+    MINMAXINFO,
 } from "../types/user32.types.js";
 
-async function CreateButton(text: string, x: number, y: number, width: number, height: number, parent: HWND, nId: number) {
-    const button = await CreateWindow("BUTTON", text, BS.PUSHBUTTON | WS.CHILD | WS.VISIBLE | WS.DISABLED,
-        x, y, width, height, parent, nId, 0, null);
-
-    return button;
-}
-
-const rcButtons = [
-    { left: 10, top: 35, right: 110, bottom: 65 },
-    { left: 10, top: 70, right: 110, bottom: 100 },
-    { left: 10, top: 105, right: 110, bottom: 135 },
-    { left: 120, top: 35, right: 220, bottom: 65 },
-    { left: 120, top: 70, right: 220, bottom: 100 },
-    { left: 120, top: 105, right: 220, bottom: 135 }
-
-];
-
-const lpszButtons = [
-    "Caption",
-    "Left",
-    "Right",
-    "Minimize",
-    "Maximize",
-    "Close",
-];
-
-const htButtons = [
-    HT.CAPTION,
-    HT.LEFT,
-    HT.RIGHT,
-    HT.MINBUTTON,
-    HT.MAXBUTTON,
-    HT.CLOSE,
-];
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
         case WM.CREATE: {
             await CreateWindow(
                 "STATIC",
-                "Click and drag the buttons",
+                "This window cannot be bigger than 450x400, or smaller than 250x200.",
                 WS.CHILD | WS.VISIBLE | SS.CENTER,
                 10, 12, 210, 20,
                 hwnd,
@@ -80,31 +40,16 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
                 0,
                 null
             );
-
-            for (let i = 0; i < 6; i++) {
-                await CreateButton(lpszButtons[i], rcButtons[i].left, rcButtons[i].top, rcButtons[i].right - rcButtons[i].left, rcButtons[i].bottom - rcButtons[i].top, hwnd, i);
-            }
             break;
         }
 
-        case WM.NCHITTEST: {
-            let hitTest = await DefWindowProc(hwnd, msg, wParam, lParam);
-            if (hitTest !== HT.CLIENT) {
-                return hitTest;
-            }
-
-            // translate client coordinates to window coordinates
-            const point = { x: LOWORD(lParam), y: HIWORD(lParam) };
-            if (!await ScreenToClient(hwnd, point))
-                return hitTest;
-
-            for (let i = 0; i < 6; i++) {
-                if (INRECT(point.x, point.y, rcButtons[i])) {
-                    return htButtons[i];
-                }
-            }
-
-            return hitTest;
+        case WM.GETMINMAXINFO: {
+            const minmax = <MINMAXINFO>lParam;
+            minmax.ptMinTrackSize.x = 250;
+            minmax.ptMinTrackSize.y = 200;
+            minmax.ptMaxTrackSize.x = 450;
+            minmax.ptMaxTrackSize.y = 400;
+            return minmax;
         }
 
         case WM.DESTROY: {
@@ -144,11 +89,11 @@ async function main() {
     const hWnd = await CreateWindowEx(
         0,                           // dwExStyle
         className,                   // lpClassName
-        "WM_NCHITTEST Test Window",  // lpWindowName
+        "WM_GETMINMAXINFO Test Window",  // lpWindowName
         WS.OVERLAPPEDWINDOW,         // dwStyle
 
         // x, y, nWidth, nHeight
-        CW_USEDEFAULT, CW_USEDEFAULT, 234, 170,
+        CW_USEDEFAULT, CW_USEDEFAULT, 350, 350,
 
         0,          // hWndParent
         0,          // hMenu      

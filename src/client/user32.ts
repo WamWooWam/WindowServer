@@ -400,6 +400,7 @@ export async function CreateDesktop(lpszDesktop: string, lpszDevice: string, pDe
  * Retrieves the dimensions of the bounding rectangle of the specified window. The dimensions are given in screen coordinates that are relative to the upper-left corner of the screen.
  * @param hWnd A handle to the window.
  * @returns A RECT structure that receives the screen coordinates of the upper-left and lower-right corners of the window, or NULL if the function fails.
+ * @category User32
  */
 export async function GetWindowRect(hWnd: HANDLE): Promise<RECT> {
     const msg = await User32.SendMessage<HANDLE, RECT>({
@@ -411,6 +412,13 @@ export async function GetWindowRect(hWnd: HANDLE): Promise<RECT> {
 }
 
 // TODO: this should not require a syscall, use shared memory
+/**
+ * The ScreenToClient function converts the screen coordinates of a specified point on the screen to client-area coordinates.
+ * @param hWnd A handle to the window whose client area will be used for the conversion.
+ * @param lpPoint A pointer to a POINT structure that specifies the screen coordinates to be converted.
+ * @returns If the function succeeds, the return value is nonzero. If the function fails, the return value is zero.
+ * @category User32
+ */
 export async function ScreenToClient(hWnd: HANDLE, lpPoint: POINT): Promise<boolean> {
     const msg = await User32.SendMessage<{ hWnd: HANDLE, lpPoint: POINT }, { retVal: boolean, lpPoint: POINT }>({
         nType: USER32.ScreenToClient,
@@ -420,6 +428,23 @@ export async function ScreenToClient(hWnd: HANDLE, lpPoint: POINT): Promise<bool
     Object.assign(lpPoint, msg.data.lpPoint);
 
     return msg.data.retVal;
+}
+
+/**
+ * Retrieves a handle to the top-level window whose class name and window name match the specified strings. 
+ * This function does not search child windows. This function does not perform a case-sensitive search.
+ * @param lpClassName The class name or a class atom created by a previous call to the RegisterClass or RegisterClassEx function.
+ * @param lpWindowName The window name (the window's title). If this parameter is NULL, all window names match.
+ * @returns If the function succeeds, the return value is a handle to the window that has the specified class name and window name.
+ * @category User32
+ */
+export async function FindWindow(lpClassName: string, lpWindowName: string): Promise<HANDLE> {
+    const msg = await User32.SendMessage<{ lpClassName: string, lpWindowName: string }, HANDLE>({
+        nType: USER32.FindWindow,
+        data: { lpClassName, lpWindowName }
+    });
+
+    return msg.data;
 }
 
 const user32: Executable = {

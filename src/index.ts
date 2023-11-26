@@ -1,5 +1,5 @@
 import { NtPostMessage, NtPostProcessMessage, NtPostQuitMessage } from "./win32k/msg.js";
-import { PsCreateProcess, PsRegisterProcessHooks, PsTerminateProcess } from "./loader.js"
+import { PsCreateProcess, PsRegisterProcessHooks, PsQuitProcess, PsTerminateProcess } from "./loader.js"
 
 import { HANDLE } from "./types/types.js";
 import { NtUserInit } from "./win32k/init.js";
@@ -85,7 +85,7 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
 
         const proc = GetSelectedProcess();
 
-        PsTerminateProcess(proc, 0);
+        PsTerminateProcess(proc);
         UpdateButtons();
     }
 
@@ -101,7 +101,7 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
         }
         catch (e) {
             console.warn("Failed to send quit message, was User32 initialized?")
-            PsTerminateProcess(proc, 0);
+            PsQuitProcess(proc, 0);
         }
 
         UpdateButtons();
@@ -151,7 +151,7 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
     PsRegisterProcessHooks(ProcessCreated, ProcessDestroyed);
 
     await NtUserInit();
-    PsCreateProcess("wininit.js", "", false, {}, "C:\\Windows\\System32", null);
+    PsCreateProcess("apps/wininit.js", "", false, {}, "C:\\Windows\\System32", null);
 
     setInterval(UpdateStates, 1000);
 })();

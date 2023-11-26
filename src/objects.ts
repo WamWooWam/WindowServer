@@ -129,13 +129,11 @@ export function ObDestroyHandle(handle: HANDLE): boolean {
         return false;
     }
 
-    // console.debug(`destroying handle ${handle}, %s %O %O`, tag.type, tag, tag.value);
-
     for (const ownedHandle of tag.ownedHandles) {
         ObDestroyHandle(ownedHandle);
     }
 
-    // console.warn(`destroyed handle ${handle}, %s %O %O`, tag.type, tag, tag.value)
+    // console.debug(`destroyed handle ${handle}, %s %O %O`, tag.type, tag, tag.value)
 
     handleTable.delete(handle);
     if (tag.dtor) {

@@ -9,9 +9,11 @@ export default interface FONT extends GDIOBJ {
 }
 
 export function GreRealiseFont(pDC: DC, pFnt: FONT) {
+    pFnt = pFnt || pDC.pfntText;
+
     let text = `${pFnt.lpLogFont.lfHeight}px '${pFnt.lpLogFont.lfFaceName}'`;
 
-    if(pFnt.lpLogFont.lfWeight > 400) {
+    if (pFnt.lpLogFont.lfWeight > 400) {
         text = `bold ${text}`;
     }
 

@@ -52,3 +52,45 @@ export async function FillRgn(hDC: number, hrgn: number): Promise<boolean> {
         data: { hDC, hrgn }
     })).data as boolean;
 }
+
+export async function DeleteObject(hObject: HANDLE): Promise<boolean> {
+    return (await Gdi32.SendMessage({
+        nType: GDI32.DeleteObject,
+        data: { hObject }
+    })).data as boolean;
+}
+
+export async function SelectObject(hDC: HANDLE, hObject: HANDLE): Promise<HANDLE> {
+    return (await Gdi32.SendMessage({
+        nType: GDI32.SelectObject,
+        data: { hDC, hObject }
+    })).data as HANDLE;
+}
+
+export async function CreateSolidBrush(crColor: number): Promise<HANDLE> {
+    return (await Gdi32.SendMessage({
+        nType: GDI32.CreateSolidBrush,
+        data: { crColor }
+    })).data as HANDLE;
+}
+
+export async function CreatePen(iStyle: number, cWidth: number, crColor: number): Promise<HANDLE> {
+    return (await Gdi32.SendMessage({
+        nType: GDI32.CreatePen,
+        data: { iStyle, cWidth, crColor }
+    })).data as HANDLE;
+}
+
+export async function TextOut(hDC: HANDLE, x: number, y: number, text: string): Promise<boolean> {
+    return (await Gdi32.SendMessage({
+        nType: GDI32.TextOut,
+        data: { hDC, x, y, text }
+    })).data as boolean;
+}
+
+export async function SetTextColor(hDC: HANDLE, crColor: number): Promise<number> {
+    return (await Gdi32.SendMessage({
+        nType: GDI32.SetTextColor,
+        data: { hDC, crColor }
+    })).data as number;
+}

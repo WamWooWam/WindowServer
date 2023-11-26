@@ -6,18 +6,18 @@
 import {
     CreateDesktop,
     DispatchMessage,
+    FindWindow,
     GetMessage,
     TranslateMessage
-} from "./client/user32.js";
+} from "../client/user32.js";
 
-import { GetModuleHandle } from "./client/kernel32.js";
-import {
-    MSG,
-} from "./types/user32.types.js";
+import { MSG, } from "../types/user32.types.js";
 
 async function main() {
-    const hModule = await GetModuleHandle(null);
-    const hDesktop = await CreateDesktop("PrimaryDesktop", null, null, 0, 0, null);
+    const window = await FindWindow(<string><any>0x8001, null);
+    if (window) return;
+
+    await CreateDesktop("PrimaryDesktop", null, null, 0, 0, null);
 
     let msg: MSG = {} as MSG;
     while (await GetMessage(msg, 0, 0, 0)) {

@@ -57,7 +57,13 @@ export function PsListProcesses(): HANDLE[] {
     return [...ObEnumObjectsByType("PROC")];
 }
 
-export function PsTerminateProcess(hProcess: HANDLE, uExitCode: number): boolean {
+export function PsQuitProcess(hProcess: HANDLE, uExitCode: number): boolean {
+    const proc = ObGetObject<PsProcess>(hProcess);
+    proc.Quit();
+    return true;
+}
+
+export function PsTerminateProcess(hProcess: HANDLE): boolean {
     const proc = ObGetObject<PsProcess>(hProcess);
     proc.Terminate();
     return true;

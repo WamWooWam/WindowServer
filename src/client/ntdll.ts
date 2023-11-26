@@ -10,7 +10,6 @@ import NTDLL, {
 
 import Executable from "../types/Executable.js";
 import Message from "../types/Message.js";
-import { NtAwait } from "../util.js";
 import { SUBSYS_NTDLL } from "../types/subsystems.js";
 import { SubsystemId } from "../types/types.js";
 

@@ -1,5 +1,5 @@
 import { ObEnumObjectsByType, ObGetObject, ObSetObject } from "../objects.js";
-import { INRECT, InflateRect } from "../types/gdi32.types.js";
+import { INRECT, InflateRect, OffsetRect, POINT } from "../types/gdi32.types.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { WMP } from "../types/user32.int.types.js";
 import { CREATE_DESKTOP, CREATE_WINDOW_EX, HT, HWND, HWND_TOP, HWND_TOPMOST, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
@@ -7,7 +7,8 @@ import { NtDefWindowProc } from "./def.js";;
 import DesktopElement from "./html/DesktopElement.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtPostMessage } from "./msg.js";
-import { NtCreateWindowEx, NtDoNCHitTest, NtGetDesktopWindow, NtSetWindowPos, NtShowWindow } from "./window.js";
+import { NtCreateWindowEx, NtGetDesktopWindow, NtSetWindowPos, NtShowWindow } from "./window.js";
+import { NtDoNCHitTest } from "./nc.js";
 import { WND } from "./wnd.js";
 
 // export default interface DESKTOP {
@@ -153,8 +154,30 @@ function NtUserDesktopCreateElement(wnd: WND) {
             return;
 
         lastMouseMove = now;
-        
+
         NtUserHitTestWindow(wnd.peb, x, y, (hWnd, result) => {
+            switch (result) {
+                case HT.TOP:
+                case HT.BOTTOM:
+                    document.body.style.cursor = "ns-resize";
+                    break;
+                case HT.LEFT:
+                case HT.RIGHT:
+                    document.body.style.cursor = "ew-resize";
+                    break;
+                case HT.TOPLEFT:
+                case HT.BOTTOMRIGHT:
+                    document.body.style.cursor = "nwse-resize";
+                    break;
+                case HT.TOPRIGHT:
+                case HT.BOTTOMLEFT:
+                    document.body.style.cursor = "nesw-resize";
+                    break;
+                default:
+                    document.body.style.cursor = "default";
+                    break;
+            }
+
             NtPostMessage(wnd.peb, {
                 hWnd,
                 message: result === HT.CLIENT ? WM.MOUSEMOVE : WM.NCMOUSEMOVE,
@@ -189,7 +212,10 @@ function NtUserDesktopCreateElement(wnd: WND) {
                 break;
         }
 
-        NtUserHitTestWindow(wnd.peb, x, y, (hWnd, result) => {
+        NtUserHitTestWindow(wnd.peb, x, y, async (hWnd, result) => {
+            await NtUserSetActiveWindow(wnd.peb, hWnd);
+
+            NtPostMessage(wnd.peb, [hWnd, WM.ACTIVATE, hWnd, 0]);
             NtPostMessage(wnd.peb, {
                 hWnd,
                 message: result === HT.CLIENT ? wmc : wmnc,
@@ -257,57 +283,53 @@ async function NtUserHitTestWindow(peb: PEB, x: number, y: number, callback: (hW
         callback(hWnd, HT.CLIENT);
         return;
     }
-    else {
-    }
 
     const desktop = NtGetDesktopWindow(peb);
-    const desktopWnd = ObGetObject<WND>(desktop);
-    const wnds = [...desktopWnd.children, desktop];
-    // the order of children of the desktop window should be the z-order, we need to preserve this
-    for (const hWnd of wnds) {
-        const wnd = ObGetObject<WND>(hWnd);
+    if (!desktop) return;
 
-        // if the window is a child, invisible, disabled, or iconic, skip it
-        if ((wnd.dwStyle & (WS.CHILD | WS.POPUP)) === WS.CHILD ||
-            (wnd.dwStyle & WS.VISIBLE) !== WS.VISIBLE ||
-            (wnd.dwStyle & WS.DISABLED) === WS.DISABLED ||
-            (wnd.dwStyle & WS.ICONIC) === WS.ICONIC)
-            continue;
+    const hWnd = await NtUserHitTestWindowRecursive(peb, { x, y }, desktop, callback);
+    console.log("NtUserHitTestWindow", ObGetObject<WND>(hWnd).lpszName);
+}
 
-        const rcWindow = { ...wnd.rcWindow };
+async function NtUserHitTestWindowRecursive(peb: PEB, lpPoint: POINT, hWnd: HWND, callback: (hWnd: HWND, result: HT) => void): Promise<HWND> {
+    const pWnd = ObGetObject<WND>(hWnd);
+    if (!pWnd)
+        return -1;
 
+    if ((pWnd.dwStyle & WS.VISIBLE) !== WS.VISIBLE ||
+        (pWnd.dwStyle & WS.DISABLED) === WS.DISABLED ||
+        (pWnd.dwStyle & WS.ICONIC) === WS.ICONIC)
+        return -1;
+
+    const rcWindow = pWnd.rcWindow;
+    for (let pParent = ObGetObject<WND>(pWnd.hParent); pParent; pParent = ObGetObject<WND>(pParent.hParent)) {
+        if ((pParent.dwStyle & WS.VISIBLE) !== WS.VISIBLE ||
+            (pParent.dwStyle & WS.DISABLED) === WS.DISABLED ||
+            (pParent.dwStyle & WS.ICONIC) === WS.ICONIC)
+            break;
+
+        OffsetRect(rcWindow, pParent.rcWindow.left + pParent.rcClient.left, pParent.rcWindow.top + pParent.rcClient.top);
+    }
+
+    if (!(pWnd.dwStyle & WS.CHILD))
         InflateRect(rcWindow, 4, 4); // inflate rect by 4px to make it easier to hit
-        if (INRECT(x, y, rcWindow)) {
-            // TODO: i assume we should look at rcClient here, but it isn't fully implemented yet
-            const result = await NtDoNCHitTest(wnd, x, y);
-            if (result !== HT.TRANSPARENT && result !== HT.NOWHERE && result !== HT.ERROR) {
-                // for now, we do cursor changes here
-                // TODO: this should be done in the window proc
-                switch (result) {
-                    case HT.TOP:
-                    case HT.BOTTOM:
-                        document.body.style.cursor = "ns-resize";
-                        break;
-                    case HT.LEFT:
-                    case HT.RIGHT:
-                        document.body.style.cursor = "ew-resize";
-                        break;
-                    case HT.TOPLEFT:
-                    case HT.BOTTOMRIGHT:
-                        document.body.style.cursor = "nwse-resize";
-                        break;
-                    case HT.TOPRIGHT:
-                    case HT.BOTTOMLEFT:
-                        document.body.style.cursor = "nesw-resize";
-                        break;
-                    default:
-                        document.body.style.cursor = "default";
-                        break;
-                }
 
-                callback(hWnd, result);
-                return;
-            }
+    // not in the window rect, go away :D
+    if (!INRECT(lpPoint.x, lpPoint.y, rcWindow))
+        return -1;
+
+    for (const child of pWnd.pChildren) {
+        const ret = await NtUserHitTestWindowRecursive(peb, lpPoint, child, callback);
+        if (ret !== -1) {
+            return ret;
         }
     }
+
+    const result = await NtDoNCHitTest(pWnd, lpPoint.x, lpPoint.y);
+    if (result !== HT.TRANSPARENT && result !== HT.NOWHERE && result !== HT.ERROR) {
+        callback(hWnd, result);
+        return hWnd;
+    }
+
+    return -1;
 }

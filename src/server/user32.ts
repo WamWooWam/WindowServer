@@ -1,5 +1,5 @@
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
-import { NtCreateWindowEx, NtDestroyWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
+import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
 import { NtDispatchMessage, NtGetMessage, NtPostQuitMessage } from "../win32k/msg.js";
 import { NtInitSysMetrics, NtIntGetSystemMetrics } from "../win32k/metrics.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
@@ -62,7 +62,6 @@ const DefaultClasses: WNDCLASSEX[] = [
         cbClsExtra: 0,
         cbWndExtra: 0,
         cbSize: 0
-    
     },
     {
         style: WS.CHILD,
@@ -186,6 +185,10 @@ function UserScreenToClient(peb: PEB, params: { hWnd: HWND, lpPoint: POINT }) {
     return { retVal: true, lpPoint: tranformed }
 }
 
+function UserFindWindow(peb: PEB, params: { lpClassName: string, lpWindowName: string }): HWND {
+    return NtFindWindow(peb, params.lpClassName, params.lpWindowName);
+}
+
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_USER32,
     lpfnInit: NtUser32Initialize,
@@ -206,6 +209,7 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.CreateDesktop]: UserCreateDesktop,
         [USER32.GetWindowRect]: UserGetWindowRect,
         [USER32.ScreenToClient]: UserScreenToClient,
+        [USER32.FindWindow]: UserFindWindow
     }
 };
 

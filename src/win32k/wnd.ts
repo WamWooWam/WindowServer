@@ -62,9 +62,10 @@ export class WND {
          * and just return the result of the kernel call
          */
         overrides_NCHITTEST: true,
+        hasHadInitialPaint: false
     }
 
-    private _pRootElement: HTMLElement;
+    private _hRootElement: HANDLE;
 
     public data: any;
 
@@ -200,16 +201,20 @@ export class WND {
         return this._hDC;
     }
 
-    public get children(): HWND[] {
+    public get pChildren(): HWND[] {
         return [...this._phwndChildren];
     }
 
     public get pRootElement() {
-        return this._pRootElement;
+        return ObGetObject<HTMLElement>(this._hRootElement);
     }
 
     public set pRootElement(value: HTMLElement) {
-        this._pRootElement = value;
+        if (this._hRootElement)
+            ObCloseHandle(this._hRootElement);
+
+        // store a handle to the element, so we can close it when we're done
+        this._hRootElement = ObSetObject(value, "HTMLElement", this._hWnd, (el) => el.remove());
     }
 
     public get zIndex(): number {
@@ -218,8 +223,8 @@ export class WND {
 
     public set zIndex(value: number) {
         this._zIndex = value;
-        if (this._pRootElement)
-            this._pRootElement.style.zIndex = `${value}`;
+        if (this.pRootElement)
+            this.pRootElement.style.zIndex = `${value}`;
     }
 
     public get lpClass(): W32CLASSINFO {
@@ -280,25 +285,37 @@ export class WND {
         this._rcWindow.right = x + cx;
         this._rcWindow.bottom = y + cy;
 
-        this.FixWindowCoordinates();
-
         let oldCX = previousWindow.right - previousWindow.left;
         let oldCY = previousWindow.bottom - previousWindow.top;
         let newCX = this.rcWindow.right - this.rcWindow.left;
         let newCY = this.rcWindow.bottom - this.rcWindow.top;
 
+        this.FixWindowCoordinates();
+
         if (oldCX !== newCX || oldCY !== newCY) {
             await this.CalculateClientSize();
         }
 
-        if (this._pRootElement) {
-            this._pRootElement.style.transform = `translate(${this.rcWindow.left}px, ${this.rcWindow.top}px)`;
-            this._pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
-            this._pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
+        if (this.pRootElement) {
+            this.pRootElement.style.transform = `translate(${this.rcWindow.left}px, ${this.rcWindow.top}px)`;
+            this.pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
+            this.pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
         }
 
-        if (this._hDC) {
-            GreResizeDC(this._hDC, this.rcClient);
+
+        if (this.stateFlags.sendSizeMoveMsgs) {
+            await NtDispatchMessage(this._peb, [this._hWnd, WM.SIZE, 0, { cx: newCX, cy: newCY }]);
+            await NtDispatchMessage(this._peb, [this._hWnd, WM.MOVE, 0, { x: this.rcWindow.left, y: this.rcWindow.top }]);
+        }
+
+        if (bRepaint && ((oldCX !== newCX || oldCY !== newCY) || !this.stateFlags.hasHadInitialPaint)) {
+            this.stateFlags.hasHadInitialPaint = true;
+
+            if (this._hDC && !(this.dwStyle & WS.CHILD)) {
+                GreResizeDC(this._hDC, this.rcClient);
+            }
+
+            await NtDispatchMessage(this._peb, [this._hWnd, WM.PAINT, 0, 0]);
         }
     }
 
@@ -335,11 +352,26 @@ export class WND {
     public Dispose(): void {
         this.Hide();
 
-        if (this._hParent)
+        if (this._hParent) {
+            const parent = ObGetObject<WND>(this._hParent);
+            if (parent) {
+                parent.RemoveChild(this._hWnd);
+            }
+
             ObCloseHandle(this._hParent);
+        }
 
         if (this._hOwner)
             ObCloseHandle(this._hOwner);
+
+        if (this._hDC)
+            ObCloseHandle(this._hDC);
+
+        if (this._hMenu)
+            ObCloseHandle(this._hMenu);
+
+        if (this._hRootElement)
+            ObCloseHandle(this._hRootElement);
     }
 
     private FixWindowCoordinates(): void {
@@ -400,7 +432,7 @@ export class WND {
     }
 
     async CreateElement() {
-        if (!this._pRootElement) {
+        if (!this.pRootElement) {
             await NtDispatchMessage(this._peb, [this._hWnd, WMP.CREATEELEMENT, 0, 0])
 
             if (this._hParent) {
@@ -408,7 +440,7 @@ export class WND {
             }
             else {
                 // for now, just add it to the body
-                document.body.appendChild(this._pRootElement);
+                document.body.appendChild(this.pRootElement);
             }
         }
 
@@ -420,23 +452,23 @@ export class WND {
         this.pRootElement.style.zIndex = `${this.zIndex}`;
 
         // if we're a top level window, allocate a DC
-        // if (!(this.dwStyle & WS.CHILD)) {
-        //     this._hDC = GreAllocDCForWindow(this._peb, this._hWnd);
-        // }
-        // else {
-        //     // use the parent's DC, with an additional transform
-        //     const parent = ObGetObject<WND>(this._hParent);
-        //     this._hDC = ObDuplicateHandle(parent._hDC);
-        // }
+        if (!(this.dwStyle & WS.CHILD)) {
+            this._hDC = GreAllocDCForWindow(this._peb, this._hWnd);
+        }
+        else {
+            // use the parent's DC, with an additional transform
+            const parent = ObGetObject<WND>(this._hParent);
+            this._hDC = ObDuplicateHandle(parent._hDC);
+        }
 
-        // if (!this._hDC)
-        //     return;
+        if (!this._hDC)
+            return;
 
-        // GreResizeDC(this._hDC, this.rcClient);
+        GreResizeDC(this._hDC, this.rcClient);
     }
 
     public UpdateWindowStyle(dwOldStyle: number, dwNewStyle: number): void {
-        if (!this._pRootElement)
+        if (!this.pRootElement)
             return;
 
         this.FixWindowCoordinates();

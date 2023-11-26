@@ -19,6 +19,7 @@
 x-window {
     opacity: 0;
     will-change: transform top left;
+    box-sizing: content-box;
 }
 
 body {
@@ -863,6 +864,7 @@ table>tbody>tr>* {
     height: 100%;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
 }
 
 .window-template>.window-body {
@@ -875,6 +877,10 @@ table>tbody>tr>* {
     width: 16px;
     height: 16px;
     margin-right: 2px;
+}
+
+canvas {
+    position: absolute;
 }
 
 /*# sourceMappingURL=98.css.map */

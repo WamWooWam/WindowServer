@@ -15,8 +15,6 @@ export default class WindowElement extends WindowElementBase {
 
     windowBody: HTMLElement;
 
-    private _style: number = 0;
-
     static get observedAttributes() {
         return [...super.observedAttributes, 'icon'];
     }
@@ -65,23 +63,13 @@ export default class WindowElement extends WindowElementBase {
             case "window-title":
                 this.titleBarText.innerText = newValue;
                 break;
-            case "window-style":
-                this.applyWindowStyle(newValue);
-                break;
             case "icon":
                 this.icon.src = newValue;
                 break;
         }
     }
 
-    applyWindowStyle(newStyle: string) {
-        // window style is *either* a number indicating a bitwise combination of styles
-        // or a string deliminated by | of window styles to apply
-        const style = this.parseWindowStyle(newStyle);
-        if (this._style === style) {
-            return;
-        }
-
+    applyStylesCore(style: number) {
         if ((style & WS.CAPTION) === WS.CAPTION) {
             this.titleBar.style.display = "";
             this.titleBarText.style.display = "";
@@ -144,34 +132,6 @@ export default class WindowElement extends WindowElementBase {
         else {
             this.style.opacity = "0";
         }
-
-        this._style = style;
-    }
-
-    parseWindowStyle(newStyle: string): number {
-        let style = 0;
-        if (Number.isInteger(parseInt(newStyle))) {
-            style = parseInt(newStyle);
-        }
-        else {
-            let styles = newStyle.split("|");
-            for (let i = 0; i < styles.length; i++) {
-                let styleName = styles[i].trim();
-                if (styleName.startsWith("WS_EX_")) {
-                    styleName = styleName.substring(6);
-                    style |= WS.EX[styleName as keyof typeof WS.EX];
-                }
-                else if (styleName.startsWith("WS_")) {
-                    styleName = styleName.substring(3);
-                    style |= WS[styleName as keyof typeof WS] as number;
-                }
-                else {
-                    console.warn("unknown style", styleName);
-                }
-            }
-        }
-
-        return style;
     }
 }
 

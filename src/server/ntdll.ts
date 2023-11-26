@@ -40,7 +40,7 @@ async function SubsystemLoaded(peb: PEB, data: LOAD_SUBSYSTEM) {
 
 async function ProcessExit(peb: PEB, data: PROCESS_EXIT) {
     const process = ObGetObject<PsProcess>(peb.hProcess);
-    await process.Terminate();
+    await process.Quit();
 }
 
 const NTDLL_SUBSYSTEM: SUBSYSTEM_DEF = {

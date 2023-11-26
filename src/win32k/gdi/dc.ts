@@ -1,16 +1,17 @@
-import { BLACK_PEN, DC_BRUSH, HDC, POINT, RECT, TRANSPARENT, WHITE_BRUSH } from "../../types/gdi32.types.js";
+import { BLACK_PEN, DC_BRUSH, HDC, POINT, RECT, SYSTEM_FONT, TRANSPARENT, WHITE_BRUSH } from "../../types/gdi32.types.js";
 import BRUSH, { GreRealiseBrush } from "./brush.js";
-import { COLOR, HWND } from "../../types/user32.types.js";
+import { COLOR, HWND, SPI } from "../../types/user32.types.js";
+import FONT, { GreCreateFontIndirect } from "./font.js";
 import { GreGetObj, GreGetStockObject } from "./obj.js";
 import { HANDLE, PEB } from "../../types/types.js";
-import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetObject } from "../../objects.js";
+import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetHandleOwner, ObSetObject } from "../../objects.js";
 import PEN, { GreRealisePen } from "./pen.js";
 
 import CLIP from "./clip.js";
-import FONT from "./font.js";
 import { GDIOBJ } from "./ntgdi.js";
 import { IntGetSysColor } from "../brush.js";
 import { MATRIX } from "./trans.js";
+import { NtUserSystemParametersInfo } from "../metrics.js";
 import { WND } from "../wnd.js";
 
 // represents a device context
@@ -47,16 +48,26 @@ class DC implements DC {
     constructor(hOwner: HANDLE, params: Partial<DC>) {
         this.hDC = ObSetObject(this, "DC", hOwner || params.pdcParent.hDC, (val) => GreCleanupDC(val));
 
+        const metrics = {};
+        NtUserSystemParametersInfo(SPI.GETNONCLIENTMETRICS, metrics)
+
         this.pSurface = params.pSurface;
         this.pCtx = params.pCtx;
         this.pbrFill = params.pbrFill || GreGetStockObject(WHITE_BRUSH);
         this.pbrLine = params.pbrLine || GreGetStockObject(BLACK_PEN);
-        this.pfntText = params.pfntText || null;
+        this.pfntText = params.pfntText;
         this.pdcParent = params.pdcParent || null;
         this.pcClip = params.pcClip || null;
         this.pmTransform = params.pmTransform || null;
         this.prBounds = params.prBounds || { left: 0, top: 0, right: 1, bottom: 1 };
         this.ptCurrent = { x: 0, y: 0 };
+
+        if (!this.pfntText) {
+            const font = GreCreateFontIndirect((metrics as any).lfSmCaptionFont);
+            this.pfntText = font;
+
+            ObSetHandleOwner(font._hObj, this.hDC);
+        }
 
         this.crText = IntGetSysColor(COLOR.WINDOWTEXT);
         this.dwBkMode = TRANSPARENT;
@@ -140,7 +151,7 @@ function GreCleanupDC(dc: DC) {
 }
 
 export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ {
-    if(!h) {
+    if (!h) {
         return null;
     }
 
@@ -200,7 +211,7 @@ export function GreLineTo(dc: DC, x: number, y: number) {
     }
 
     dc.pCtx.closePath();
-    dc.pCtx.stroke(); 
+    dc.pCtx.stroke();
 
     return ptPrev;
 }

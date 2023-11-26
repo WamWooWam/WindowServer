@@ -1,4 +1,4 @@
-import { HWND, LPARAM, LRESULT, WM, WPARAM } from "../../types/user32.types.js";
+import { HT, HWND, LPARAM, LRESULT, WM, WPARAM } from "../../types/user32.types.js";
 
 import { ObGetObject } from "../../objects.js";
 import { StaticElement } from "../../win32k/html/StaticElement.js";
@@ -12,6 +12,8 @@ export function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: 
     switch (uMsg) {
         case WMP.CREATEELEMENT: {
             element = new StaticElement();
+            element.dwStyle = wnd.dwStyle.toString();
+            element.dwExStyle = wnd.dwExStyle.toString();
             element.innerText = wnd.lpszName;
             wnd.pRootElement = element;
 
@@ -37,6 +39,8 @@ export function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: 
         case WM.GETFONT: {
             return 0;
         }
+        case WM.NCHITTEST:
+            return HT.CLIENT;
         default:
             return 0;
     }

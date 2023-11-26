@@ -1,6 +1,6 @@
+import { GDIOBJ, NtGdiDeleteObject } from "./ntgdi.js";
 import { RECT, RGN } from "../../types/gdi32.types.js";
 
-import { GDIOBJ } from "./ntgdi.js";
 import { ObSetObject } from "../../objects.js";
 
 export default interface REGION extends GDIOBJ {
@@ -714,6 +714,9 @@ function GreRgnXor(
     GreRegSubtract(tra, sra, srb);
     GreRegSubtract(trb, srb, sra);
     GreRegUnion(dr, tra, trb);
+
+    NtGdiDeleteObject(tra._hObj);
+    NtGdiDeleteObject(trb._hObj);
 
     return GreRegComplexity(dr);
 }

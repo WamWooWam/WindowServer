@@ -1,4 +1,4 @@
-import { HWND, LPARAM, LRESULT, WM, WPARAM } from "../../types/user32.types.js";
+import { HT, HWND, LPARAM, LRESULT, WM, WPARAM, WS } from "../../types/user32.types.js";
 
 import { NtDefWindowProc } from "../../win32k/def.js";
 import { ObGetObject } from "../../objects.js";
@@ -14,9 +14,16 @@ export function ButtonWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: 
                 const pElement = document.createElement("button");
                 pElement.innerText = wnd.lpszName;
                 wnd.pRootElement = pElement;
-                
+
+                // TODO: move this is bad, custom Button element will do this
+                if (wnd.dwStyle & WS.DISABLED) {
+                    pElement.disabled = true;
+                }
+
                 return 0;
             }
+        case WM.NCHITTEST:
+            return HT.CLIENT;
         default:
             return NtDefWindowProc(hWnd, uMsg, wParam, lParam);
     }

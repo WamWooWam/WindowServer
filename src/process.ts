@@ -42,7 +42,7 @@ export class PsProcess {
     private state: 'running' | 'terminating' | 'terminated' = 'running';
 
     constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
-        this.handle = ObSetObject<PsProcess>(this, "PROC", null, this.Terminate.bind(this));
+        this.handle = ObSetObject<PsProcess>(this, "PROC", null, this.Quit.bind(this));
         this.id = this.handle;
         this.name = exec.name;
         this.version = exec.version;
@@ -88,7 +88,10 @@ export class PsProcess {
         });
     }
 
-    async Terminate() {
+    /**
+     * Semi-gracefully terminates the process by calling exit handlers and then terminating the worker.
+     */
+    async Quit() {
         if (this.state === 'terminating' || this.state === 'terminated') {
             return;
         }
@@ -102,11 +105,30 @@ export class PsProcess {
         this.worker.terminate();
         this.worker = null;
 
-
         this.onTerminate?.(0);
         this.state = 'terminated';
 
         ObDestroyHandle(this.handle);
+    }
+
+    /**
+     * Forcefully terminates the process without calling any exit handlers, attempts
+     * to destroy all objects owned by the process.
+     * @internal
+     */
+    Terminate() {
+        this.worker.terminate();
+        this.worker = null;
+
+        try {
+            this.onTerminate?.(0);
+            this.state = 'terminated';
+
+            ObDestroyHandle(this.handle);
+        }
+        catch (e) {
+            console.error(e);
+        }
     }
 
     SendMessage<S = any, R = any>(msg: Message<S>): Promise<Message<R>> {
@@ -124,7 +146,7 @@ export class PsProcess {
                 else {
                     resolve(msg);
                 }
-                
+
                 performance.measure(`SendMessage:${msg.lpSubsystem}:${msg.nType}`, { start: mark.startTime, end: performance.now() });
             });
 
@@ -175,7 +197,7 @@ export class PsProcess {
         if (handler) {
             try {
                 const mark = performance.now();
-                
+
                 let resp = await handler(this.peb, msg.data);
                 this.PostMessage({ lpSubsystem: msg.lpSubsystem, nType: msg.nType, nChannel: msg.nChannel, data: resp });
 

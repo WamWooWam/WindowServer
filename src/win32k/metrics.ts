@@ -52,7 +52,6 @@ export function NtIntGetSystemMetrics(peb: PEB, nIndex: number): number {
     return view[nIndex];
 }
 
-
 export function NtUserSystemParametersInfo(nParam: SPI, obj: any): boolean {
     switch (nParam) {
         case SPI.GETNONCLIENTMETRICS:

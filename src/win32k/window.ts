@@ -17,11 +17,10 @@ import {
 import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
 import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
 import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
-import { NtDispatchMessage, NtPostMessage, NtSendMessageTimeout } from "./msg.js";
-import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObGetObject } from "../objects.js";
+import { NtDispatchMessage, NtPostMessage } from "./msg.js";
+import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObEnumObjectsByType, ObGetObject } from "../objects.js";
 
 import { GreAllocDCForMonitor } from "./gdi/dc.js";
-import { NtDefWindowProc } from "./def.js";
 import { NtFindClass } from "./class.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
@@ -117,12 +116,12 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
 
     if (wnd.dwStyle & (WS.DLGFRAME | WS.BORDER)) {
         // TODO: SM_CXMINTRACK/SM_CYMINTRACK
-        minMax.ptMaxTrackSize.x = NtIntGetSystemMetrics(peb, SM.CXMINTRACK);
-        minMax.ptMaxTrackSize.y = NtIntGetSystemMetrics(peb, SM.CYMINTRACK);
+        minMax.ptMinTrackSize.x = NtIntGetSystemMetrics(peb, SM.CXMINTRACK);
+        minMax.ptMinTrackSize.y = NtIntGetSystemMetrics(peb, SM.CYMINTRACK);
     }
     else {
-        minMax.ptMaxTrackSize.x = 2 * xinc;
-        minMax.ptMaxTrackSize.y = 2 * yinc;
+        minMax.ptMinTrackSize.x = 2 * xinc;
+        minMax.ptMinTrackSize.y = 2 * yinc;
     }
 
     // TODO: SM_CXMAXTRACK/SM_CYMAXTRACK
@@ -213,6 +212,10 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     }
 
     let _hwndParent = NtGetDesktopWindow(peb);
+    if (_hwndParent && ObGetObject<WND>(_hwndParent) === null) {
+        _hwndParent = null;
+    }
+
     let _hwndOwner = null;
 
     if (hWndParent) {
@@ -398,11 +401,11 @@ export async function NtSetWindowPos(peb: PEB, hWnd: HWND, hWndInsertAfter: HWND
             return false;
         }
 
-        let children = parentWnd.children;
+        let children = parentWnd.pChildren;
 
         let insertIdx = children.indexOf(wnd.hWnd);
         if (hWndInsertAfter === HWND_TOP) {
-            insertIdx = parentWnd.children.findIndex((hWnd) => {
+            insertIdx = parentWnd.pChildren.findIndex((hWnd) => {
                 return ObGetObject<WND>(hWnd).dwExStyle & WS.EX.TOPMOST;
             });
 
@@ -509,7 +512,7 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
     // check shell window
 
     // destroy children
-    for (const child of wnd.children) {
+    for (const child of wnd.pChildren) {
         await NtDestroyWindow(peb, child);
     }
 
@@ -529,20 +532,6 @@ export function NtUserGetDC(peb: PEB, hWnd: HWND): HDC {
     const wnd = ObGetObject<WND>(hWnd);
     return ObDuplicateHandle(wnd.hDC);
 }
-
-export async function NtDoNCHitTest(wnd: WND, x: number, y: number) {
-    if (!wnd.stateFlags.overrides_NCHITTEST) {
-        return await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
-    }
-    else {
-        const { status, result } = await NtSendMessageTimeout(wnd.peb, [wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x], 10);
-        if (status !== 0) // STATUS_TIMEOUT
-            return await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
-
-        return result;
-    }
-}
-
 
 export function NtUserMapWindowPoints(fromWnd: WND, toWnd: WND, lpPoints: POINT[]) {
     let delta = { cx: 0, cy: 0 };
@@ -599,4 +588,23 @@ export function NtUserGetWindowBorders(peb: PEB, style: number, exStyle: number,
     size.cy *= NtIntGetSystemMetrics(peb, SM.CYBORDER);
 
     return size;
+}
+
+export function NtFindWindow(peb: PEB, lpClassName: string, lpWindowName: string): HWND {
+    const state = GetW32ProcInfo(peb);
+    if (!state) {
+        return 0;
+    }
+
+    for (const hWnd of ObEnumObjectsByType("WND")) {
+        const wnd = ObGetObject<WND>(hWnd);
+        if (!wnd) continue;
+        
+        if (wnd.dwStyle & WS.CHILD) continue;
+        if (wnd.lpClass.lpszClassName === lpClassName && (!lpWindowName || wnd.lpszName === lpWindowName)) {
+            return wnd.hWnd;
+        }
+    }
+
+    return 0;
 }
