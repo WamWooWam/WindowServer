@@ -153,10 +153,10 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
     }
     if (newMinMax.ptMaxSize.x >= (monitor.rcMonitor.right - monitor.rcMonitor.left) &&
         newMinMax.ptMaxSize.y >= (monitor.rcMonitor.bottom - monitor.rcMonitor.top)) {
-        // Window -> state |= WNDS_MAXIMIZESTOMONITOR;
+        // Window.state |= WNDS_MAXIMIZESTOMONITOR;
     }
     else {
-        // Window -> state &= ~WNDS_MAXIMIZESTOMONITOR;
+        // Window.state &= ~WNDS_MAXIMIZESTOMONITOR;
     }
 
 
@@ -184,6 +184,8 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
 }
 
 export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promise<HWND> {
+    const mark = performance.now();
+
     const { dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam } = data;
     const state = GetW32ProcInfo(peb);
 
@@ -284,8 +286,8 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
 
     if ((wnd.dwStyle & (WS.CHILD | WS.POPUP)) === WS.CHILD) {
         if (_hwndParent != NtGetDesktopWindow(peb)) {
-            createStruct.x += parentWnd.rcClient.left;
-            createStruct.y += parentWnd.rcClient.top;
+            // createStruct.x += parentWnd.rcClient.left;
+            // createStruct.y += parentWnd.rcClient.top;
         }
     }
 
@@ -300,19 +302,27 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         await NtWinPosGetMinMaxInfo(peb, wnd, maxSize, maxPos, minTrackSize, maxTrackSize);
     }
 
-    wnd.MoveWindow(createStruct.x, createStruct.y, createStruct.nWidth, createStruct.nHeight, false);
+    await wnd.MoveWindow(createStruct.x, createStruct.y, createStruct.nWidth, createStruct.nHeight, false);
 
     await NtDispatchMessage(peb, [wnd.hWnd, WM.NCCREATE, 0, createStruct]);
 
-    // todo: WM.ncalcsize
+    // if (parentWnd !== null) {
+    //     parentWnd.AddChild(wnd.hWnd);
+    // }
 
+    // maxPos.x = wnd.rcWindow.left;
+    // maxPos.y = wnd.rcWindow.top;
+
+    // sends WM_NCCALCSIZE
+    await wnd.CalculateClientSize();
+    
     let result = await NtDispatchMessage(peb, [wnd.hWnd, WM.CREATE, 0, createStruct]);
     if (result === -1) {
         wnd.Dispose();
         return 0;
     }
 
-    console.log("wnd", wnd);
+    performance.measure("NtCreateWindowEx", { start: mark, end: performance.now() });
 
     return wnd.hWnd;
 }
@@ -351,6 +361,15 @@ async function NtSendParentNotify(peb: PEB, pWnd: WND, msg: number) {
 
         ObCloseHandle(handle);
     }
+}
+
+export function NtUserGetWindowRect(peb: PEB, hWnd: HWND): RECT {
+    const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return null;
+    }
+
+    return wnd.rcWindow;
 }
 
 
@@ -451,7 +470,7 @@ export async function NtSetWindowPos(peb: PEB, hWnd: HWND, hWndInsertAfter: HWND
         // TODO
     }
 
-    wnd.MoveWindow(x, y, cx, cy, uFlags & SWP.NOREDRAW ? false : true);
+    await wnd.MoveWindow(x, y, cx, cy, uFlags & SWP.NOREDRAW ? false : true);
 }
 
 export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
@@ -539,4 +558,42 @@ export function NtUserMapWindowPoints(fromWnd: WND, toWnd: WND, lpPoints: POINT[
         point.x += delta.cx;
         point.y += delta.cy;
     }
+}
+
+export function NtUserHasWindowEdge(style: number, exStyle: number) {
+    if (style & WS.MINIMIZE)
+        return true;
+    if (exStyle & WS.EX.DLGMODALFRAME)
+        return true;
+    if (exStyle & WS.EX.STATICEDGE)
+        return true;
+    if (style & WS.THICKFRAME)
+        return true;
+    style &= WS.CAPTION;
+    if (style == WS.DLGFRAME || style == WS.CAPTION)
+        return true;
+    return false;
+}
+
+export function NtUserGetWindowBorders(style: number, exStyle: number, withClient: boolean) {
+    let border = 0;
+    let size = { cx: 0, cy: 0 };
+
+    if (NtUserHasWindowEdge(style, exStyle))
+        border += 2;
+    else if ((exStyle & (WS.EX.STATICEDGE | WS.EX.DLGMODALFRAME)) == WS.EX.STATICEDGE)
+        border += 1; /* for the outer frame always present */
+    if ((exStyle & WS.EX.CLIENTEDGE) && withClient)
+        border += 2;
+    if (style & WS.CAPTION || exStyle & WS.EX.DLGMODALFRAME)
+        border++; /* The other border */
+    size.cx = size.cy = border;
+    if ((style & WS.THICKFRAME) && !(style & WS.MINIMIZE)) /* The resize border */ {
+        size.cx += NtIntGetSystemMetrics(SM.CXFRAME) - NtIntGetSystemMetrics(SM.CXDLGFRAME);
+        size.cy += NtIntGetSystemMetrics(SM.CYFRAME) - NtIntGetSystemMetrics(SM.CYDLGFRAME);
+    }
+    size.cx *= NtIntGetSystemMetrics(SM.CXBORDER);
+    size.cy *= NtIntGetSystemMetrics(SM.CYBORDER);
+
+    return size;
 }

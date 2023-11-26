@@ -1,7 +1,8 @@
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
-import { NtCreateWindowEx, NtDestroyWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC } from "../win32k/window.js";
+import { NtCreateWindowEx, NtDestroyWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
 import { NtDispatchMessage, NtGetMessage, NtPostQuitMessage } from "../win32k/msg.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
+import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
 import USER32, {
     CREATE_DESKTOP,
     CREATE_WINDOW_EX,
@@ -26,9 +27,11 @@ import { ButtonWndProc } from "./user32/button.js";
 import { NtDefWindowProc } from "../win32k/def.js";
 import { NtIntGetSystemMetrics } from "../win32k/metrics.js";
 import { NtRegisterClassEx } from "../win32k/class.js";
+import { ObGetObject } from "../objects.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 import W32MSG_QUEUE from "../win32k/msgqueue.js";
 import { W32PROCINFO } from "../win32k/shared.js";
+import { WND } from "../win32k/wnd.js";
 
 const DefaultClasses: WNDCLASSEX[] = [
     {
@@ -152,6 +155,20 @@ async function UserCreateDesktop(peb: PEB, params: CREATE_DESKTOP): Promise<HAND
     return await NtUserCreateDesktop(peb, params);
 }
 
+function UserGetWindowRect(peb: PEB, params: HWND): RECT {
+    return NtUserGetWindowRect(peb, params);
+}
+
+function UserScreenToClient(peb: PEB, params: { hWnd: HWND, lpPoint: POINT }) {
+    const wnd = ObGetObject<WND>(params.hWnd);
+    const rect = { ...wnd.rcClient };
+
+    OffsetRect(rect, wnd.rcWindow.left, wnd.rcWindow.top);
+
+    const tranformed = { x: params.lpPoint.x - rect.left, y: params.lpPoint.y - rect.top };
+    return { retVal: true, lpPoint: tranformed }
+}
+
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_USER32,
     lpfnInit: NtUser32Initialize,
@@ -169,7 +186,9 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.GetDC]: UserGetDC,
         [USER32.GetSystemMetrics]: UserGetSystemMetrics,
         [USER32.SetWindowPos]: UserSetWindowPos,
-        [USER32.CreateDesktop]: UserCreateDesktop
+        [USER32.CreateDesktop]: UserCreateDesktop,
+        [USER32.GetWindowRect]: UserGetWindowRect,
+        [USER32.ScreenToClient]: UserScreenToClient,
     }
 };
 

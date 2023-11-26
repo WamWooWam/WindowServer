@@ -1,6 +1,6 @@
 import { HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, MSG, SC, SM, SW, SWP, VK, WM, WMSZ, WPARAM, WS } from "../types/user32.types.js";
 import { INRECT, InflateRect, OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
-import { NtDestroyWindow, NtDoNCHitTest, NtIntGetClientRect, NtSetWindowPos, NtShowWindow, NtUserMapWindowPoints, NtWinPosGetMinMaxInfo } from "./window.js";
+import { NtDestroyWindow, NtDoNCHitTest, NtIntGetClientRect, NtSetWindowPos, NtShowWindow, NtUserGetWindowBorders, NtUserHasWindowEdge, NtUserMapWindowPoints, NtWinPosGetMinMaxInfo } from "./window.js";
 import { NtDispatchMessage, NtGetMessage, NtPostMessage, NtSendMessageTimeout } from "./msg.js";
 import { NtUserGetCapture, NtUserGetCursorPos, NtUserReleaseCapture, NtUserSetCapture } from "./cursor.js";
 import { WMP, WND_DATA } from "../types/user32.int.types.js";
@@ -22,51 +22,59 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
     if (Msg > WM.USER && Msg < WMP.CREATEELEMENT) // not for us!
         return 0;
 
-    const wnd = ObGetObject<WND>(hWnd);
-    if (!wnd) {
-        return -1;
+    const mark = performance.now();
+    try {
+        const wnd = ObGetObject<WND>(hWnd);
+        if (!wnd) {
+            return -1;
+        }
+
+        const peb = wnd.peb;
+        const state = GetW32ProcInfo(peb);
+
+        switch (Msg) {
+            case WMP.CREATEELEMENT:
+                console.log("WMP_CREATEELEMENT");
+                return await NtDefCreateElement(peb, hWnd, Msg, wParam, lParam);
+            case WMP.ADDCHILD:
+                console.log("WMP_ADDCHILD");
+                return await NtDefAddChild(peb, hWnd, wParam);
+            case WMP.REMOVECHILD:
+                console.log("WMP_REMOVECHILD");
+                return await NtDefRemoveChild(peb, hWnd, wParam);
+            case WMP.UPDATEWINDOWSTYLE:
+                console.log("WMP_UPDATEWINDOWSTYLE");
+                return await NtDefUpdateWindowStyle(peb, hWnd, wParam, lParam);
+            case WM.NCCALCSIZE:
+                return NtDefCalcNCSizing(peb, hWnd, Msg, wParam, lParam);
+            case WM.NCHITTEST:
+                return NtDefNCHitTest(peb, hWnd, Msg, wParam, lParam);
+            case WM.NCLBUTTONDOWN:
+                return await NtDefNCLButtonDown(peb, hWnd, Msg, wParam, lParam);
+            case WM.NCLBUTTONUP:
+                return await NtDefNCLButtonUp(peb, hWnd, Msg, wParam, lParam);
+            case WM.ACTIVATE:
+                console.log("WM_ACTIVATE");
+                return 0;
+            case WM.NCCREATE:
+                console.log("WM_NCCREATE");
+                return 0;
+            case WM.CREATE:
+                console.log("WM_CREATE");
+                return 0;
+            case WM.CLOSE:
+                console.log("WM_CLOSE");
+                await NtDestroyWindow(peb, hWnd);
+                return 0;
+            case WM.SYSCOMMAND:
+                console.log("WM_SYSCOMMAND");
+                return await NtDefWndHandleSysCommand(peb, wnd, wParam, lParam);
+            case WM.GETMINMAXINFO:
+                return lParam;
+        }
     }
-
-    const peb = wnd.peb;
-    const state = GetW32ProcInfo(peb);
-
-    switch (Msg) {
-        case WMP.CREATEELEMENT:
-            console.log("WMP_CREATEELEMENT");
-            return await NtDefCreateElement(peb, hWnd, Msg, wParam, lParam);
-        case WMP.ADDCHILD:
-            console.log("WMP_ADDCHILD");
-            return await NtDefAddChild(peb, hWnd, wParam);
-        case WMP.REMOVECHILD:
-            console.log("WMP_REMOVECHILD");
-            return await NtDefRemoveChild(peb, hWnd, wParam);
-        case WMP.UPDATEWINDOWSTYLE:
-            console.log("WMP_UPDATEWINDOWSTYLE");
-            return await NtDefUpdateWindowStyle(peb, hWnd, wParam, lParam);
-        case WM.NCHITTEST:
-            return NtDefNCHitTest(peb, hWnd, Msg, wParam, lParam);
-        case WM.NCLBUTTONDOWN:
-            return await NtDefNCLButtonDown(peb, hWnd, Msg, wParam, lParam);
-        case WM.NCLBUTTONUP:
-            return await NtDefNCLButtonUp(peb, hWnd, Msg, wParam, lParam);
-        case WM.ACTIVATE:
-            console.log("WM_ACTIVATE");
-            return 0;
-        case WM.NCCREATE:
-            console.log("WM_NCCREATE");
-            return 0;
-        case WM.CREATE:
-            console.log("WM_CREATE");
-            return 0;
-        case WM.CLOSE:
-            console.log("WM_CLOSE");
-            await NtDestroyWindow(peb, hWnd);
-            return 0;
-        case WM.SYSCOMMAND:
-            console.log("WM_SYSCOMMAND");
-            return await NtDefWndHandleSysCommand(peb, wnd, wParam, lParam);
-        case WM.GETMINMAXINFO:
-            return lParam;
+    finally {
+        performance.measure(`NtDefWindowProc:0x${Msg.toString(16)}`, { start: mark, end: performance.now() });
     }
 
     return 0; // TODO
@@ -150,7 +158,7 @@ function NtDefNCHitTest(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARAM, lPara
         return HT.ERROR;
     }
 
-    wnd.stateFlags.overrides_NCHITTEST = false;
+    // wnd.stateFlags.overrides_NCHITTEST = false;
 
     const pRootElement = wnd.pRootElement as WindowElement;
     if (!pRootElement) {
@@ -367,7 +375,7 @@ function IntIsWindowVisible(wnd: WND) {
         if (!temp) return true;
         if (!(temp.dwStyle & WS.VISIBLE)) break;
         if (temp.dwStyle & WS.MINIMIZE && temp != wnd) break;
-        // if (Temp -> fnid == FNID_DESKTOP) return TRUE;
+        // if (Temp . fnid == FNID_DESKTOP) return TRUE;
         temp = ObGetObject<WND>(temp.hParent);
     }
 
@@ -596,7 +604,7 @@ async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lParam: LP
     }
 
     NtUserReleaseCapture(peb);
-    
+
     await NtDispatchMessage(peb, [wnd.hWnd, WM.EXITSIZEMOVE, 0, 0]);
 
     return 0;
@@ -678,4 +686,111 @@ async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt: POINT
             }
         }
     }
+}
+
+function NtDefCalcNCSizing(peb: PEB, hWnd: number, Msg: WM, wParam: WPARAM, lParam: LPARAM): LRESULT {
+    const wnd = ObGetObject<WND>(hWnd);
+    let style = wnd.dwStyle;
+    let exStyle = wnd.dwExStyle;
+    let rect = lParam as RECT;
+    let origRect: RECT;
+
+    if (rect == null) {
+        return null;
+    }
+
+    origRect = { ...rect };
+
+    // wnd.state &= ~WNDS_HASCAPTION;
+
+    // if (wparam)
+    // {
+    //     if (wnd.lpClass.style & CS.VREDRAW)
+    //     {
+    //         Result |= WVR_VREDRAW;
+    //     }
+    //     if (wnd.pcls.style & CS.HREDRAW)
+    //     {
+    //         Result |= WVR_HREDRAW;
+    //     }
+    //     Result |= WVR_VALIDRECTS;
+    // }
+
+    if (!(wnd.dwStyle & WS.MINIMIZE)) {
+        if (NtUserHasWindowEdge(wnd.dwStyle, wnd.dwExStyle)) {
+            let windowBorders = NtUserGetWindowBorders(wnd.dwStyle, wnd.dwExStyle, false);
+            InflateRect(rect, -windowBorders.cx, -windowBorders.cy);
+        }
+        else if ((wnd.dwExStyle & WS.EX.STATICEDGE) || (wnd.dwStyle & WS.BORDER)) {
+            InflateRect(rect, -1, -1);
+        }
+
+        if ((wnd.dwStyle & WS.CAPTION) == WS.CAPTION) {
+            // wnd.state |= WNDS_HASCAPTION;
+
+            if (wnd.dwExStyle & WS.EX.TOOLWINDOW)
+                rect.top += NtIntGetSystemMetrics(SM.CYSMCAPTION);
+            else
+                rect.top += NtIntGetSystemMetrics(SM.CYCAPTION);
+        }
+
+        // TODO: HMENUS
+        // if (HAS_MENU(Wnd, Style))
+        // {
+        //     HDC hDC = UserGetDCEx(Wnd, 0, DCX_USESTYLE | DCX_WINDOW);
+
+        //     wnd.state |= WNDS_HASMENU;
+
+        //     if (hDC)
+        //     {
+        //         RECT CliRect = *Rect;
+        //         CliRect.bottom -= OrigRect.top;
+        //         CliRect.right -= OrigRect.left;
+        //         CliRect.left -= OrigRect.left;
+        //         CliRect.top -= OrigRect.top;
+        //         if (!Suspended)
+        //             Rect.top += MENU_DrawMenuBar(hDC, &CliRect, Wnd, TRUE);
+        //         UserReleaseDC(Wnd, hDC, FALSE);
+        //     }
+        // }
+
+        if (wnd.dwExStyle & WS.EX.CLIENTEDGE) {
+            InflateRect(rect, -2 * NtIntGetSystemMetrics(SM.CXBORDER), -2 * NtIntGetSystemMetrics(SM.CYBORDER));
+        }
+
+        if (style & WS.VSCROLL) {
+            if (rect.right - rect.left >= NtIntGetSystemMetrics(SM.CXVSCROLL)) {
+                // wnd.state |= WNDS_HASVERTICALSCROOLLBAR;
+
+                /* rectangle is in screen coords when wparam is false */
+                if (!wParam && (exStyle & WS.EX.LAYOUTRTL))
+                    exStyle ^= WS.EX.LEFTSCROLLBAR;
+
+                if ((exStyle & WS.EX.LEFTSCROLLBAR) != 0)
+                    rect.left += NtIntGetSystemMetrics(SM.CXVSCROLL);
+                else
+                    rect.right -= NtIntGetSystemMetrics(SM.CXVSCROLL);
+            }
+        }
+
+        if (style & WS.HSCROLL) {
+            if (rect.bottom - rect.top > NtIntGetSystemMetrics(SM.CYHSCROLL)) {
+                // wnd.state |= WNDS_HASHORIZONTALSCROLLBAR;
+
+                rect.bottom -= NtIntGetSystemMetrics(SM.CYHSCROLL);
+            }
+        }
+
+        if (rect.top > rect.bottom)
+            rect.bottom = rect.top;
+
+        if (rect.left > rect.right)
+            rect.right = rect.left;
+    }
+    else {
+        rect.right = rect.left;
+        rect.bottom = rect.top;
+    }
+
+    return rect;
 }

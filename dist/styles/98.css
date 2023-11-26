@@ -23,6 +23,7 @@ x-window {
 
 body {
     color: #222;
+    background-color: #008080;
     font-family: Arial;
     font-size: 12px;
     margin:0px;
@@ -867,6 +868,7 @@ table>tbody>tr>* {
 .window-template>.window-body {
     flex: 1;
     overflow: hidden;
+    transform-origin: top left;
 }
 
 .title-bar-icon {

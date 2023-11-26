@@ -10,7 +10,9 @@ export function ButtonWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: 
     switch (uMsg) {
         case WMP.CREATEELEMENT:
             {
+                const wnd = ObGetObject<WND>(hWnd);
                 const pElement = document.createElement("button");
+                pElement.innerText = wnd.lpszName;
                 wnd.pRootElement = pElement;
                 
                 return 0;

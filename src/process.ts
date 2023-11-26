@@ -110,14 +110,13 @@ export class PsProcess {
     }
 
     SendMessage<S = any, R = any>(msg: Message<S>): Promise<Message<R>> {
-        // console.debug(`server sending message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
-
         return new Promise((resolve, reject) => {
             if (!this.worker) {
                 console.warn(`worker is null, is the process terminated? dropping message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
                 return;
             }
 
+            const mark = performance.mark(`Server_SendMessage:${msg.lpSubsystem}:${msg.nType}`);
             const channel = this.RegisterCallback((msg) => {
                 if (msg.nType & 0x80000000) {
                     reject(msg.data);
@@ -125,6 +124,8 @@ export class PsProcess {
                 else {
                     resolve(msg);
                 }
+                
+                performance.measure(`SendMessage:${msg.lpSubsystem}:${msg.nType}`, { start: mark.startTime, end: performance.now() });
             });
 
             this.worker.postMessage({
@@ -143,7 +144,7 @@ export class PsProcess {
             return;
         }
 
-        // console.debug(`server posting message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+        performance.mark(`Server_PostMessage:${msg.lpSubsystem}:${msg.nType}`);
         this.worker.postMessage(msg);
     }
 
@@ -173,11 +174,12 @@ export class PsProcess {
         const handler = this.peb.lpSubsystems.get(msg.lpSubsystem)?.lpExports[msg.nType];
         if (handler) {
             try {
-                // console.log(`%s:server recieved message %s:%d, %O, calling %O`, msg.lpSubsystem, msg.lpSubsystem, msg.nType, msg, handler);
-
+                const mark = performance.now();
+                
                 let resp = await handler(this.peb, msg.data);
-
                 this.PostMessage({ lpSubsystem: msg.lpSubsystem, nType: msg.nType, nChannel: msg.nChannel, data: resp });
+
+                performance.measure(`HandleSyscall:${msg.lpSubsystem}:${msg.nType}`, { start: mark, end: performance.now() });
             } catch (e) {
                 this.PostMessage({ lpSubsystem: msg.lpSubsystem, nType: msg.nType | 0x80000000, nChannel: msg.nChannel, data: e });
                 console.error(`error while handling message ${msg.lpSubsystem}:${msg.nType}`);

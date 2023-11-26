@@ -34,6 +34,13 @@ export function NtIntGetSystemMetrics(nIndex: number): number {
             return 1; // hardcoded, fix
         case SM.CYBORDER:
             return 1; // hardcoded, fix
+        case SM.CYCAPTION:
+            return 18; // hardcoded, fix
+            case SM.CXDLGFRAME:
+            return 3; // hardcoded, fix
+        case SM.CYDLGFRAME:
+        return 3; // hardcoded, fix
+
         default:
             console.warn(`NtIntGetSystemMetrics: unknown index ${nIndex}`);
             return 0;

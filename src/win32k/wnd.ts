@@ -16,7 +16,7 @@ import {
 } from "../types/user32.types.js";
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
-import { HDC, RECT } from "../types/gdi32.types.js";
+import { HDC, OffsetRect, RECT } from "../types/gdi32.types.js";
 import { HWNDS, W32CLASSINFO, W32PROCINFO } from "./shared.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import {
@@ -222,6 +222,10 @@ export class WND {
             this._pRootElement.style.zIndex = `${value}`;
     }
 
+    public get lpClass(): W32CLASSINFO {
+        return this._pClsInfo;
+    }
+
     public AddChild(hWnd: HWND): void {
         this._phwndChildren.splice(0, 0, hWnd);
         this.FixZOrder();
@@ -263,7 +267,7 @@ export class WND {
         this.dwStyle = this.dwStyle & ~WS.VISIBLE;
     }
 
-    public MoveWindow(x: number, y: number, cx: number, cy: number, bRepaint: boolean): void {
+    public async MoveWindow(x: number, y: number, cx: number, cy: number, bRepaint: boolean): Promise<void> {
         if ((this.dwStyle & (WS.POPUP | WS.CHILD)) === 0) {
             cx = Math.max(cx, NtIntGetSystemMetrics(SM.CXMINTRACK));
             cy = Math.max(cy, NtIntGetSystemMetrics(SM.CYMINTRACK));
@@ -276,12 +280,16 @@ export class WND {
         this._rcWindow.right = x + cx;
         this._rcWindow.bottom = y + cy;
 
-        this._rcClient.left = 0;
-        this._rcClient.top = 0;
-        this._rcClient.right = cx;
-        this._rcClient.bottom = cy;
-
         this.FixWindowCoordinates();
+
+        let oldCX = previousWindow.right - previousWindow.left;
+        let oldCY = previousWindow.bottom - previousWindow.top;
+        let newCX = this.rcWindow.right - this.rcWindow.left;
+        let newCY = this.rcWindow.bottom - this.rcWindow.top;
+
+        if (oldCX !== newCX || oldCY !== newCY) {
+            await this.CalculateClientSize();
+        }
 
         if (this._pRootElement) {
             this._pRootElement.style.transform = `translate(${this.rcWindow.left}px, ${this.rcWindow.top}px)`;
@@ -291,6 +299,18 @@ export class WND {
 
         if (this._hDC) {
             GreResizeDC(this._hDC, this.rcClient);
+        }
+    }
+
+    public async CalculateClientSize(): Promise<void> {
+        let rect = { ...this.rcWindow };
+        rect.right -= rect.left;
+        rect.bottom -= rect.top;
+        rect.left = rect.top = 0;
+
+        const newRect = await NtDispatchMessage(this._peb, [this._hWnd, WM.NCCALCSIZE, 0, rect]);
+        if (newRect) {
+            this._rcClient = newRect;
         }
     }
 
@@ -377,11 +397,6 @@ export class WND {
         this._rcWindow.top = Math.floor(y);
         this._rcWindow.right = Math.floor(x + cx);
         this._rcWindow.bottom = Math.floor(y + cy);
-
-        this._rcClient.left = 0;
-        this._rcClient.top = 0;
-        this._rcClient.right = cx;
-        this._rcClient.bottom = cy;
     }
 
     async CreateElement() {

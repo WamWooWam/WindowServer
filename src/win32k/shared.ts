@@ -30,6 +30,8 @@ export interface W32PROCINFO {
 }
 
 export interface W32CLASSINFO {
+    style: number;
+    exStyle: number;
     lpszClassName: string;
     lpszClassVersion: string;
     lpszMenuName: string;

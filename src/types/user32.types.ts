@@ -15,6 +15,8 @@ const USER32 = {
     GetSystemMetrics: 0x0000000B,
     SetWindowPos: 0x0000000C,
     CreateDesktop: 0x0000000D,
+    GetWindowRect: 0x0000000E,
+    ScreenToClient: 0x0000000F,
 }
 
 export const HWND_TOP = 0;
@@ -111,11 +113,13 @@ export enum SM {
     CXMINTRACK = 34,
     CYMINTRACK = 35,
     CXMAXTRACK = 36,
-    CYMAXTRACK = 37,    
+    CYMAXTRACK = 37,   
+    CYSMCAPTION = 51,
+    CXSMCAPTION = 52,
+    CYSMSIZE = 53,
+    CXSMSIZE = 54, 
     CXMINIMIZED = 57,
     CYMINIMIZED = 58,
-    CYSMSIZE = 53,
-    CXSMSIZE = 54
 }
 
 

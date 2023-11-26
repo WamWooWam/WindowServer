@@ -16,6 +16,8 @@ export function PsCreateProcess(
     lpCurrentDirectory: string,
     lpStartupInfo: any): HANDLE {
 
+    const mark = performance.mark("PsCreateProcess");
+
     // TODO: this should be loaded from the executable file
     const exec: Executable = {
         file: lpApplicationName,

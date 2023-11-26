@@ -1,3 +1,4 @@
+import { HDC, POINT, RECT } from "../types/gdi32.types.js";
 import USER32, {
     ATOM,
     CREATE_DESKTOP,
@@ -24,7 +25,6 @@ import USER32, {
 import Executable from "../types/Executable.js";
 import { GetModuleHandle } from "./kernel32.js";
 import { HANDLE } from "../types/types.js";
-import { HDC } from "../types/gdi32.types.js";
 import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
@@ -134,25 +134,31 @@ export async function CreateWindowEx(
     hInstance: HINSTANCE,
     lpParam: any
 ): Promise<HANDLE> {
-    const msg = await User32.SendMessage<CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY>({
-        nType: USER32.CreateWindowEx,
-        data: {
-            dwExStyle,
-            lpClassName,
-            lpWindowName,
-            dwStyle,
-            x,
-            y,
-            nWidth,
-            nHeight,
-            hWndParent,
-            hMenu,
-            hInstance,
-            lpParam
-        }
-    });
+    const now = performance.now();
+    try {
+        const msg = await User32.SendMessage<CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY>({
+            nType: USER32.CreateWindowEx,
+            data: {
+                dwExStyle,
+                lpClassName,
+                lpWindowName,
+                dwStyle,
+                x,
+                y,
+                nWidth,
+                nHeight,
+                hWndParent,
+                hMenu,
+                hInstance,
+                lpParam
+            }
+        });
 
-    return msg.data.hWnd;
+        return msg.data.hWnd;
+    }
+    finally {
+        performance.measure(`CreateWindowEx:${lpClassName}`, { start: now, end: performance.now() });
+    }
 }
 
 /**
@@ -388,6 +394,32 @@ export async function CreateDesktop(lpszDesktop: string, lpszDevice: string, pDe
     });
 
     return msg.data;
+}
+
+/**
+ * Retrieves the dimensions of the bounding rectangle of the specified window. The dimensions are given in screen coordinates that are relative to the upper-left corner of the screen.
+ * @param hWnd A handle to the window.
+ * @returns A RECT structure that receives the screen coordinates of the upper-left and lower-right corners of the window, or NULL if the function fails.
+ */
+export async function GetWindowRect(hWnd: HANDLE): Promise<RECT> {
+    const msg = await User32.SendMessage<HANDLE, RECT>({
+        nType: USER32.GetWindowRect,
+        data: hWnd
+    });
+
+    return msg.data;
+}
+
+// TODO: this should not require a syscall, use shared memory
+export async function ScreenToClient(hWnd: HANDLE, lpPoint: POINT): Promise<boolean> {
+    const msg = await User32.SendMessage<{ hWnd: HANDLE, lpPoint: POINT }, { retVal: boolean, lpPoint: POINT }>({
+        nType: USER32.ScreenToClient,
+        data: { hWnd, lpPoint }
+    });
+
+    Object.assign(lpPoint, msg.data.lpPoint);
+
+    return msg.data.retVal;
 }
 
 const user32: Executable = {
