@@ -94,3 +94,10 @@ export async function SetTextColor(hDC: HANDLE, crColor: number): Promise<number
         data: { hDC, crColor }
     })).data as number;
 }
+
+export async function Rectangle(hDC: HANDLE, left: number, top: number, right: number, bottom: number): Promise<boolean> {
+    return (await Gdi32.SendMessage({
+        nType: GDI32.Rectangle,
+        data: { hDC, left, top, right, bottom }
+    })).data as boolean;
+}

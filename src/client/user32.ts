@@ -447,6 +447,17 @@ export async function FindWindow(lpClassName: string, lpWindowName: string): Pro
     return msg.data;
 }
 
+export async function GetClientRect(hWnd: HANDLE, lpRect: RECT): Promise<boolean> {
+    const msg = await User32.SendMessage<{ hWnd: HANDLE, lpRect: RECT }, { retVal: boolean, lpRect: RECT }>({
+        nType: USER32.GetClientRect,
+        data: { hWnd, lpRect }
+    });
+
+    Object.assign(lpRect, msg.data.lpRect);
+
+    return msg.data.retVal;
+}
+
 const user32: Executable = {
     file: "user32.js",
     type: "dll",

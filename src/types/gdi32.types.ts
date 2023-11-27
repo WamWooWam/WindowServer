@@ -9,7 +9,8 @@ export const GDI32 = {
     CreateSolidBrush: 0x00000006,
     CreatePen: 0x00000007,
     TextOut: 0x00000008,
-    SetTextColor: 0x00000009,
+    SetTextColor: 0x00000009, 
+    Rectangle: 0x0000000A,
 }
 
 export type RECT = {

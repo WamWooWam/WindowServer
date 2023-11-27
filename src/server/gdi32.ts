@@ -1,13 +1,13 @@
 import { GDI32, HRGN } from "../types/gdi32.types.js";
+import { GreFillRegion, GreRectangle } from "../win32k/gdi/draw.js";
 import { HANDLE, PEB, SUBSYSTEM_DEF } from "../types/types.js";
-import { NtGdiDeleteObject, NtGdiSelectObject, NtGdiSetTextColor, NtGdiTextOut } from "../win32k/gdi/ntgdi.js";
+import { NtGdiDeleteObject, NtGdiRectangle, NtGdiSelectObject, NtGdiSetTextColor, NtGdiTextOut } from "../win32k/gdi/ntgdi.js";
 import { ObGetObject, ObSetHandleOwner, ObSetObject } from "../objects.js";
 import REGION, { GreCombineRgn, GreCreateRectRgn } from "../win32k/gdi/rgn.js";
 
 import DC from "../win32k/gdi/dc.js";
 import { GreCreatePen } from "../win32k/gdi/pen.js";
 import { GreCreateSolidBrush } from "../win32k/gdi/brush.js";
-import { GreFillRegion } from "../win32k/gdi/draw.js";
 import { SUBSYS_GDI32 } from "../types/subsystems.js";
 
 function GdiCreateRectRgn(peb: PEB, { x1, x2, y1, y2 }: { x1: number, y1: number, x2: number, y2: number }): HRGN {
@@ -64,6 +64,11 @@ function GdiSetTextColor(peb: PEB, { hDC, crColor }: { hDC: HANDLE, crColor: num
     return NtGdiSetTextColor(hDC, crColor);
 }
 
+function GdiRectangle(peb: PEB, { hDC, left, top, right, bottom }: { hDC: HANDLE, left: number, top: number, right: number, bottom: number }): boolean {
+    NtGdiRectangle(hDC, { left, top, right, bottom });
+    return true;
+}
+
 
 const GDI32_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_GDI32,
@@ -76,7 +81,8 @@ const GDI32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [GDI32.CreateSolidBrush]: GdiCreateSolidBrush,
         [GDI32.CreatePen]: GdiCreatePen,
         [GDI32.TextOut]: GdiTextOut,
-        [GDI32.SetTextColor]: GdiSetTextColor
+        [GDI32.SetTextColor]: GdiSetTextColor,
+        [GDI32.Rectangle]: GdiRectangle,
     }
 };
 

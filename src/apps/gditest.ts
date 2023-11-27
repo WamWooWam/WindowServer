@@ -50,6 +50,7 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
             await DeleteObject(rgn2);
             await DeleteObject(intersect);
             await DeleteObject(brush);
+            await DeleteObject(hdc);
             break;
         }
 

@@ -20,6 +20,7 @@ const USER32 = {
     GetWindowRect: 0x0000000E,
     ScreenToClient: 0x0000000F,
     FindWindow: 0x00000010,
+    GetClientRect: 0x00000011,
 }
 
 export const HWND_TOP = 0;

@@ -189,6 +189,16 @@ function UserFindWindow(peb: PEB, params: { lpClassName: string, lpWindowName: s
     return NtFindWindow(peb, params.lpClassName, params.lpWindowName);
 }
 
+function UserGetClientRect(peb: PEB, { hWnd }: { hWnd: HANDLE, lpRect: RECT }): { retVal: boolean, lpRect: RECT } {
+    const wnd = ObGetObject<WND>(hWnd);
+    const rect = { ...wnd.rcClient };
+
+    // ensure the rect is relative to the client area
+    OffsetRect(rect, -wnd.rcClient.left, -wnd.rcClient.top);
+
+    return { retVal: true, lpRect: rect };
+}
+
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_USER32,
     lpfnInit: NtUser32Initialize,
@@ -209,7 +219,8 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.CreateDesktop]: UserCreateDesktop,
         [USER32.GetWindowRect]: UserGetWindowRect,
         [USER32.ScreenToClient]: UserScreenToClient,
-        [USER32.FindWindow]: UserFindWindow
+        [USER32.FindWindow]: UserFindWindow,
+        [USER32.GetClientRect]: UserGetClientRect
     }
 };
 
