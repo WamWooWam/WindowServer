@@ -20,7 +20,7 @@ import KERNEL32, {
     IDX_LAST_ERROR,
     IDX_PID,
 } from "../types/kernel32.types.js";
-import { NtCreateDirectory, NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../file.js";
+import { NtCreateDirectory, NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../fs/file.js";
 import { ObCloseHandle, ObGetObject } from "../objects.js";
 import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 

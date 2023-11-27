@@ -1,11 +1,11 @@
-import { NtPostMessage, NtPostProcessMessage, NtPostQuitMessage } from "./win32k/msg.js";
+import { NtPostProcessMessage } from "./win32k/msg.js";
 import { PsCreateProcess, PsRegisterProcessHooks, PsQuitProcess, PsTerminateProcess } from "./loader.js"
 
 import { HANDLE } from "./types/types.js";
-import { NtUserInit } from "./win32k/init.js";
 import { PsProcess } from "./process.js";
-import { HWND_BROADCAST, WM } from "./types/user32.types.js";
+import { WM } from "./types/user32.types.js";
 import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from "./objects.js";
+import { NtInit } from "./boot.js";
 
 (async () => {
     const procs: HANDLE[] = [];
@@ -78,24 +78,14 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
     }
 
     const KillProc = async () => {
-        if (procs.length === 1) {
-            console.warn("Refusing to kill wininit.");
-            return;
-        }
-
         const proc = GetSelectedProcess();
-
         PsTerminateProcess(proc);
         UpdateButtons();
     }
 
     const QuitProc = async () => {
-        if (procs.length === 1) {
-            console.warn("Refusing to kill wininit.");
-            return;
-        }
-
         const proc = GetSelectedProcess();
+        
         try {
             NtPostProcessMessage(proc, { hWnd: null, message: WM.QUIT, wParam: 0, lParam: 0 });
         }
@@ -150,8 +140,8 @@ import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from
 
     PsRegisterProcessHooks(ProcessCreated, ProcessDestroyed);
 
-    await NtUserInit();
-    PsCreateProcess("apps/wininit.js", "", false, {}, "C:\\Windows\\System32", null);
+    // boot the system
+    await NtInit();
 
     setInterval(UpdateStates, 1000);
 })();

@@ -1,4 +1,4 @@
-import NTDLL, { LOAD_SUBSYSTEM, PROCESS_EXIT } from "../types/ntdll.types.js";
+import { LOAD_SUBSYSTEM, PROCESS_CRASH, PROCESS_EXIT } from "../types/ntdll.int.types.js";
 import { PEB, SUBSYSTEM_DEF, SubsystemId } from "../types/types.js";
 import {
     SUBSYS_GDI32,
@@ -8,6 +8,8 @@ import {
     SUBSYS_USER32
 } from "../types/subsystems.js";
 
+import { KeBugCheckEx } from "../bugcheck.js";
+import NTDLL from "../types/ntdll.types.js";
 import { ObGetObject } from "../objects.js";
 import { PsProcess } from "../process.js";
 
@@ -30,7 +32,7 @@ async function SubsystemLoaded(peb: PEB, data: LOAD_SUBSYSTEM) {
     if (data.cbSharedMemory) {
         sharedMemory = new SharedArrayBuffer(data.cbSharedMemory);
     }
-    
+
     process.CreateSubsystem(subsystem, sharedMemory);
 
     return {
@@ -43,11 +45,17 @@ async function ProcessExit(peb: PEB, data: PROCESS_EXIT) {
     await process.Quit();
 }
 
+function ProcessCrash(peb: PEB, data: PROCESS_CRASH) {
+    const process = ObGetObject<PsProcess>(peb.hProcess);
+    process.Terminate(data.uExitCode, data.error);
+}
+
 const NTDLL_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_NTDLL,
     lpExports: {
         [NTDLL.LoadSubsystem]: SubsystemLoaded,
         [NTDLL.ProcessExit]: ProcessExit,
+        [NTDLL.ProcessCrash]: ProcessCrash,
     }
 };
 

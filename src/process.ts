@@ -1,12 +1,14 @@
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF, Version } from "./types/types.js";
-import NTDLL, { PROCESS_CREATE } from "./types/ntdll.types.js";
 import { ObDestroyHandle, ObGetObject, ObSetObject } from "./objects.js";
 
 import Executable from "./types/Executable.js";
+import { KeBugCheckEx } from "./bugcheck.js";
 import Message from "./types/Message.js";
+import NTDLL from "./types/ntdll.types.js";
 import NTDLL_SUBSYSTEM from "./server/ntdll.js";
 import { NtAllocSharedMemory } from "./sharedmem.js";
 import { NtGetDefaultDesktop } from "./win32k/desktop.js";
+import { PROCESS_CREATE } from "./types/ntdll.int.types.js";
 import { SUBSYS_NTDLL } from "./types/subsystems.js";
 
 export class PsProcess {
@@ -23,6 +25,8 @@ export class PsProcess {
     hIn: HANDLE;
     hOut: HANDLE;
     hErr: HANDLE;
+
+    isCritical: boolean = false;
 
     exitCode?: number;
 
@@ -90,7 +94,7 @@ export class PsProcess {
     /**
      * Semi-gracefully terminates the process by calling exit handlers and then terminating the worker.
      */
-    async Quit() {
+    async Quit(uExitCode: number = 0, error: any = null) {
         if (this.state === 'terminating' || this.state === 'terminated') {
             return;
         }
@@ -104,10 +108,15 @@ export class PsProcess {
         this.worker.terminate();
         this.worker = null;
 
-        this.onTerminate?.(0);
+        this.exitCode = uExitCode;
+        this.onTerminate?.(uExitCode);
         this.state = 'terminated';
 
         ObDestroyHandle(this.handle);
+
+        if (this.isCritical) {
+            KeBugCheckEx(0xEF, error, uExitCode, this.handle, 0);
+        }
     }
 
     /**
@@ -115,18 +124,27 @@ export class PsProcess {
      * to destroy all objects owned by the process.
      * @internal
      */
-    Terminate() {
+    Terminate(uExitCode: number = 0, error: any = null) {
+        if (this.state === 'terminated') {
+            return;
+        }
+
         this.worker.terminate();
         this.worker = null;
 
         try {
-            this.onTerminate?.(0);
+            this.exitCode = uExitCode;
+            this.onTerminate?.(uExitCode);
             this.state = 'terminated';
 
             ObDestroyHandle(this.handle);
         }
         catch (e) {
             console.error(e);
+        }
+
+        if (this.isCritical) {
+            KeBugCheckEx(0xEF, error, uExitCode, this.handle, 0);
         }
     }
 

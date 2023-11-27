@@ -110,7 +110,7 @@ export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: numb
     const peb = wnd.peb;
     switch (msg) {
         case WMP.CREATEELEMENT: {
-            NtUserDesktopCreateElement(wnd);
+            NtUserDesktopCreateElement(peb, wnd);
             break;
         }
         case WM.DISPLAYCHANGE: {
@@ -133,22 +133,20 @@ export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: numb
     }
 }
 
+
 let lastMouseMove = 0;
-function NtUserDesktopCreateElement(wnd: WND) {
+function NtUserDesktopCreateElement(peb: PEB, wnd: WND) {
     const pRootElement = new DesktopElement();
     wnd.pRootElement = pRootElement;
 
     let captureElement: HTMLElement = null;
-
-    // we need to bubble events up to windows via window messages
-    window.addEventListener("pointermove", async (e) => {
+    async function HitTestMove(e: PointerEvent) {
         e.preventDefault();
 
         const x = e.clientX;
         const y = e.clientY;
 
         // console.log("pointermove", x, y);
-
         const now = performance.now();
         if (now - lastMouseMove < 8)
             return;
@@ -186,9 +184,9 @@ function NtUserDesktopCreateElement(wnd: WND) {
                 pt: { x, y }
             });
         });
-    });
+    }
 
-    window.addEventListener("pointerdown", async (e) => {
+    async function HitTestDown(e: PointerEvent) {
         e.preventDefault();
 
         captureElement = e.target as HTMLElement;
@@ -227,9 +225,9 @@ function NtUserDesktopCreateElement(wnd: WND) {
                 pt: { x, y }
             });
         });
-    });
+    }
 
-    window.addEventListener("pointerup", async (e) => {
+    async function HitTestUp(e: PointerEvent) {
         e.preventDefault();
 
         if (captureElement)
@@ -264,8 +262,12 @@ function NtUserDesktopCreateElement(wnd: WND) {
                 pt: { x, y }
             });
         });
-    });
+    }
 
+    // we need to bubble events up to windows via window messages
+    window.addEventListener("pointermove", HitTestMove);
+    window.addEventListener("pointerdown", HitTestDown);
+    window.addEventListener("pointerup", HitTestUp);
     window.addEventListener("dblclick", async (e) => {
         const x = e.clientX;
         const y = e.clientY;
@@ -279,6 +281,12 @@ function NtUserDesktopCreateElement(wnd: WND) {
             }
         });
     });
+
+
+    // automatically release event listeners when the desktop is destroyed
+    ObSetObject(HitTestMove, "CALLBACK", peb.hDesktop, () => window.removeEventListener("pointermove", HitTestMove));
+    ObSetObject(HitTestDown, "CALLBACK", peb.hDesktop, () => window.removeEventListener("pointerdown", HitTestDown));
+    ObSetObject(HitTestUp, "CALLBACK", peb.hDesktop, () => window.removeEventListener("pointerup", HitTestUp));
 }
 
 async function NtUserHitTestWindow(peb: PEB, x: number, y: number, callback: (hWnd: HWND, result: HT) => void) {

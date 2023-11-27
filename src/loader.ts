@@ -53,6 +53,12 @@ export function PsCreateProcess(
     return proc.handle;
 }
 
+export function PsProcessMarkCritical(hProcess: HANDLE, bCritical: boolean): boolean {
+    const proc = ObGetObject<PsProcess>(hProcess);
+    proc.isCritical = bCritical;
+    return true;
+}
+
 export function PsListProcesses(): HANDLE[] {
     return [...ObEnumObjectsByType("PROC")];
 }

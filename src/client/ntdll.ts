@@ -1,15 +1,16 @@
 // env: worker
 
-import NTDLL, {
-    CALLBACK_MESSAGE_TYPE,
+import {
     LOAD_SUBSYSTEM,
     PROCESS_CREATE,
     PROCESS_EXIT,
     SUBSYSTEM_LOADED
-} from "../types/ntdll.types.js";
+} from "../types/ntdll.int.types.js";
 
 import Executable from "../types/Executable.js";
 import Message from "../types/Message.js";
+import NTDLL from "../types/ntdll.types.js";
+import { PROCESS_CRASH } from "../types/ntdll.int.types.js";
 import { SUBSYS_NTDLL } from "../types/subsystems.js";
 import { SubsystemId } from "../types/types.js";
 
@@ -128,7 +129,14 @@ __addEventListener('message', (event) => {
 });
 
 __addEventListener('error', (event) => {
-    console.error(event); // TODO: send error to parent
+    // console.error(event); // TODO: send error to parent
+    Ntdll.SendMessage<PROCESS_CRASH>({
+        nType: NTDLL.ProcessCrash,
+        data: {
+            uExitCode: 0xC0000144,
+            error: event.error ?? event.message ?? event
+        }
+    });
 });
 
 __addEventListener('messageerror', (event) => {
@@ -136,7 +144,13 @@ __addEventListener('messageerror', (event) => {
 });
 
 __addEventListener('unhandledrejection', (event) => {
-    console.error(event); // TODO: send error to parent
+    Ntdll.SendMessage<PROCESS_CRASH>({
+        nType: NTDLL.ProcessCrash,
+        data: {
+            uExitCode: 0xC0000409,
+            error: event.reason
+        }
+    });
 });
 
 const Ntdll = new SubsystemClass(SUBSYS_NTDLL, NTDLL_HandleMessage);
