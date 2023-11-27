@@ -17,6 +17,8 @@
             right: 0;
             bottom: 0;
             overflow: hidden;
+            overscroll-behavior-x: none;
+            touch-action: none;
         }
     </style>
 </head>
@@ -61,7 +63,8 @@
     </div>
 
     <!-- TODO: this will eventually be a process -->
-    <x-window id="task-manager" window-title="Task Manager" window-style="WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_ACTIVE | WS_VISIBLE"
+    <x-window id="task-manager" window-title="Task Manager"
+        window-style="WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_ACTIVE | WS_VISIBLE"
         style="width: 300px; z-index: 9999999; position: absolute; right: 24px; bottom: 24px;">
         <div style="padding: 8px;">
             <div class="sunken-panel" style="height: 120px; width: 100%;">

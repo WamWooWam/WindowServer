@@ -146,8 +146,12 @@ function NtUserDesktopCreateElement(wnd: WND) {
 
     // we need to bubble events up to windows via window messages
     window.addEventListener("pointermove", async (e) => {
+        e.preventDefault();
+
         const x = e.clientX;
         const y = e.clientY;
+
+        // console.log("pointermove", x, y);
 
         const now = performance.now();
         if (now - lastMouseMove < 8)
@@ -189,8 +193,11 @@ function NtUserDesktopCreateElement(wnd: WND) {
     });
 
     window.addEventListener("pointerdown", async (e) => {
+        e.preventDefault();
+
         captureElement = e.target as HTMLElement;
         captureElement.setPointerCapture(e.pointerId);
+
 
         const x = e.clientX;
         const y = e.clientY;
@@ -227,6 +234,8 @@ function NtUserDesktopCreateElement(wnd: WND) {
     });
 
     window.addEventListener("pointerup", async (e) => {
+        e.preventDefault();
+
         if (captureElement)
             captureElement.releasePointerCapture(e.pointerId);
 

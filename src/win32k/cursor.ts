@@ -11,7 +11,18 @@ export function NtUserGetCursorPos(peb: PEB) {
 export function NtUserInitCursor() {
     gptCursorPos = { x: 0, y: 0 };
 
-    window.addEventListener("mousemove", (e) => {
+    window.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        gptCursorPos = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener("pointermove", (e) => {
+        e.preventDefault();
+        gptCursorPos = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener("pointerup", (e) => {
+        e.preventDefault();
         gptCursorPos = { x: e.clientX, y: e.clientY };
     });
 }
