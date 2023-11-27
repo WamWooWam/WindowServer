@@ -20,8 +20,8 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
         return;
     }
 
-    const sysCommand = wParam & 65520;
-    let hitTest = wParam & 15;
+    const sysCommand = wParam & 0xFFF0;
+    let hitTest = wParam & 0xF;
 
     const style = wnd.dwStyle;
     const exStyle = wnd.dwExStyle;

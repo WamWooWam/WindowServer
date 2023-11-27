@@ -1,12 +1,11 @@
-import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF, SubsystemHandlers, SubsystemId, Version } from "./types/types.js";
-import NTDLL, { CALLBACK_MESSAGE_TYPE, PROCESS_CREATE } from "./types/ntdll.types.js";
+import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF, Version } from "./types/types.js";
+import NTDLL, { PROCESS_CREATE } from "./types/ntdll.types.js";
 import { ObDestroyHandle, ObGetObject, ObSetObject } from "./objects.js";
 
 import Executable from "./types/Executable.js";
 import Message from "./types/Message.js";
 import NTDLL_SUBSYSTEM from "./server/ntdll.js";
 import { NtAllocSharedMemory } from "./sharedmem.js";
-import { NtAwait } from "./util.js";
 import { NtGetDefaultDesktop } from "./win32k/desktop.js";
 import { SUBSYS_NTDLL } from "./types/subsystems.js";
 

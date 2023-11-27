@@ -30,13 +30,8 @@ export async function NtGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MES
 
 export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
     let _msg: MSG = msg as MSG;
-    if (msg instanceof Array) {
-        _msg = {
-            hWnd: msg[0],
-            message: msg[1],
-            wParam: msg[2],
-            lParam: msg[3]
-        };
+    if (msg instanceof Array) { // WNDPROC_PARAMS
+        _msg = { hWnd: msg[0], message: msg[1], wParam: msg[2], lParam: msg[3] };
     }
 
     if (_msg.hWnd === HWND_BROADCAST) {
@@ -56,7 +51,7 @@ export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
 
         return;
     }
-    
+
     const wnd = ObGetObject<WND>(_msg.hWnd);
     const _peb = wnd ? wnd.peb : peb;
     const state = GetW32ProcInfo(_peb);
@@ -67,13 +62,8 @@ export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
 
 export async function NtDispatchMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Promise<LRESULT> {
     let _msg: MSG = msg as MSG;
-    if (msg instanceof Array) {
-        _msg = {
-            hWnd: msg[0],
-            message: msg[1],
-            wParam: msg[2],
-            lParam: msg[3]
-        };
+    if (msg instanceof Array) { // WNDPROC_PARAMS
+        _msg = { hWnd: msg[0], message: msg[1], wParam: msg[2], lParam: msg[3] };
     }
 
     if (_msg.hWnd && _msg.message === WM.LBUTTONDOWN || _msg.message === WM.MBUTTONDOWN || _msg.message === WM.RBUTTONDOWN) {
@@ -85,7 +75,7 @@ export async function NtDispatchMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Pr
     const _peb = wnd ? wnd.peb : peb;
     const state = GetW32ProcInfo(_peb);
     if (!state) return; // this process doesn't have a message queue
-    
+
     return await state.lpMsgQueue.DispatchMessage(_msg);
 }
 
@@ -121,7 +111,7 @@ export async function NtSendMessageTimeout(peb: PEB, msg: MSG | WNDPROC_PARAMS, 
 export async function NtPostQuitMessage(peb: PEB, nExitCode: number) {
     const state = GetW32ProcInfo(peb);
     if (!state) return false; // this process doesn't have a message queue
-    
+
     const msg: MSG = {
         hWnd: null,
         message: WM.QUIT,
