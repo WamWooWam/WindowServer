@@ -1,18 +1,18 @@
-import { BLACK_PEN, DC_BRUSH, HDC, POINT, RECT, SYSTEM_FONT, TRANSPARENT, WHITE_BRUSH } from "../../types/gdi32.types.js";
-import BRUSH, { GreRealiseBrush } from "./brush.js";
+import { BLACK_PEN, HDC, POINT, RECT, TRANSPARENT, WHITE_BRUSH } from "../../types/gdi32.types.js";
 import { COLOR, HWND, SPI } from "../../types/user32.types.js";
 import FONT, { GreCreateFontIndirect } from "./font.js";
-import { GreGetObj, GreGetStockObject } from "./obj.js";
 import { HANDLE, PEB } from "../../types/types.js";
 import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetHandleOwner, ObSetObject } from "../../objects.js";
 import PEN, { GreRealisePen } from "./pen.js";
 
+import BRUSH from "./brush.js";
 import CLIP from "./clip.js";
 import { GDIOBJ } from "./ntgdi.js";
+import { GreGetStockObject } from "./obj.js";
 import { IntGetSysColor } from "../brush.js";
 import { MATRIX } from "./trans.js";
 import { NtUserSystemParametersInfo } from "../metrics.js";
-import { WND } from "../wnd.js";
+import WND from "../wnd.js";
 
 // represents a device context
 interface DC {

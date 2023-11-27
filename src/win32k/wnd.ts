@@ -1,13 +1,11 @@
+import { CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
 import {
-    CREATE_WINDOW_EX,
     CW_USEDEFAULT,
     HINSTANCE,
     HMENU,
     HWND,
     LPARAM,
     LRESULT,
-    MSG,
-    SC,
     SM,
     WM,
     WNDPROC,
@@ -16,23 +14,15 @@ import {
 } from "../types/user32.types.js";
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
-import { HDC, OffsetRect, RECT } from "../types/gdi32.types.js";
+import { HDC, RECT } from "../types/gdi32.types.js";
 import { HWNDS, W32CLASSINFO, W32PROCINFO } from "./shared.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
-import {
-    ObCloseHandle,
-    ObDuplicateHandle,
-    ObGetChildHandlesByType,
-    ObGetObject,
-    ObSetHandleOwner,
-    ObSetObject
-} from "../objects.js";
+import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetObject } from "../objects.js";
 
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
-import { WMP } from "../types/user32.int.types.js";
 
-export class WND {
+export default class WND {
     private _hWnd: HWND;
     private _hInstance: HINSTANCE;
     private _dwStyle: number

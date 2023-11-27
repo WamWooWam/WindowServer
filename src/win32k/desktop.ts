@@ -1,15 +1,15 @@
 import { ObEnumObjectsByType, ObGetObject, ObSetObject } from "../objects.js";
 import { INRECT, InflateRect, OffsetRect, POINT } from "../types/gdi32.types.js";
 import { HANDLE, PEB } from "../types/types.js";
-import { WMP } from "../types/user32.int.types.js";
-import { CREATE_DESKTOP, CREATE_WINDOW_EX, HT, HWND, HWND_TOP, HWND_TOPMOST, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
+import { CREATE_DESKTOP, CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
+import { HT, HWND, HWND_TOP, HWND_TOPMOST, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
 import { NtDefWindowProc } from "./def.js";;
 import DesktopElement from "./html/DesktopElement.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtPostMessage } from "./msg.js";
 import { NtCreateWindowEx, NtGetDesktopWindow, NtSetWindowPos, NtShowWindow } from "./window.js";
 import { NtDoNCHitTest } from "./nc.js";
-import { WND } from "./wnd.js";
+import WND from "./wnd.js";
 
 // export default interface DESKTOP {
 //     dwSessionId: number;
@@ -20,17 +20,13 @@ import { WND } from "./wnd.js";
 //     hCaptureWindow?: HWND;
 // }
 
+// TODO: implement hWindowOrder
 export default class DESKTOP {
     dwSessionId: number;
     hwndDesktop: HWND;
     lpszDesktop: string;
     hActiveWindow: HWND;
     hCaptureWindow?: HWND;
-
-    public static async CreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP): Promise<HANDLE> {
-        const desktop = await NtUserCreateDesktop(peb, pDeskParams);
-        return desktop;
-    }
 }
 
 export function NtGetDefaultDesktop(): HANDLE {

@@ -4,8 +4,19 @@ import { HANDLE } from "../types/types.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
 import { SUBSYS_GDI32 } from "../types/subsystems.js";
 
+export * from "../types/gdi32.types.js";
+
 const Gdi32 = await NtRegisterSubsystem(SUBSYS_GDI32, () => { });
 
+/**
+ * The GetStockObject function retrieves a handle to one of the stock pens, brushes, fonts, or palettes.
+ * @param nIndex The type of stock object.
+ * @returns If the function succeeds, the return value is the handle to the requested logical object.
+ * @see {@link https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getstockobject}
+ * @category GDI32
+ * @example
+ * const hBrush = await GetStockObject(WHITE_BRUSH);
+ */
 export function GetStockObject(nIndex: number): HANDLE {
     return 0x80000000 + nIndex;
 }

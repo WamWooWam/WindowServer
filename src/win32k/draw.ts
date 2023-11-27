@@ -51,10 +51,9 @@ import {
 import { NtIntGetSystemMetrics, NtUserSystemParametersInfo } from "./metrics.js";
 
 import BRUSH from "./gdi/brush.js";
-import { GreCreateFontIndirect } from "./gdi/font.js";
 import { GreRectangle } from "./gdi/draw.js";
 import PEN from "./gdi/pen.js";
-import { WND } from "./wnd.js";
+import WND from "./wnd.js";
 
 export function NtUserFillRect(hDC: HDC, prc: RECT, hbr: HBRUSH) {
     const dc = GreGetObj<DC>(hDC);

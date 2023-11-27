@@ -1,16 +1,5 @@
 import { GetModuleHandle } from "../client/kernel32.js";
 import {
-    CreateWindow,
-    CreateWindowEx,
-    DefWindowProc,
-    DispatchMessage,
-    GetMessage,
-    PostQuitMessage,
-    RegisterClass,
-    ShowWindow,
-    TranslateMessage
-} from "../client/user32.js";
-import {
     CW_USEDEFAULT,
     HINSTANCE,
     HWND,
@@ -24,7 +13,16 @@ import {
     WPARAM,
     SS,
     MINMAXINFO,
-} from "../types/user32.types.js";
+    CreateWindow,
+    CreateWindowEx,
+    DefWindowProc,
+    DispatchMessage,
+    GetMessage,
+    PostQuitMessage,
+    RegisterClass,
+    ShowWindow,
+    TranslateMessage
+} from "../client/user32.js";
 
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {

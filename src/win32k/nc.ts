@@ -8,7 +8,7 @@ import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtUserSetActiveWindow } from "./desktop.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
-import { WND } from "./wnd.js";
+import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
 
 export function NtDefCalcNCSizing(peb: PEB, hWnd: number, Msg: WM, wParam: WPARAM, lParam: LPARAM): LRESULT {
@@ -305,7 +305,7 @@ export function NtDefNCHitTest(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARAM
     }
 
     return HT.CLIENT;
-} 
+}
 
 export async function NtDoNCHitTest(wnd: WND, x: number, y: number) {
     if (!wnd.stateFlags.overrides_NCHITTEST) {

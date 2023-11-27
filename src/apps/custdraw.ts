@@ -2,41 +2,44 @@ import {
     CreatePen,
     CreateSolidBrush,
     DeleteObject,
+    HBRUSH,
+    HDC,
+    INRECT,
+    PS,
+    RECT,
     Rectangle,
     SelectObject,
     TextOut
 } from "../client/gdi32.js";
 import { GetModuleHandle } from "../client/kernel32.js";
 import {
+    COLOR,
+    CW_USEDEFAULT,
     CreateWindowEx,
     DefWindowProc,
     DispatchMessage,
     GetClientRect,
     GetDC,
     GetMessage,
-    PostQuitMessage,
-    RegisterClass,
-    ScreenToClient,
-    ShowWindow,
-    TranslateMessage
-} from "../client/user32.js";
-import { HDC, INRECT, PS, RECT } from "../types/gdi32.types.js";
-import {
-    CW_USEDEFAULT,
     HINSTANCE,
+    HIWORD,
+    HT,
     HWND,
+    LOWORD,
     LPARAM,
     LRESULT,
     MSG,
+    PostQuitMessage,
+    RegisterClass,
     SW,
-    WS,
+    ScreenToClient,
+    ShowWindow,
+    TranslateMessage,
     WM,
     WNDCLASSEX,
     WPARAM,
-    HT,
-    LOWORD,
-    HIWORD,
-} from "../types/user32.types.js";
+    WS
+} from "../client/user32.js";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
@@ -48,7 +51,6 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
             const clientRect: RECT = {} as RECT;
             await GetClientRect(hwnd, clientRect);
 
-            // draw a basic titlebar and close button
             const hdc: HDC = await GetDC(hwnd);
             const pen = await CreatePen(PS.NULL, 1, 0x000000);
             const background = await CreateSolidBrush(0x008080);
@@ -90,19 +92,8 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
             const clientRect: RECT = {} as RECT;
             await GetClientRect(hwnd, clientRect);
 
-            const titlebarRect: RECT = {
-                left: 0,
-                top: 0,
-                right: clientRect.right,
-                bottom: 20
-            };
-
-            const closeRect: RECT = {
-                left: clientRect.right - 30,
-                top: 0,
-                right: clientRect.right,
-                bottom: 30
-            };
+            const titlebarRect: RECT = { left: 0, top: 0, right: clientRect.right, bottom: 20 };
+            const closeRect: RECT = { left: clientRect.right - 30, top: 0, right: clientRect.right, bottom: 30 };
 
             if (INRECT(point.x, point.y, closeRect)) {
                 hitTest = HT.CLOSE;
@@ -142,7 +133,7 @@ async function main() {
         hInstance: <HINSTANCE>hModule,
         hIcon: 0,
         hCursor: 0,
-        hbrBackground: 0,
+        hbrBackground: <HBRUSH>(COLOR.WINDOW + 1),
         lpszMenuName: 0,
         lpszClassName: className,
         hIconSm: 0
@@ -153,7 +144,7 @@ async function main() {
         0,                           // dwExStyle
         className,                   // lpClassName
         "GDI Test Window",           // lpWindowName
-        WS.POPUP | WS.THICKFRAME,         // dwStyle
+        WS.POPUP | WS.THICKFRAME,    // dwStyle
 
         // x, y, nWidth, nHeight
         CW_USEDEFAULT, CW_USEDEFAULT, 350, 350,

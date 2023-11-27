@@ -11,7 +11,7 @@ import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
-import { WND } from "./wnd.js";
+import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
 
 export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lParam: LPARAM) {

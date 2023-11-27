@@ -37,12 +37,15 @@ export default abstract class WindowElementBase extends HTMLElement {
     }
 
     connectedCallback() {
+        this.applyStyles(this.dwStyle);
+        this.applyExStyles(this.dwExStyle);
     }
 
     disconnectedCallback() {
     }
 
     attributeChangedCallback(name: string, oldValue: string, newValue: string) {
+        if(!this.isConnected) return;
         switch (name) {
             case "window-title":
                 break;
@@ -57,6 +60,8 @@ export default abstract class WindowElementBase extends HTMLElement {
     }
 
     applyStyles(dwNewStyle: string): void {
+        if(dwNewStyle === null) return;
+        
         const dwStyle = this.parseWindowStyle(dwNewStyle);
         if (dwStyle === this._style) {
             return;
@@ -68,6 +73,8 @@ export default abstract class WindowElementBase extends HTMLElement {
     }
 
     applyExStyles(dwNewStyle: string): void {
+        if(dwNewStyle === null) return;
+
         const dwStyle = this.parseExWindowStyle(dwNewStyle);
         if (dwStyle === this._exStyle) {
             return;

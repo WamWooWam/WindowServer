@@ -1,22 +1,5 @@
-import KERNEL32, {
-    CLOSE_HANDLE,
-    CREATE_DIRECTORY,
-    CREATE_DIRECTORY_REPLY,
-    CREATE_FILE,
-    CREATE_FILE_REPLY,
-    GET_MODULE_HANDLE,
-    GET_MODULE_HANDLE_REPLY,
-    GET_PROCESS_INFO,
-    GET_PROCESS_INFO_REPLY,
-    IDX_LAST_ERROR,
-    IDX_PID,
-    READ_FILE,
-    READ_FILE_REPLY,
-    SET_FILE_POINTER,
-    SET_FILE_POINTER_REPLY,
-    WRITE_FILE,
-    WRITE_FILE_REPLY
-} from "../types/kernel32.types.js";
+import { CLOSE_HANDLE, CREATE_DIRECTORY, CREATE_DIRECTORY_REPLY, CREATE_FILE, CREATE_FILE_REPLY, GET_MODULE_HANDLE, GET_MODULE_HANDLE_REPLY, GET_PROCESS_INFO, GET_PROCESS_INFO_REPLY, READ_FILE, READ_FILE_REPLY, SET_FILE_POINTER, SET_FILE_POINTER_REPLY, WRITE_FILE, WRITE_FILE_REPLY } from "../types/kernel32.int.types.js";
+import KERNEL32, { IDX_LAST_ERROR, IDX_PID, STD_ERROR_HANDLE, STD_INPUT_HANDLE, } from "../types/kernel32.types.js";
 
 import Executable from "../types/Executable.js";
 import { HANDLE } from "../types/types.js";
@@ -24,48 +7,7 @@ import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
 import { SUBSYS_KERNEL32 } from "../types/subsystems.js";
 
-export const STD_INPUT_HANDLE = -10;
-export const STD_OUTPUT_HANDLE = -11;
-export const STD_ERROR_HANDLE = -12;
-
-export const GENERIC_ALL = 0x10000000;
-export const GENERIC_EXECUTE = 0x20000000;
-export const GENERIC_WRITE = 0x40000000;
-export const GENERIC_READ = 0x80000000;
-
-export const CREATE_NEW = 1;
-export const CREATE_ALWAYS = 2;
-export const OPEN_EXISTING = 3;
-export const OPEN_ALWAYS = 4;
-export const TRUNCATE_EXISTING = 5;
-
-export const FILE_ATTRIBUTE_READONLY = 0x00000001;
-export const FILE_ATTRIBUTE_HIDDEN = 0x00000002;
-export const FILE_ATTRIBUTE_SYSTEM = 0x00000004;
-export const FILE_ATTRIBUTE_DIRECTORY = 0x00000010;
-export const FILE_ATTRIBUTE_ARCHIVE = 0x00000020;
-export const FILE_ATTRIBUTE_DEVICE = 0x00000040;
-export const FILE_ATTRIBUTE_NORMAL = 0x00000080;
-export const FILE_ATTRIBUTE_TEMPORARY = 0x00000100;
-
-export const FILE_FLAG_WRITE_THROUGH = 0x80000000;
-export const FILE_FLAG_OVERLAPPED = 0x40000000;
-export const FILE_FLAG_NO_BUFFERING = 0x20000000;
-export const FILE_FLAG_RANDOM_ACCESS = 0x10000000;
-export const FILE_FLAG_DELETE_ON_CLOSE = 0x04000000;
-
-export const FILE_SHARE_READ = 0x00000001;
-export const FILE_SHARE_WRITE = 0x00000002;
-export const FILE_SHARE_DELETE = 0x00000004;
-export const FILE_SHARE_VALID_FLAGS = 0x00000007;
-
-export const FILE_BEGIN = 0;
-export const FILE_CURRENT = 1;
-export const FILE_END = 2;
-
-export const FILE_GENERIC_READ = 0x80000000;
-export const FILE_GENERIC_WRITE = 0x40000000;
-export const FILE_GENERIC_EXECUTE = 0x20000000;
+export * from "../types/kernel32.types.js";
 
 function Kernel32_HandleMessage(msg: Message) {
 
@@ -134,7 +76,7 @@ function GetCurrentProcessId(): number {
  * @returns If the function succeeds, the return value is a process identifier. If the function fails, the return value is zero.
  */
 export async function GetProcessId(hProcess: HANDLE): Promise<number> {
-    if(hProcess === -1) return GetCurrentProcessId();
+    if (hProcess === -1) return GetCurrentProcessId();
 
     const msg = await Kernel32.SendMessage<GET_PROCESS_INFO, GET_PROCESS_INFO_REPLY>({
         nType: KERNEL32.GetProcessInfo,

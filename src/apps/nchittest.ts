@@ -1,19 +1,6 @@
 import { GetModuleHandle } from "../client/kernel32.js";
 import {
     CreateWindow,
-    CreateWindowEx,
-    DefWindowProc,
-    DispatchMessage,
-    GetMessage,
-    GetWindowRect,
-    PostQuitMessage,
-    RegisterClass,
-    ScreenToClient,
-    ShowWindow,
-    TranslateMessage
-} from "../client/user32.js";
-import { INRECT } from "../types/gdi32.types.js";
-import {
     CW_USEDEFAULT,
     HINSTANCE,
     HWND,
@@ -30,7 +17,18 @@ import {
     HIWORD,
     BS,
     SS,
-} from "../types/user32.types.js";
+    CreateWindowEx,
+    DefWindowProc,
+    DispatchMessage,
+    GetMessage,
+    GetWindowRect,
+    PostQuitMessage,
+    RegisterClass,
+    ScreenToClient,
+    ShowWindow,
+    TranslateMessage
+} from "../client/user32.js";
+import { INRECT } from "../types/gdi32.types.js";
 
 async function CreateButton(text: string, x: number, y: number, width: number, height: number, parent: HWND, nId: number) {
     const button = await CreateWindow("BUTTON", text, BS.PUSHBUTTON | WS.CHILD | WS.VISIBLE | WS.DISABLED,

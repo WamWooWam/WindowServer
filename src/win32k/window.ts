@@ -1,5 +1,8 @@
+import { CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
+import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
+import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
+import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
 import {
-    CREATE_WINDOW_EX,
     HWND,
     HWND_BOTTOM,
     HWND_BROADCAST,
@@ -14,9 +17,6 @@ import {
     WM,
     WS,
 } from "../types/user32.types.js";
-import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
-import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
-import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObEnumObjectsByType, ObGetObject } from "../objects.js";
 
@@ -26,8 +26,7 @@ import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtSetLastError } from "../error.js";
 import { PEB } from "../types/types.js";
-import { WMP } from "../types/user32.int.types.js";
-import { WND } from "./wnd.js";
+import WND from "./wnd.js";
 
 export function NtGetDesktopWindow(peb: PEB): HWND {
     return ObGetObject<DESKTOP>(peb.hDesktop)?.hwndDesktop;
@@ -533,6 +532,15 @@ export function NtUserGetDC(peb: PEB, hWnd: HWND): HDC {
     return ObDuplicateHandle(wnd.hDC);
 }
 
+export function NtUserIsWindowEnabled(hWnd: HWND) {
+    const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return false;
+    }
+
+    return !(wnd.dwStyle & WS.DISABLED);
+}
+
 export function NtUserMapWindowPoints(fromWnd: WND, toWnd: WND, lpPoints: POINT[]) {
     let delta = { cx: 0, cy: 0 };
 
@@ -599,7 +607,7 @@ export function NtFindWindow(peb: PEB, lpClassName: string, lpWindowName: string
     for (const hWnd of ObEnumObjectsByType("WND")) {
         const wnd = ObGetObject<WND>(hWnd);
         if (!wnd) continue;
-        
+
         if (wnd.dwStyle & WS.CHILD) continue;
         if (wnd.lpClass.lpszClassName === lpClassName && (!lpWindowName || wnd.lpszName === lpWindowName)) {
             return wnd.hWnd;

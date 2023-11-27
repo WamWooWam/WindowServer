@@ -1,12 +1,12 @@
-import SHELL32, {
-    SH_CREATE_DIRECTORY_EX,
-    SH_CREATE_DIRECTORY_EX_REPLY
-} from "../types/shell32.types.js";
+import { SH_CREATE_DIRECTORY_EX, SH_CREATE_DIRECTORY_EX_REPLY } from "../types/shell32.int.types.js";
 
 import Executable from "../types/Executable.js";
 import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
+import SHELL32 from "../types/shell32.types.js";
 import { SUBSYS_SHELL32 } from "../types/subsystems.js";
+
+export * from "../types/shell32.types.js";
 
 const Shell32 = await NtRegisterSubsystem(SUBSYS_SHELL32, Shell32_HandleMessage);
 

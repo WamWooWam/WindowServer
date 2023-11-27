@@ -1,28 +1,11 @@
+import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
-import { NtDispatchMessage, NtGetMessage, NtPostQuitMessage } from "../win32k/msg.js";
+import { NtDispatchMessage, NtGetMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
 import { NtInitSysMetrics, NtIntGetSystemMetrics } from "../win32k/metrics.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
 import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
-import USER32, {
-    CREATE_DESKTOP,
-    CREATE_WINDOW_EX,
-    CREATE_WINDOW_EX_REPLY,
-    GET_MESSAGE,
-    GET_MESSAGE_REPLY,
-    HWND,
-    LRESULT,
-    MSG,
-    REGISTER_CLASS,
-    REGISTER_CLASS_REPLY,
-    SET_WINDOW_POS,
-    SHOW_WINDOW,
-    SHOW_WINDOW_REPLY,
-    WNDCLASSEX,
-    WNDCLASS_WIRE,
-    WNDPROC_PARAMS,
-    WS,
-} from "../types/user32.types.js";
+import USER32, { HWND, LRESULT, MSG, WNDCLASSEX, WS, } from "../types/user32.types.js";
 
 import { ButtonWndProc } from "./user32/button.js";
 import { NtDefWindowProc } from "../win32k/def.js";
@@ -32,7 +15,7 @@ import { SUBSYS_USER32 } from "../types/subsystems.js";
 import { StaticWndProc } from "./user32/static.js";
 import W32MSG_QUEUE from "../win32k/msgqueue.js";
 import { W32PROCINFO } from "../win32k/shared.js";
-import { WND } from "../win32k/wnd.js";
+import WND from "../win32k/wnd.js";
 
 const DefaultClasses: WNDCLASSEX[] = [
     {
@@ -175,21 +158,21 @@ function UserGetWindowRect(peb: PEB, params: HWND): RECT {
     return NtUserGetWindowRect(peb, params);
 }
 
-function UserScreenToClient(peb: PEB, params: { hWnd: HWND, lpPoint: POINT }) {
+function UserScreenToClient(peb: PEB, params: SCREEN_TO_CLIENT): SCREEN_TO_CLIENT_REPLY {
     const wnd = ObGetObject<WND>(params.hWnd);
-    const rect = { ...wnd.rcClient };
+    if (!wnd) return { retVal: false, lpPoint: null };
 
+    const rect = { ...wnd.rcClient };
     OffsetRect(rect, wnd.rcWindow.left, wnd.rcWindow.top);
 
-    const tranformed = { x: params.lpPoint.x - rect.left, y: params.lpPoint.y - rect.top };
-    return { retVal: true, lpPoint: tranformed }
+    return { retVal: true, lpPoint: { x: params.lpPoint.x - rect.left, y: params.lpPoint.y - rect.top } }
 }
 
-function UserFindWindow(peb: PEB, params: { lpClassName: string, lpWindowName: string }): HWND {
+function UserFindWindow(peb: PEB, params: FIND_WINDOW): HWND {
     return NtFindWindow(peb, params.lpClassName, params.lpWindowName);
 }
 
-function UserGetClientRect(peb: PEB, { hWnd }: { hWnd: HANDLE, lpRect: RECT }): { retVal: boolean, lpRect: RECT } {
+function UserGetClientRect(peb: PEB, { hWnd }: GET_CLIENT_RECT): GET_CLIENT_RECT_REPLY {
     const wnd = ObGetObject<WND>(hWnd);
     const rect = { ...wnd.rcClient };
 
@@ -197,6 +180,14 @@ function UserGetClientRect(peb: PEB, { hWnd }: { hWnd: HANDLE, lpRect: RECT }): 
     OffsetRect(rect, -wnd.rcClient.left, -wnd.rcClient.top);
 
     return { retVal: true, lpRect: rect };
+}
+
+async function UserSendMessage(peb: PEB, params: WNDPROC_PARAMS): Promise<LRESULT> {
+    return await NtDispatchMessage(peb, params);
+}
+
+function UserPostMessage(peb: PEB, params: WNDPROC_PARAMS) {
+    NtPostMessage(peb, params);
 }
 
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
@@ -220,7 +211,9 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.GetWindowRect]: UserGetWindowRect,
         [USER32.ScreenToClient]: UserScreenToClient,
         [USER32.FindWindow]: UserFindWindow,
-        [USER32.GetClientRect]: UserGetClientRect
+        [USER32.GetClientRect]: UserGetClientRect,
+        [USER32.SendMessage]: UserSendMessage,
+        [USER32.PostMessage]: UserPostMessage
     }
 };
 

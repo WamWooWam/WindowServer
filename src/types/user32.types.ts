@@ -1,6 +1,8 @@
-import { HANDLE } from "./types.js";
-import { POINT } from "./gdi32.types.js";
+import { HDC, POINT, RECT } from "./gdi32.types.js";
 
+import { HANDLE } from "./types.js";
+
+// TODO: sort these
 const USER32 = {
     SetSystemMetrics: -1,
 
@@ -21,6 +23,8 @@ const USER32 = {
     ScreenToClient: 0x0000000F,
     FindWindow: 0x00000010,
     GetClientRect: 0x00000011,
+    SendMessage: 0x00000012,
+    PostMessage: 0x00000013,
 }
 
 export const HWND_TOP = 0;
@@ -29,7 +33,6 @@ export const HWND_TOPMOST = -1;
 export const HWND_NOTOPMOST = -2;
 export const HWND_MESSAGE = -3;
 export const HWND_BROADCAST = 0xFFFF;
-
 
 export const CW_USEDEFAULT = 0x80000000;
 
@@ -785,6 +788,7 @@ export enum SS {
     ETCHEDVERT = 0x00000011,
     ETCHEDFRAME = 0x00000012,
     TYPEMASK = 0x0000001F,
+
     REALSIZECONTROL = 0x00000040,
     NOPREFIX = 0x00000080, /* Don't do "&" character translation */
     NOTIFY = 0x00000100,
@@ -797,6 +801,34 @@ export enum SS {
     PATHELLIPSIS = 0x00008000,
     WORDELLIPSIS = 0x0000C000,
     ELLIPSISMASK = 0x0000C000,
+}
+
+export enum ODT {
+    MENU = 1,
+    LISTBOX = 2,
+    COMBOBOX = 3,
+    BUTTON = 4,
+    STATIC = 5,
+}
+
+export enum ODA {
+    DRAWENTIRE = 1,
+    SELECT = 2,
+    FOCUS = 4,
+}
+
+export enum ODS {
+    SELECTED = 1,
+    GRAYED = 2,
+    DISABLED = 4,
+    CHECKED = 8,
+    FOCUS = 16,
+    DEFAULT = 32,
+    COMBOBOXEDIT = 4096,
+    HOTLIGHT = 0x0040,
+    INACTIVE = 0x0080,
+    NOACCEL = 0x0100,
+    NOFOCUSRECT = 0x0200,
 }
 
 export type HWND = HANDLE;
@@ -874,20 +906,6 @@ export interface LOGFONT {
     lfFaceName: string;
 }
 
-export interface WNDCLASS_WIRE {
-    cbSize?: number;
-    style: number;
-    lpfnWndProc: number;
-    cbClsExtra: number;
-    cbWndExtra: number;
-    hInstance: HINSTANCE;
-    hIcon: HICON;
-    hCursor: HCURSOR;
-    hbrBackground: HBRUSH;
-    lpszMenuName: number | string;
-    lpszClassName: number | string;
-    hIconSm?: HICON;
-}
 
 export interface MINMAXINFO {
     ptReserved: POINT;
@@ -915,74 +933,16 @@ export interface NONCLIENTMETRICS {
     lfMessageFont: LOGFONT;
     iPaddedBorderWidth: number;
 }
-
-export interface CREATE_WINDOW_EX {
-    dwExStyle: number;
-    lpClassName: string | number;
-    lpWindowName: string;
-    dwStyle: number;
-    x: number;
-    y: number;
-    nWidth: number;
-    nHeight: number;
-    hWndParent: HWND;
-    hMenu: HMENU;
-    hInstance: HINSTANCE;
-    lpParam: any;
-}
-
-export interface CREATE_WINDOW_EX_REPLY {
-    hWnd: HWND;
-}
-
-export type WNDPROC_PARAMS = [hWnd: HANDLE, uMsg: number, wParam: WPARAM, lParam: LPARAM];
-
-export interface REGISTER_CLASS {
-    lpWndClass: WNDCLASS | WNDCLASS_WIRE;
-}
-
-export interface REGISTER_CLASS_REPLY {
-    retVal: ATOM;
-}
-
-export interface SHOW_WINDOW {
-    hWnd: HWND;
-    nCmdShow: number;
-}
-
-export interface SHOW_WINDOW_REPLY {
-    retVal: boolean;
-}
-
-export interface GET_MESSAGE {
-    lpMsg: MSG;
-    hWnd: HWND;
-    wMsgFilterMin: number;
-    wMsgFilterMax: number;
-}
-
-export interface GET_MESSAGE_REPLY {
-    retVal: boolean;
-    lpMsg: MSG;
-}
-
-export interface SET_WINDOW_POS {
-    hWnd: HWND;
-    hWndInsertAfter: HWND;
-    x: number;
-    y: number;
-    cx: number;
-    cy: number;
-    uFlags: number;
-}
-
-export interface CREATE_DESKTOP {
-    lpszDesktop: string;
-    lpszDevice: string;
-    pDevMode: null;
-    dwFlags: number;
-    dwDesiredAccess: number;
-    lpsa: any;
+export interface DRAWITEMSTRUCT {
+    CtlType: number;
+    CtlID: number;
+    itemID: number;
+    itemAction: number;
+    itemState: number;
+    hwndItem: HWND;
+    hDC: HDC;
+    rcItem: RECT;
+    itemData: number;
 }
 
 export default USER32;

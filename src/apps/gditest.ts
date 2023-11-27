@@ -1,17 +1,5 @@
-import { CombineRgn, CreateRectRgn, CreateSolidBrush, DeleteObject, FillRgn, SelectObject, TextOut } from "../client/gdi32.js";
+import { CombineRgn, CreateRectRgn, CreateSolidBrush, DeleteObject, FillRgn, SelectObject, TextOut, HDC, RGN } from "../client/gdi32.js";
 import { GetModuleHandle } from "../client/kernel32.js";
-import {
-    CreateWindowEx,
-    DefWindowProc,
-    DispatchMessage,
-    GetDC,
-    GetMessage,
-    PostQuitMessage,
-    RegisterClass,
-    ShowWindow,
-    TranslateMessage
-} from "../client/user32.js";
-import { HDC, RGN } from "../types/gdi32.types.js";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -24,7 +12,16 @@ import {
     WM,
     WNDCLASSEX,
     WPARAM,
-} from "../types/user32.types.js";
+    CreateWindowEx,
+    DefWindowProc,
+    DispatchMessage,
+    GetDC,
+    GetMessage,
+    PostQuitMessage,
+    RegisterClass,
+    ShowWindow,
+    TranslateMessage
+} from "../client/user32.js";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {

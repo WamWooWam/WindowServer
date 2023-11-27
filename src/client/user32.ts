@@ -1,27 +1,6 @@
+import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HDC, POINT, RECT } from "../types/gdi32.types.js";
-import USER32, {
-    ATOM,
-    CREATE_DESKTOP,
-    CREATE_WINDOW_EX,
-    CREATE_WINDOW_EX_REPLY,
-    GET_MESSAGE,
-    GET_MESSAGE_REPLY,
-    HINSTANCE,
-    LPARAM,
-    LRESULT,
-    MSG,
-    REGISTER_CLASS,
-    REGISTER_CLASS_REPLY,
-    SET_WINDOW_POS,
-    SHOW_WINDOW,
-    SHOW_WINDOW_REPLY,
-    SM,
-    WNDCLASS,
-    WNDCLASS_WIRE,
-    WNDPROC,
-    WNDPROC_PARAMS,
-    WPARAM
-} from "../types/user32.types.js";
+import USER32, { ATOM, HINSTANCE, LPARAM, LRESULT, MSG, SM, WNDCLASS, WPARAM } from "../types/user32.types.js";
 
 import Executable from "../types/Executable.js";
 import { GetModuleHandle } from "./kernel32.js";
@@ -30,7 +9,10 @@ import Message from "../types/Message.js";
 import { NtRegisterSubsystem } from "./ntdll.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 
+export * from "../types/user32.types.js";
+
 const User32 = await NtRegisterSubsystem(SUBSYS_USER32, User32_HandleMessage, 0x1000);
+
 function User32_HandleMessage(msg: Message) {
 
 }
@@ -420,7 +402,7 @@ export async function GetWindowRect(hWnd: HANDLE): Promise<RECT> {
  * @category User32
  */
 export async function ScreenToClient(hWnd: HANDLE, lpPoint: POINT): Promise<boolean> {
-    const msg = await User32.SendMessage<{ hWnd: HANDLE, lpPoint: POINT }, { retVal: boolean, lpPoint: POINT }>({
+    const msg = await User32.SendMessage<SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY>({
         nType: USER32.ScreenToClient,
         data: { hWnd, lpPoint }
     });
@@ -439,7 +421,7 @@ export async function ScreenToClient(hWnd: HANDLE, lpPoint: POINT): Promise<bool
  * @category User32
  */
 export async function FindWindow(lpClassName: string, lpWindowName: string): Promise<HANDLE> {
-    const msg = await User32.SendMessage<{ lpClassName: string, lpWindowName: string }, HANDLE>({
+    const msg = await User32.SendMessage<FIND_WINDOW, HANDLE>({
         nType: USER32.FindWindow,
         data: { lpClassName, lpWindowName }
     });
@@ -448,7 +430,7 @@ export async function FindWindow(lpClassName: string, lpWindowName: string): Pro
 }
 
 export async function GetClientRect(hWnd: HANDLE, lpRect: RECT): Promise<boolean> {
-    const msg = await User32.SendMessage<{ hWnd: HANDLE, lpRect: RECT }, { retVal: boolean, lpRect: RECT }>({
+    const msg = await User32.SendMessage<GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY>({
         nType: USER32.GetClientRect,
         data: { hWnd, lpRect }
     });
@@ -456,6 +438,22 @@ export async function GetClientRect(hWnd: HANDLE, lpRect: RECT): Promise<boolean
     Object.assign(lpRect, msg.data.lpRect);
 
     return msg.data.retVal;
+}
+
+export async function SendMessage(hWnd: HANDLE, Msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    const msg = await User32.SendMessage<WNDPROC_PARAMS, LRESULT>({
+        nType: USER32.SendMessage,
+        data: [hWnd, Msg, wParam, lParam]
+    });
+
+    return msg.data;
+}
+
+export async function PostMessage(hWnd: HANDLE, Msg: number, wParam: WPARAM, lParam: LPARAM) {
+    await User32.SendMessage<WNDPROC_PARAMS>({
+        nType: USER32.PostMessage,
+        data: [hWnd, Msg, wParam, lParam]
+    });
 }
 
 const user32: Executable = {

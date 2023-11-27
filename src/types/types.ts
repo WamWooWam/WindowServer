@@ -1,5 +1,3 @@
-import Message from "./Message.js";
-
 type Version = [major: number, minor: number, build: number, revision: number];
 
 type SubsystemId = string;

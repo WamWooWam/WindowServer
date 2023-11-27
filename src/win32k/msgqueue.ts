@@ -3,7 +3,7 @@ import { MSG_QUEUE, W32PROCINFO } from "./shared.js";
 
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
-import { WND } from "./wnd.js";
+import WND from "./wnd.js";
 
 type MSG_CALLBACK = (result: LRESULT) => Promise<void> | void;
 type MSG_CALLBACKS = { [msg: number]: MSG_CALLBACK[] };
@@ -47,6 +47,7 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
     }
 
     async PeekMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number, wRemoveMsg: number): Promise<MSG> {
+        
         throw new Error("Method not implemented.");
     }
 

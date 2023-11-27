@@ -1,22 +1,19 @@
-import { HT, HWND, LPARAM, LRESULT, WM, WPARAM } from "../../types/user32.types.js";
+import { DRAWITEMSTRUCT, HT, HWND, LPARAM, LRESULT, ODA, ODS, ODT, SS, WM, WPARAM } from "../../types/user32.types.js";
+import { NtDispatchMessage, NtPostMessage } from "../../win32k/msg.js";
+import { NtUserGetDC, NtUserIsWindowEnabled } from "../../win32k/window.js";
 
 import { ObGetObject } from "../../objects.js";
 import { StaticElement } from "../../win32k/html/StaticElement.js";
 import { WMP } from "../../types/user32.int.types.js";
-import { WND } from "../../win32k/wnd.js";
+import WND from "../../win32k/wnd.js";
 
-export function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): LRESULT {
+export async function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     let wnd = ObGetObject<WND>(hWnd);
     let element = wnd.pRootElement as StaticElement;
 
     switch (uMsg) {
         case WMP.CREATEELEMENT: {
-            element = new StaticElement();
-            element.dwStyle = wnd.dwStyle.toString();
-            element.dwExStyle = wnd.dwExStyle.toString();
-            element.innerText = wnd.lpszName;
-            wnd.pRootElement = element;
-
+            wnd.pRootElement = new StaticElement(wnd);
             return 0;
         }
         case WM.SETTEXT: {
@@ -39,6 +36,25 @@ export function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: 
         case WM.GETFONT: {
             return 0;
         }
+        case WM.PAINT: {
+            if ((wnd.dwStyle & SS.TYPEMASK) == SS.OWNERDRAW) {
+                // tell the parent to draw this control
+                const struct: DRAWITEMSTRUCT = {
+                    CtlType: ODT.STATIC,
+                    CtlID: wnd.hMenu, // TODO: this should be accessed via GetWindowLongPtr
+                    itemID: 0,
+                    itemAction: ODA.DRAWENTIRE,
+                    itemState: NtUserIsWindowEnabled(hWnd) ? 0 : ODS.DISABLED,
+                    hwndItem: hWnd,
+                    hDC: NtUserGetDC(wnd.peb, hWnd),
+                    rcItem: { left: 0, top: 0, right: 0, bottom: 0 },
+                    itemData: 0
+                };
+                
+                await NtDispatchMessage(null, [wnd.hParent, WM.DRAWITEM, wnd.hWnd, 0]);
+            }
+        }
+
         case WM.NCHITTEST:
             return HT.CLIENT;
         default:

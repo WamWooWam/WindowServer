@@ -1,4 +1,4 @@
-import KERNEL32, {
+import {
     CLOSE_HANDLE,
     CREATE_DIRECTORY,
     CREATE_DIRECTORY_REPLY,
@@ -8,15 +8,17 @@ import KERNEL32, {
     GET_MODULE_HANDLE_REPLY,
     GET_PROCESS_INFO,
     GET_PROCESS_INFO_REPLY,
-    IDX_HMODULE,
-    IDX_LAST_ERROR,
-    IDX_PID,
     READ_FILE,
     READ_FILE_REPLY,
     SET_FILE_POINTER,
     SET_FILE_POINTER_REPLY,
     WRITE_FILE,
     WRITE_FILE_REPLY
+} from "../types/kernel32.int.types.js";
+import KERNEL32, {
+    IDX_HMODULE,
+    IDX_LAST_ERROR,
+    IDX_PID,
 } from "../types/kernel32.types.js";
 import { NtCreateDirectory, NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../file.js";
 import { ObCloseHandle, ObGetObject } from "../objects.js";

@@ -9,8 +9,7 @@ import { NtDefWndDoSizeMove } from "./sizemove.js";
 import { NtDispatchMessage } from "./msg.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
-import { POINT } from "../types/gdi32.types.js";
-import { WND } from "./wnd.js";
+import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
 
 export function HasThickFrame(dwStyle: number) {

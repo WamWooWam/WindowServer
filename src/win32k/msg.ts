@@ -1,12 +1,12 @@
 import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
-import { GET_MESSAGE, GET_MESSAGE_REPLY, HWND_BROADCAST, LRESULT, MSG, WM, WNDPROC_PARAMS } from "../types/user32.types.js";
+import { GET_MESSAGE, GET_MESSAGE_REPLY, WMP, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { GetW32ProcInfo, HWNDS } from "./shared.js";
 import { HANDLE, PEB } from "../types/types.js";
+import { HWND_BROADCAST, LRESULT, MSG, WM } from "../types/user32.types.js";
 import { ObEnumObjectsByType, ObGetObject } from "../objects.js";
 
 import { PsProcess } from "../process.js";
-import { WMP } from "../types/user32.int.types.js";
-import { WND } from "./wnd.js";
+import WND from "./wnd.js";
 
 export async function NtGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
     const state = GetW32ProcInfo(peb);

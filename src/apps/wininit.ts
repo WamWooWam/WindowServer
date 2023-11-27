@@ -8,10 +8,9 @@ import {
     DispatchMessage,
     FindWindow,
     GetMessage,
-    TranslateMessage
+    TranslateMessage,
+    MSG
 } from "../client/user32.js";
-
-import { MSG, } from "../types/user32.types.js";
 
 async function main() {
     const window = await FindWindow(<string><any>0x8001, null);

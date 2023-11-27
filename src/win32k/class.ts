@@ -1,9 +1,10 @@
-import { ATOM, HWND, LPARAM, WNDCLASS, WNDCLASSEX, WNDCLASS_WIRE, WNDPROC, WPARAM } from "../types/user32.types.js";
+import { ATOM, HWND, LPARAM, WNDCLASS, WNDCLASSEX, WNDPROC, WPARAM } from "../types/user32.types.js";
 import { GetW32ProcInfo, W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtDoCallbackAsync } from "../callback.js";
 import { PEB } from "../types/types.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
+import { WNDCLASS_WIRE } from "../types/user32.int.types.js";
 
 function CreateWndProcCallback(peb: PEB, lpfnWndProc: number | WNDPROC): WNDPROC {
     if (typeof lpfnWndProc === "number") {
@@ -19,7 +20,7 @@ function CreateWndProcCallback(peb: PEB, lpfnWndProc: number | WNDPROC): WNDPROC
 
         return NT_IS_CALLING_INTO_USERSPACE;
     }
-    else if(typeof lpfnWndProc === "function") {
+    else if (typeof lpfnWndProc === "function") {
         function LocalWndProcCallback(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): number {
             const now = performance.now();
             try {
