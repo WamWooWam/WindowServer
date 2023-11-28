@@ -20,11 +20,11 @@ import KERNEL32, {
     IDX_LAST_ERROR,
     IDX_PID,
 } from "../types/kernel32.types.js";
-import { NtCreateDirectory, NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../fs/file.js";
-import { ObCloseHandle, ObGetObject } from "../objects.js";
+import { NtCreateDirectory, NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../ntos/fs/file.js";
+import { ObCloseHandle, ObGetObject } from "../ntos/objects.js";
 import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 
-import { PsProcess } from "../process.js";
+import { PsProcess } from "../ntos/process.js";
 import { SUBSYS_KERNEL32 } from "../types/subsystems.js";
 
 function NtK32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {

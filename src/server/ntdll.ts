@@ -8,10 +8,10 @@ import {
     SUBSYS_USER32
 } from "../types/subsystems.js";
 
-import { KeBugCheckEx } from "../bugcheck.js";
+import { KeBugCheckEx } from "../ntos/bugcheck.js";
 import NTDLL from "../types/ntdll.types.js";
-import { ObGetObject } from "../objects.js";
-import { PsProcess } from "../process.js";
+import { ObGetObject } from "../ntos/objects.js";
+import { PsProcess } from "../ntos/process.js";
 
 const ValidSubsystems = [SUBSYS_NTDLL, SUBSYS_KERNEL32, SUBSYS_USER32, SUBSYS_GDI32, SUBSYS_SHELL32];
 

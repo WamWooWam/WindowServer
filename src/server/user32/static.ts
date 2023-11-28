@@ -1,11 +1,11 @@
 import { DRAWITEMSTRUCT, HT, HWND, LPARAM, LRESULT, ODA, ODS, ODT, SS, WM, WPARAM } from "../../types/user32.types.js";
-import { NtDispatchMessage, NtPostMessage } from "../../win32k/msg.js";
-import { NtUserGetDC, NtUserIsWindowEnabled } from "../../win32k/window.js";
+import { NtDispatchMessage, NtPostMessage } from "../../ntos/win32k/msg.js";
+import { NtUserGetDC, NtUserIsWindowEnabled } from "../../ntos/win32k/window.js";
 
-import { ObGetObject } from "../../objects.js";
+import { ObGetObject } from "../../ntos/objects.js";
 import { StaticElement } from "../../win32k/html/StaticElement.js";
 import { WMP } from "../../types/user32.int.types.js";
-import WND from "../../win32k/wnd.js";
+import WND from "../../ntos/win32k/wnd.js";
 
 export async function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     let wnd = ObGetObject<WND>(hWnd);

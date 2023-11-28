@@ -2,8 +2,8 @@
 
 import { COLOR, SS } from "../../types/user32.types.js";
 
-import { IntGetSysColor } from "../brush.js";
-import WND from "../wnd.js";
+import { IntGetSysColor } from "../../ntos/win32k/brush.js";
+import WND from "../../ntos/win32k/wnd.js";
 import WindowElementBase from "./WindowElementBase.js";
 
 const NumToHexColor = (num: number) => {

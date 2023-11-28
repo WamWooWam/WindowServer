@@ -1,21 +1,21 @@
 import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
-import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
-import { NtDispatchMessage, NtGetMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
-import { NtInitSysMetrics, NtIntGetSystemMetrics } from "../win32k/metrics.js";
-import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
+import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC, NtUserGetWindowRect } from "../ntos/win32k/window.js";
+import { NtDispatchMessage, NtGetMessage, NtPostMessage, NtPostQuitMessage } from "../ntos/win32k/msg.js";
+import { NtInitSysMetrics, NtIntGetSystemMetrics } from "../ntos/win32k/metrics.js";
+import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../ntos/win32k/desktop.js";
 import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
 import USER32, { HWND, LRESULT, MSG, WNDCLASSEX, WS, } from "../types/user32.types.js";
 
 import { ButtonWndProc } from "./user32/button.js";
-import { NtDefWindowProc } from "../win32k/def.js";
-import { NtRegisterClassEx } from "../win32k/class.js";
-import { ObGetObject } from "../objects.js";
+import { NtDefWindowProc } from "../ntos/win32k/def.js";
+import { NtRegisterClassEx } from "../ntos/win32k/class.js";
+import { ObGetObject } from "../ntos/objects.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 import { StaticWndProc } from "./user32/static.js";
-import W32MSG_QUEUE from "../win32k/msgqueue.js";
-import { W32PROCINFO } from "../win32k/shared.js";
-import WND from "../win32k/wnd.js";
+import W32MSG_QUEUE from "../ntos/win32k/msgqueue.js";
+import { W32PROCINFO } from "../ntos/win32k/shared.js";
+import WND from "../ntos/win32k/wnd.js";
 
 const DefaultClasses: WNDCLASSEX[] = [
     {

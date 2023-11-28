@@ -1,13 +1,13 @@
 import { GDI32, HRGN } from "../types/gdi32.types.js";
-import { GreFillRegion, GreRectangle } from "../win32k/gdi/draw.js";
+import { GreFillRegion, GreRectangle } from "../ntos/win32k/gdi/draw.js";
 import { HANDLE, PEB, SUBSYSTEM_DEF } from "../types/types.js";
-import { NtGdiDeleteObject, NtGdiRectangle, NtGdiSelectObject, NtGdiSetTextColor, NtGdiTextOut } from "../win32k/gdi/ntgdi.js";
-import { ObGetObject, ObSetHandleOwner, ObSetObject } from "../objects.js";
-import REGION, { GreCombineRgn, GreCreateRectRgn } from "../win32k/gdi/rgn.js";
+import { NtGdiDeleteObject, NtGdiRectangle, NtGdiSelectObject, NtGdiSetTextColor, NtGdiTextOut } from "../ntos/win32k/gdi/ntgdi.js";
+import { ObGetObject, ObSetHandleOwner, ObSetObject } from "../ntos/objects.js";
+import REGION, { GreCombineRgn, GreCreateRectRgn } from "../ntos/win32k/gdi/rgn.js";
 
-import DC from "../win32k/gdi/dc.js";
-import { GreCreatePen } from "../win32k/gdi/pen.js";
-import { GreCreateSolidBrush } from "../win32k/gdi/brush.js";
+import DC from "../ntos/win32k/gdi/dc.js";
+import { GreCreatePen } from "../ntos/win32k/gdi/pen.js";
+import { GreCreateSolidBrush } from "../ntos/win32k/gdi/brush.js";
 import { SUBSYS_GDI32 } from "../types/subsystems.js";
 
 function GdiCreateRectRgn(peb: PEB, { x1, x2, y1, y2 }: { x1: number, y1: number, x2: number, y2: number }): HRGN {

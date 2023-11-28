@@ -1,9 +1,9 @@
 import { HT, HWND, LPARAM, LRESULT, WM, WPARAM, WS } from "../../types/user32.types.js";
 
-import { NtDefWindowProc } from "../../win32k/def.js";
-import { ObGetObject } from "../../objects.js";
+import { NtDefWindowProc } from "../../ntos/win32k/def.js";
+import { ObGetObject } from "../../ntos/objects.js";
 import { WMP } from "../../types/user32.int.types.js";
-import WND from "../../win32k/wnd.js";
+import WND from "../../ntos/win32k/wnd.js";
 
 export function ButtonWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): LRESULT {
     const wnd = ObGetObject<WND>(hWnd);

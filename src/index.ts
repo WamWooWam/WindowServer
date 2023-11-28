@@ -1,11 +1,11 @@
-import { NtPostProcessMessage } from "./win32k/msg.js";
-import { PsCreateProcess, PsRegisterProcessHooks, PsQuitProcess, PsTerminateProcess } from "./loader.js"
+import { NtPostProcessMessage } from "./ntos/win32k/msg.js";
+import { PsCreateProcess, PsRegisterProcessHooks, PsQuitProcess, PsTerminateProcess } from "./ntos/loader.js"
 
 import { HANDLE } from "./types/types.js";
-import { PsProcess } from "./process.js";
+import { PsProcess } from "./ntos/process.js";
 import { WM } from "./types/user32.types.js";
-import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from "./objects.js";
-import { NtInit } from "./boot.js";
+import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from "./ntos/objects.js";
+import { NtInit } from "./ntos/boot.js";
 
 (async () => {
     const procs: HANDLE[] = [];
