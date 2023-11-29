@@ -15,6 +15,49 @@
     src: url(ms_sans_serif_bold.woff2) format("woff2")
 }
 
+:root {
+    --3d-object-background: #d4d0c8;
+    --3d-object-color: #000000;
+    --active-title-bar-color1: #0a246a;
+    --active-title-bar-color2: #a6caf0;
+    --active-title-bar-background: linear-gradient(90deg, var(--active-title-bar-color1), var(--active-title-bar-color2));
+    --active-title-bar-font: bold 8pt "Tahoma", "Arial", sans-serif;
+    --active-title-bar-text: #ffffff;
+    --active-window-border-color: #d4d0c8;
+    --active-window-border-thickness: 1px;
+    --application-background: #808080;
+    --caption-button-size: 18px;
+    --desktop-background: #3a6ea5;
+    --icon-size: 32px;
+    --icon-spacing-horizontal: 43px;
+    --icon-spacing-vertical: 43px;
+    --inactive-title-bar-color1: #808080;
+    --inactive-title-bar-color2: #c0c0c0;
+    --inactive-title-bar-background: linear-gradient(90deg, var(--inactive-title-bar-color1), var(--inactive-title-bar-color2));
+    --inactive-title-bar-font: bold 8pt "Tahoma", "Arial", sans-serif;
+    --inactive-title-bar-text: #d4d0c8;
+    --inactive-window-border-color: #d4d0c8;
+    --inactive-window-border-thickness: 1px;
+    --menu-size: 18px;
+    --menu-background: #d4d0c8;
+    --menu-font: normal 8pt "Tahoma", "Arial", sans-serif;
+    --menu-text: #000000;
+    --message-box-font: normal 8pt "Tahoma", "Arial", sans-serif;
+    --message-box-text: #000000;
+    --palette-title-size: 15px;
+    --palette-title-font: bold 8pt "Tahoma", "Arial", sans-serif;
+    --scrollbar-width: 16px;
+    --selected-items-background: #0a246a;
+    --selected-items-text: #ffffff;
+    --selected-items-font: normal 8pt "Tahoma", "Arial", sans-serif;
+    --selected-item-size: 18px;
+    --tooltip-background: #ffffe1;
+    --tooltip-text: #000000;
+    --tooltip-font: normal 8pt "Tahoma", "Arial", sans-serif;
+    --window-background: #ffffff;
+    --window-color: #000000;
+}
+
 
 x-window {
     opacity: 0;
@@ -24,10 +67,10 @@ x-window {
 
 body {
     color: #222;
-    background-color: #008080;
-    font-family: Arial;
-    font-size: 12px;
-    margin:0px;
+    background-color: var(--desktop-background);
+    font-family: 'Tahoma', 'Arial', sans-serif;
+    font-size: 8pt;
+    margin: 0px;
 }
 
 .title-bar,
@@ -42,8 +85,8 @@ table,
 textarea,
 ul.tree-view {
     -webkit-font-smoothing: none;
-    font-family: "Pixelated MS Sans Serif", Arial;
-    font-size: 11px;
+    font-family: 'Tahoma', 'Arial', sans-serif;
+    font-size: 8pt;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -88,8 +131,8 @@ input[type=submit] {
 button,
 input[type=reset],
 input[type=submit] {
-    background: silver;
-    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf
+    background: var(--3d-object-background);
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey;
 }
 
 .vertical-bar {
@@ -100,7 +143,7 @@ input[type=submit] {
 button:not(:disabled):active,
 input[type=reset]:not(:disabled):active,
 input[type=submit]:not(:disabled):active {
-    box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px grey;
+    box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px transparent, inset 2px 2px grey;
     text-shadow: 1px 1px #222
 }
 
@@ -109,7 +152,7 @@ input[type=submit]:not(:disabled):active {
     button:not(:disabled):hover,
     input[type=reset]:not(:disabled):hover,
     input[type=submit]:not(:disabled):hover {
-        box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px grey
+        box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px transparent, inset 2px 2px grey
     }
 }
 
@@ -142,27 +185,27 @@ input[type=submit]:disabled {
 
 .window {
     /* this is WS_THICKFRAME, we'll need to do one that doesn't use this */
-    background: silver;
+    background: var(--3d-object-background);
     box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #dfdfdf, inset -2px -2px grey, inset 2px 2px #fff;
     padding: 3px
 }
 
 .title-bar {
     align-items: center;
-    background: linear-gradient(90deg, navy, #1084d0);
+    background: var(--active-title-bar-background);
     display: flex;
     justify-content: space-between;
-    padding: 3px 2px 3px 3px
+    padding: 2px 2px 3px 3px
 }
 
 .window.inactive>.title-bar,
 .title-bar.inactive {
-    background: linear-gradient(90deg, grey, #b5b5b5)
+    background: var(--inactive-title-bar-background);
 }
 
 .title-bar-text {
-    color: #fff;
-    font-weight: 700;
+    color: var(--active-title-bar-text);
+    font: var(--active-title-bar-font);
     letter-spacing: 0;
     margin: 0;
     margin-right: 24px;
@@ -170,6 +213,12 @@ input[type=submit]:disabled {
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
+}
+
+.window.inactive>.title-bar>.title-bar-text,
+.title-bar.inactive>.title-bar-text {
+    color: var(--inactive-title-bar-text);
+    font: var(--inactive-title-bar-font);
 }
 
 .title-bar-controls {
@@ -257,7 +306,7 @@ fieldset {
 }
 
 legend {
-    background: silver
+    background: rgb(212, 208, 200);
 }
 
 .field-row {
@@ -734,7 +783,7 @@ summary:focus {
 
 ::-webkit-scrollbar-thumb {
     background-color: #dfdfdf;
-    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey;
 }
 
 ::-webkit-scrollbar-button:horizontal:end:increment,
@@ -787,7 +836,7 @@ menu[role=tablist]>li {
 }
 
 menu[role=tablist]>li[aria-selected=true] {
-    background-color: silver;
+    background-color: rgb(212, 208, 200);
     margin-left: -3px;
     margin-top: -2px;
     padding-bottom: 2px;
@@ -835,8 +884,8 @@ table {
 }
 
 table>thead>tr>* {
-    background: silver;
-    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf;
+    background: var(--3d-object-background);
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey;
     box-sizing: border-box;
     font-weight: 400;
     height: 17px;
