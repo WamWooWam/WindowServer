@@ -31,3 +31,5 @@ dist/**/*.js
 dist/**/*.js.map
 publish/
 publish.zip
+
+!filer.js

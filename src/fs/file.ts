@@ -1,3 +1,4 @@
+import { Buffer, FileSystem, Path } from "../extern/filer.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { ObGetObject, ObSetObject } from "../objects.js";
 
@@ -18,21 +19,14 @@ function NtPathIsRooted(lpFileName: string) {
     return lpFileName[1] === ':';
 }
 
-export function NtInitFileSystem() {
-    return new Promise<void>((resolve, reject) => {
-        const Filer = window['Filer' as keyof typeof window];
-        const fs = new Filer.FileSystem({ flags: ['FORMAT'] }, () => { resolve(); });
-        const Buffer = Filer.Buffer;
-
-        const global = {
-            fs,
-            path: Filer.path,
-            Buffer
-        } as NT_FILESYSTEM_GLOBAL;
-
-        _global = global;
-    }).then(() => console.log('Initialized file system'));
+export async function NtInitFileSystem() {
+    await new Promise<void>((resolve, reject) => {
+        const fs = new FileSystem({ flags: ['FORMAT'] }, () => resolve());
+        const path = Path;
+        _global = { fs, path, Buffer } as NT_FILESYSTEM_GLOBAL;
+    });
 }
+
 
 export function NtGetFileSystemGlobal(): NT_FILESYSTEM_GLOBAL {
     return _global;

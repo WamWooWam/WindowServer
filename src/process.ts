@@ -20,6 +20,8 @@ export class PsProcess {
     cwd: string;
     env: { [key: string]: string; };
 
+    peb: PEB;
+    
     handle: HANDLE;
 
     hIn: HANDLE;
@@ -35,7 +37,6 @@ export class PsProcess {
 
     private worker: Worker;
     private exec: Executable;
-    peb: PEB;
 
     private hSharedMemory: HANDLE;
 
