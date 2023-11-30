@@ -115,7 +115,7 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
             await CreateButton("BS_AUTO3STATE", 10, 230, 100, 30, hwnd, 8, BS.AUTO3STATE);
             await CreateButton("BS_GROUPBOX", 160, 10, 200, 200, hwnd, 9, BS.GROUPBOX);
 
-            // create a centred static control to display the button clicked inside the group box
+            // static control to show which button was clicked
             hStatic = await CreateWindow("STATIC", "", WS.CHILD | WS.VISIBLE | SS.CENTER,
                 160, 104, 200, 12, hwnd, 10, 0, null);
 

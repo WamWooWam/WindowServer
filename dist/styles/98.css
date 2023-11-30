@@ -1,18 +1,16 @@
 /*! 98.css v0.1.20 - https://github.com/jdan/98.css */
 @font-face {
-    font-family: "Pixelated MS Sans Serif";
+    font-family: "Tahoma";
     font-style: normal;
     font-weight: 400;
-    src: url(ms_sans_serif.woff) format("woff");
-    src: url(ms_sans_serif.woff2) format("woff2")
+    src: url(fonts/tahoma.ttf) format("ttf");
 }
 
 @font-face {
     font-family: "Pixelated MS Sans Serif";
     font-style: normal;
     font-weight: 700;
-    src: url(ms_sans_serif_bold.woff) format("woff");
-    src: url(ms_sans_serif_bold.woff2) format("woff2")
+    src: url(fonts/tahomabd.ttf) format("ttf");
 }
 
 :root {
