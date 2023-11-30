@@ -27,6 +27,19 @@ import {
 } from "../client/user32.js";
 
 
+const BUTTON_NAMES = [
+    "BS_PUSHBUTTON",
+    "BS_DEFPUSHBUTTON",
+    "WS_DISABLED", // never used
+    "BS_CHECKBOX",
+    "BS_AUTOCHECKBOX",
+    "BS_RADIOBUTTON",
+    "BS_AUTORADIOBUTTON",
+    "BS_3STATE",
+    "BS_AUTO3STATE",
+    "BS_GROUPBOX"
+]
+
 async function main() {
     const hModule = await GetModuleHandle(null);
     const className = "Test Window Class";
@@ -110,38 +123,7 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
         }
 
         case WM.COMMAND: {
-            switch(LOWORD(wParam)) {
-                case 0:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "BS_PUSHBUTTON clicked");
-                    break;
-                case 1:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "BS_DEFPUSHBUTTON clicked");
-                    break;
-                case 2:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "WS_DISABLED clicked");
-                    break;
-                case 3:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "BS_CHECKBOX clicked");
-                    break;
-                case 4:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "BS_AUTOCHECKBOX clicked");
-                    break;
-                case 5:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "BS_RADIOBUTTON clicked");
-                    break;
-                case 6:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "BS_AUTORADIOBUTTON clicked");
-                    break;
-                case 7:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "BS_3STATE clicked");
-                    break;
-                case 8:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "BS_AUTO3STATE clicked");
-                    break;
-                case 9:
-                    await SendMessage(hStatic, WM.SETTEXT, 0, "BS_GROUPBOX clicked");
-                    break;
-            }
+            await SendMessage(hStatic, WM.SETTEXT, 0, `${BUTTON_NAMES[LOWORD(wParam)]} clicked`);
             return 0;
         }
 
