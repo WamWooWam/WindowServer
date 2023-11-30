@@ -346,6 +346,8 @@ export enum WM {
     EXITSIZEMOVE = 0x0232,
 
     // TODO: the rest
+    
+    COMMAND = 0x0111,
 
     USER = 0x0400,
 }
@@ -419,6 +421,31 @@ export enum BS {
     NOTIFY = 0x00004000,
     FLAT = 0x00008000,
     RIGHTBUTTON = LEFTTEXT,
+}
+
+export enum BM {
+    GETCHECK = 0x00F0,
+    SETCHECK = 0x00F1,
+    GETSTATE = 0x00F2,
+    SETSTATE = 0x00F3,
+    SETSTYLE = 0x00F4,
+    CLICK = 0x00F5,
+    GETIMAGE = 0x00F6,
+    SETIMAGE = 0x00F7,
+}
+
+export enum BN {
+    CLICKED = 0,
+    PAINT = 1,
+    HILITE = 2,
+    UNHILITE = 3,
+    DISABLE = 4,
+    DOUBLECLICKED = 5,
+    PUSHED = 2,
+    UNPUSHED = 3,
+    DBLCLK = 5,
+    PUSHED_HILITE = 2,
+    UNPUSHED_HILITE = 3,
 }
 
 export enum DC {
@@ -852,6 +879,10 @@ export function LOWORD(lParam: LPARAM) {
 
 export function HIWORD(lParam: LPARAM) {
     return (lParam >> 16) & 0xFFFF;
+}
+
+export function MAKEWPARAM(low: number, high: number) {
+    return (high << 16) | low;
 }
 
 export interface POINTS {

@@ -1,3 +1,4 @@
+import WND from "../wnd.js";
 import { WS } from "../../types/user32.types.js";
 import WindowElementBase from "./WindowElementBase.js";
 
@@ -19,8 +20,8 @@ export default class WindowElement extends WindowElementBase {
         return [...super.observedAttributes, 'icon'];
     }
 
-    constructor() {
-        super();
+    constructor(wnd: WND) {
+        super(wnd);
 
         let template = document.getElementById("x-window-template") as HTMLTemplateElement;
         let templateContent = template.content;

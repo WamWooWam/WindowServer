@@ -16,48 +16,167 @@
 }
 
 :root {
-    --3d-object-background: #d4d0c8;
-    --3d-object-color: #000000;
-    --active-title-bar-color1: #0a246a;
-    --active-title-bar-color2: #a6caf0;
-    --active-title-bar-background: linear-gradient(90deg, var(--active-title-bar-color1), var(--active-title-bar-color2));
-    --active-title-bar-font: bold 8pt "Tahoma", "Arial", sans-serif;
-    --active-title-bar-text: #ffffff;
-    --active-window-border-color: #d4d0c8;
-    --active-window-border-thickness: 1px;
-    --application-background: #808080;
-    --caption-button-size: 18px;
-    --desktop-background: #3a6ea5;
-    --icon-size: 32px;
-    --icon-spacing-horizontal: 43px;
-    --icon-spacing-vertical: 43px;
-    --inactive-title-bar-color1: #808080;
-    --inactive-title-bar-color2: #c0c0c0;
-    --inactive-title-bar-background: linear-gradient(90deg, var(--inactive-title-bar-color1), var(--inactive-title-bar-color2));
-    --inactive-title-bar-font: bold 8pt "Tahoma", "Arial", sans-serif;
-    --inactive-title-bar-text: #d4d0c8;
-    --inactive-window-border-color: #d4d0c8;
-    --inactive-window-border-thickness: 1px;
-    --menu-size: 18px;
-    --menu-background: #d4d0c8;
-    --menu-font: normal 8pt "Tahoma", "Arial", sans-serif;
-    --menu-text: #000000;
-    --message-box-font: normal 8pt "Tahoma", "Arial", sans-serif;
-    --message-box-text: #000000;
-    --palette-title-size: 15px;
-    --palette-title-font: bold 8pt "Tahoma", "Arial", sans-serif;
-    --scrollbar-width: 16px;
-    --selected-items-background: #0a246a;
-    --selected-items-text: #ffffff;
+    --scroll-bar-color: #d4d0c8;
+
+    --background-color: #3a6ea5;
+
+    --active-caption-color: #0a246a;
+    --active-caption-color-2: #a6caf0;
+    --active-caption-text-color: #ffffff;
+    --active-border-color: #d4d0c8;
+
+    --inactive-caption-color: #808080;
+    --inactive-caption-color-2: #c0c0c0;
+    --inactive-caption-text-color: #d4d0c8;
+    --inactive-border-color: #d4d0c8;
+
+    --window-color: #ffffff;
+    --window-frame-color: #000000;
+    --window-text-color: #000000;
+
+    --menu-color: #d4d0c8;
+    --menu-text-color: #000000;
+    --menu-highlight-color: #0a246a;
+    --menu-bar-color: #d4d0c8;
+
+    --button-face-color: #d4d0c8;
+    --button-shadow-color: #808080;
+    --button-text-color: #000000;
+    --button-highlight-color: #ffffff;
+
+    --highlight-color: #0a246a;
+    --highlight-text-color: #ffffff;
+
+    --info-text-color: #000000;
+    --info-background-color: #ffffe1;
+
+    --highlight-color: #000080;
+    --gray-text-color: #808080;
+    --app-workspace-color: #808080;
+
+    --3d-dark-shadow-color: #404040;
+    --3d-light-color: #d4d0c8;
+
+
+    --3d-object-color: var(--button-face-color);
+    --3d-shadow-color: var(var(--button-shadow-color));
+    --3d-highlight-color: var(--button-highlight-color);
+
+    --desktop-colour: var(--background-color);
+
+    --active-caption-background: linear-gradient(90deg, var(--active-caption-color), var(--active-caption-color-2));
+    --inactive-caption-background: linear-gradient(90deg, var(--inactive-caption-color), var(--inactive-caption-color-2));
+
     --selected-items-font: normal 8pt "Tahoma", "Arial", sans-serif;
-    --selected-item-size: 18px;
-    --tooltip-background: #ffffe1;
-    --tooltip-text: #000000;
+    /* unsure? */
+
+    --active-caption-font: bold 8pt "Tahoma", "Arial", sans-serif;
+    --inactive-caption-font: bold 8pt "Tahoma", "Arial", sans-serif;
+    --menu-font: normal 8pt "Tahoma", "Arial", sans-serif;
+    --message-box-font: normal 8pt "Tahoma", "Arial", sans-serif;
+    --small-caption-font: bold 8pt "Tahoma", "Arial", sans-serif;
     --tooltip-font: normal 8pt "Tahoma", "Arial", sans-serif;
-    --window-background: #ffffff;
-    --window-color: #000000;
+
+    --active-window-border-thickness: 1px;
+    --inactive-window-border-thickness: 1px;
+    --caption-button-size: 18px;
+    --icon-spacing-vertical: 43px;
+    --icon-spacing-horizontal: 43px;
+    --menu-size: 18px;
+    --icon-size: 32px;
+    --caption-size: 18px;
+    --small-caption-size: 15px;
+    --selected-item-size: 18px;
+    --scrollbar-width: 16px;
+
+    background-color: var(--desktop-colour);
 }
 
+.high-contrast-1 {
+    --scroll-bar-color: #000000;
+    --background-color: #000000;
+    --active-caption-color: #0000ff;
+    --inactive-caption-color: #00ffff;
+    --menu-color: #000000;
+    --window-color: #000000;
+    --window-frame-color: #ffffff;
+    --menu-text-color: #ffffff;
+    --window-text-color: #ffff00;
+    --caption-text-color: #ffffff;
+    --active-border-color: #0000ff;
+    --inactive-border-color: #00ffff;
+    --app-workspace-color: #000000;
+    --highlight-color: #008000;
+    --highlight-text-color: #ffffff;
+    --button-face-color: #000000;
+    --button-shadow-color: #808080;
+    --gray-text-color: #00ff00;
+    --button-text-color: #ffffff;
+    --inactive-caption-text-color: #000000;
+    --button-highlight-color: #c0c0c0;
+    --3d-dark-shadow-color: #ffffff;
+    --3d-light-color: #ffffff;
+    --info-text-color: #ffff00;
+    --info-background-color: #000000;
+    --highlight-color: #800080;
+    --active-caption-color-2: #0000ff;
+    --inactive-caption-color-2: #00ffff;
+    --menu-highlight-color: #008000;
+    --menu-bar-color: #000000;
+
+    --active-caption-font: bold 11px 'Microsoft Sans Serif';
+    --inactive-caption-font: bold 11px 'Microsoft Sans Serif';
+    --menu-font: 11px 'Microsoft Sans Serif';
+    --message-box-font: 11px 'Microsoft Sans Serif';
+    --small-caption-font: bold 11px 'Microsoft Sans Serif';
+    --toottip-font: 11px 'Microsoft Sans Serif';
+
+    --caption-size: 20px;
+    --small-caption-size: 15px;
+}
+
+.windows-classic {
+    --scroll-bar-color: rgb(192, 192, 192);
+    --background-color: rgb(58, 110, 165);
+    --active-caption-color: rgb(0, 0, 128);
+    --inactive-caption-color: rgb(128, 128, 128);
+    --menu-color: rgb(192, 192, 192);
+    --window-color: rgb(255, 255, 255);
+    --window-frame-color: rgb(0, 0, 0);
+    --menu-text-color: rgb(0, 0, 0);
+    --window-text-color: rgb(0, 0, 0);
+    --caption-text-color: rgb(255, 255, 255);
+    --active-border-color: rgb(192, 192, 192);
+    --inactive-border-color: rgb(192, 192, 192);
+    --app-workspace-color: rgb(128, 128, 128);
+    --highlight-color: rgb(0, 0, 128);
+    --highlight-text-color: rgb(255, 255, 255);
+    --button-face-color: rgb(192, 192, 192);
+    --button-shadow-color: rgb(128, 128, 128);
+    --gray-text-color: rgb(128, 128, 128);
+    --button-text-color: rgb(0, 0, 0);
+    --inactive-caption-text-color: rgb(192, 192, 192);
+    --button-highlight-color: rgb(255, 255, 255);
+    --3d-dark-shadow-color: rgb(0, 0, 0);
+    --3d-light-color: rgb(192, 192, 192);
+    --info-text-color: rgb(0, 0, 0);
+    --info-background-color: rgb(255, 255, 225);
+    --highlight-color: rgb(0, 0, 128);
+    --active-caption-color-2: rgb(16, 132, 208);
+    --inactive-caption-color-2: rgb(181, 181, 181);
+    --menu-highlight-color: rgb(0, 0, 128);
+    --menu-bar-color: rgb(192, 192, 192);
+
+    --active-caption-font: bold 11px 'Microsoft Sans Serif';
+    --inactive-caption-font: bold 11px 'Microsoft Sans Serif';
+    --menu-font: 11px 'Microsoft Sans Serif';
+    --message-box-font: 11px 'Microsoft Sans Serif';
+    --small-caption-font: bold 11px 'Microsoft Sans Serif';
+    --toottip-font: 11px 'Microsoft Sans Serif';
+
+    --caption-size: 18px;
+    --small-caption-size: 15px;
+}
 
 x-window {
     opacity: 0;
@@ -66,8 +185,8 @@ x-window {
 }
 
 body {
-    color: #222;
-    background-color: var(--desktop-background);
+    color: var(--window-text-color);
+    background-color: var(--desktop-colour);
     font-family: 'Tahoma', 'Arial', sans-serif;
     font-size: 8pt;
     margin: 0px;
@@ -77,6 +196,7 @@ body {
 .window,
 window,
 button,
+.button,
 input,
 label,
 option,
@@ -115,23 +235,27 @@ u {
 }
 
 button,
+.button,
 input[type=reset],
 input[type=submit] {
     border: none;
     border-radius: 0;
     box-sizing: border-box;
-    color: transparent;
+    color: var(--3d-object-foreground);
     min-height: 23px;
     min-width: 75px;
     padding: 0 12px;
-    text-shadow: 0 0 #222
+    text-shadow: 0 0 var(--3d-object-foreground);
+    cursor: unset;
+    overflow: h;
 }
 
 .vertical-bar,
 button,
+.button,
 input[type=reset],
 input[type=submit] {
-    background: var(--3d-object-background);
+    background: var(--3d-object-color);
     box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey;
 }
 
@@ -140,15 +264,16 @@ input[type=submit] {
     width: 4px
 }
 
+.button.active,
 button:not(:disabled):active,
 input[type=reset]:not(:disabled):active,
 input[type=submit]:not(:disabled):active {
     box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px transparent, inset 2px 2px grey;
-    text-shadow: 1px 1px #222
+    text-shadow: 0 0 var(--3d-object-foreground);
 }
 
 @media (not(hover)) {
-
+    .button.hover,
     button:not(:disabled):hover,
     input[type=reset]:not(:disabled):hover,
     input[type=submit]:not(:disabled):hover {
@@ -156,6 +281,7 @@ input[type=submit]:not(:disabled):active {
     }
 }
 
+.button.focus,
 button:focus,
 input[type=reset]:focus,
 input[type=submit]:focus {
@@ -169,6 +295,7 @@ input[type=submit]::-moz-focus-inner {
     border: 0
 }
 
+.disabled,
 :disabled,
 :disabled+label,
 input[readonly],
@@ -178,6 +305,7 @@ input[readonly]+label {
 
 :disabled+label,
 button:disabled,
+.button.disabled,
 input[type=reset]:disabled,
 input[type=submit]:disabled {
     text-shadow: 1px 1px 0 #fff
@@ -185,27 +313,31 @@ input[type=submit]:disabled {
 
 .window {
     /* this is WS_THICKFRAME, we'll need to do one that doesn't use this */
-    background: var(--3d-object-background);
+    background: var(--3d-object-color);
     box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #dfdfdf, inset -2px -2px grey, inset 2px 2px #fff;
     padding: 3px
 }
 
 .title-bar {
-    align-items: center;
-    background: var(--active-title-bar-background);
+    background: var(--active-caption-background);
+    height: var(--caption-size);
+    padding: 0 2px;
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    padding: 2px 2px 3px 3px
 }
 
 .window.inactive>.title-bar,
 .title-bar.inactive {
-    background: var(--inactive-title-bar-background);
+    background: var(--inactive-caption-background);
+    color: var(--inactive-caption-text-color);
 }
 
 .title-bar-text {
-    color: var(--active-title-bar-text);
-    font: var(--active-title-bar-font);
+    color: var(--active-caption-text-color);
+    font: var(--active-caption-font);
+    transform: translateY(-1px);
+    /* todo: not like this */
     letter-spacing: 0;
     margin: 0;
     margin-right: 24px;
@@ -217,8 +349,8 @@ input[type=submit]:disabled {
 
 .window.inactive>.title-bar>.title-bar-text,
 .title-bar.inactive>.title-bar-text {
-    color: var(--inactive-title-bar-text);
-    font: var(--inactive-title-bar-font);
+    color: var(--inactive-caption-text-color);
+    font: var(--inactive-caption-font);
 }
 
 .title-bar-controls {
@@ -306,7 +438,7 @@ fieldset {
 }
 
 legend {
-    background: rgb(212, 208, 200);
+    background: var(--3d-light-color);
 }
 
 .field-row {
@@ -370,6 +502,7 @@ input[type=radio]+label:before {
     width: 12px
 }
 
+input[type=radio].active+label:before,
 input[type=radio]:active+label:before {
     background: url("data:image/svg+xml;charset=utf-8,%3Csvg width='12' height='12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M8 0H4v1H2v1H1v2H0v4h1v2h1V8H1V4h1V2h2V1h4v1h2V1H8V0z' fill='gray'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M8 1H4v1H2v2H1v4h1v1h1V8H2V4h1V3h1V2h4v1h2V2H8V1z' fill='%23000'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M9 3h1v1H9V3zm1 5V4h1v4h-1zm-2 2V9h1V8h1v2H8zm-4 0v1h4v-1H4zm0 0V9H2v1h2z' fill='%23DFDFDF'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M11 2h-1v2h1v4h-1v2H8v1H4v-1H2v1h2v1h4v-1h2v-1h1V8h1V4h-1V2z' fill='%23fff'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M4 2h4v1h1v1h1v4H9v1H8v1H4V9H3V8H2V4h1V3h1V2z' fill='silver'/%3E%3C/svg%3E")
 }
@@ -415,6 +548,7 @@ input[type=checkbox]+label:before {
     width: 13px
 }
 
+input[type=checkbox].active+label:before,
 input[type=checkbox]:active+label:before {
     background: silver
 }
@@ -836,7 +970,7 @@ menu[role=tablist]>li {
 }
 
 menu[role=tablist]>li[aria-selected=true] {
-    background-color: rgb(212, 208, 200);
+    background-color: #d4d0c8;
     margin-left: -3px;
     margin-top: -2px;
     padding-bottom: 2px;
@@ -873,7 +1007,7 @@ menu[role=tablist].multirows>li {
 
 .sunken-panel,
 table {
-    background-color: #fff
+    background-color: var(--window-color);
 }
 
 table {
@@ -884,7 +1018,7 @@ table {
 }
 
 table>thead>tr>* {
-    background: var(--3d-object-background);
+    background: var(--3d-object-color);
     box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey;
     box-sizing: border-box;
     font-weight: 400;
@@ -899,8 +1033,8 @@ table.interactive>tbody>tr {
 }
 
 table>tbody>tr.highlighted {
-    background-color: navy;
-    color: #fff
+    background-color: var(--highlight-color);
+    color: var(--highlight-text-color)
 }
 
 table>tbody>tr>* {
@@ -930,6 +1064,88 @@ table>tbody>tr>* {
 
 canvas {
     position: absolute;
+}
+
+x-static {}
+
+x-static.left,
+x-static.simple {
+    text-align: left;
+}
+
+x-static.center {
+    text-align: center;
+}
+
+x-static.right {
+    text-align: right;
+}
+
+x-static.black-rect {
+    background-color: var(--3d-dark-shadow-color);
+}
+
+x-static.gray-rect {
+    background-color: var(--3d-shadow-color);
+}
+
+x-static.white-rect {
+    background-color: var(--3d-highlight-color);
+}
+
+x-static.black-frame {
+    border: 1px solid var(--3d-dark-shadow-color);
+}
+
+x-static.gray-frame {
+    border: 1px solid var(--3d-shadow-color);
+}
+
+x-static.white-frame {
+    border: 1px solid var(--3d-highlight-color);
+}
+
+x-static.etched-frame {
+    box-shadow: inset -1px -1px var(--button-highlight-color), inset 1px 1px var(--button-shadow-color), inset -2px -2px var(--button-shadow-color), inset 2px 2px var(--button-highlight-color);
+}
+
+x-static.etched-horz {
+    box-shadow: inset 0 -1px var(--button-highlight-color), inset 0 1px var(--button-shadow-color), inset 0 -2px var(--button-shadow-color), inset 0 2px var(--button-highlight-color);
+}
+
+x-static.etched-vert {
+    box-shadow: inset -1px 0 var(--button-highlight-color), inset 1px 0 var(--button-shadow-color), inset -2px 0 var(--button-shadow-color), inset 2px 0 var(--button-highlight-color);
+}
+
+.x-button-template, .x-group-box-template {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.x-button-template {
+    padding: 0px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-wrap: nowrap;
+    overflow: hidden;
+}
+.x-button-template.left {
+    justify-content: flex-start;
+}
+.x-button-template.right {
+    justify-content: flex-end;
+}
+.x-button-template.top {
+    align-items: flex-start;
+}
+.x-button-template.bottom {
+    align-items: flex-end;
+}
+.x-button-template.multiline {
+    text-wrap: normal;
 }
 
 /*# sourceMappingURL=98.css.map */

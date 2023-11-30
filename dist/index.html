@@ -53,13 +53,48 @@
         <template id="x-desktop-template">
             <style>
                 :host {
-                    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAARSURBVBhXY2Bg+A/EYMDwHwAMAgH/CWV5JQAAAABJRU5ErkJggg==);
                     background-repeat: repeat;
                     image-rendering: pixelated;
                     overflow: hidden;
                 }
             </style>
             <slot></slot>
+        </template>
+        <template id="x-button-template">
+            <link id="style" rel="stylesheet" href="/styles/98.css">
+            <div role="button" class="button x-button-template">
+                <img class="icon" src="" />
+                <span class="text">
+                    <slot></slot>
+                </span>
+            </div>
+        </template>
+        <template id="x-checkbox-template">
+            <link id="style" rel="stylesheet" href="/styles/98.css">
+            <input type="checkbox" />
+            <label class="checkbox x-checkbox-template">
+                <span class="text">
+                    <slot></slot>
+                </span>
+            </label>
+        </template>
+        <template id="x-radio-button-template">
+            <link id="style" rel="stylesheet" href="/styles/98.css">
+            <input type="radio" />
+            <label class="checkbox x-checkbox-template">
+                <span class="text">
+                    <slot></slot>
+                </span>
+            </label>
+        </template>
+        <template id="x-group-box-template">
+            <link id="style" rel="stylesheet" href="/styles/98.css">
+            <fieldset class="group-box x-group-box-template">
+                <legend class="text">
+                    <slot></slot>
+                </legend>
+                <slot></slot>
+            </fieldset>
         </template>
     </div>
 
@@ -78,7 +113,7 @@
                         </tr>
                     </thead>
                     <tbody id="processes">
-                        
+
                     </tbody>
                 </table>
             </div>
@@ -89,6 +124,7 @@
                 <option value="gditest">GDI Test Application</option>
                 <option value="custdraw">Custom Drawn Window Test</option>
                 <option value="static">STATIC Control Test</option>
+                <option value="button">BUTTON Control Test</option>
                 <option value="asyncfre">Asynchronous Freezing Test</option>
                 <option value="syncfre">Synchronous Freezing Test</option>
             </select>

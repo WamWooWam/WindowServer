@@ -7,9 +7,10 @@ import { NtDefWindowProc } from "./def.js";;
 import DesktopElement from "./html/DesktopElement.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtPostMessage } from "./msg.js";
-import { NtCreateWindowEx, NtGetDesktopWindow, NtSetWindowPos, NtShowWindow } from "./window.js";
+import { NtCreateWindowEx, NtGetDesktopWindow, NtSetWindowPos, NtShowWindow, NtUserMapWindowPoints } from "./window.js";
 import { NtDoNCHitTest } from "./nc.js";
 import WND from "./wnd.js";
+import { NtUserScreenToClient } from "./client.js";
 
 // export default interface DESKTOP {
 //     dwSessionId: number;
@@ -176,12 +177,16 @@ function NtUserDesktopCreateElement(peb: PEB, wnd: WND) {
                     break;
             }
 
+            const point = { x, y };
+            if (result === HT.CLIENT)
+                NtUserScreenToClient(hWnd, point);
+
             NtPostMessage(wnd.peb, {
                 hWnd,
                 message: result === HT.CLIENT ? WM.MOUSEMOVE : WM.NCMOUSEMOVE,
                 wParam: result,
-                lParam: (x << 16) + y,
-                pt: { x, y }
+                lParam: (point.x << 16) + point.y,
+                pt: point
             });
         });
     }
@@ -216,13 +221,17 @@ function NtUserDesktopCreateElement(peb: PEB, wnd: WND) {
         NtUserHitTestWindow(wnd.peb, x, y, async (hWnd, result) => {
             await NtUserSetActiveWindow(wnd.peb, hWnd);
 
+            const point = { x, y };
+            if (result === HT.CLIENT)
+                NtUserScreenToClient(hWnd, point);
+
             NtPostMessage(wnd.peb, [hWnd, WM.ACTIVATE, hWnd, 0]);
             NtPostMessage(wnd.peb, {
                 hWnd,
                 message: result === HT.CLIENT ? wmc : wmnc,
                 wParam: result,
-                lParam: (x << 16) + y,
-                pt: { x, y }
+                lParam: (point.x << 16) + point.y,
+                pt: point
             });
         });
     }
@@ -254,12 +263,16 @@ function NtUserDesktopCreateElement(peb: PEB, wnd: WND) {
         }
 
         NtUserHitTestWindow(wnd.peb, x, y, (hWnd, result) => {
+            const point = { x, y };
+            if (result === HT.CLIENT)
+                NtUserScreenToClient(hWnd, point);
+
             NtPostMessage(wnd.peb, {
                 hWnd,
                 message: result === HT.CLIENT ? wmc : wmnc,
                 wParam: result,
-                lParam: (x << 16) + y,
-                pt: { x, y }
+                lParam: (point.x << 16) + point.y,
+                pt: point
             });
         });
     }

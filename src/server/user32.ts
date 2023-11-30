@@ -10,6 +10,7 @@ import USER32, { HWND, LRESULT, MSG, WNDCLASSEX, WS, } from "../types/user32.typ
 import { ButtonWndProc } from "./user32/button.js";
 import { NtDefWindowProc } from "../win32k/def.js";
 import { NtRegisterClassEx } from "../win32k/class.js";
+import { NtUserScreenToClient } from "../win32k/client.js";
 import { ObGetObject } from "../objects.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 import { StaticWndProc } from "./user32/static.js";
@@ -159,13 +160,13 @@ function UserGetWindowRect(peb: PEB, params: HWND): RECT {
 }
 
 function UserScreenToClient(peb: PEB, params: SCREEN_TO_CLIENT): SCREEN_TO_CLIENT_REPLY {
-    const wnd = ObGetObject<WND>(params.hWnd);
-    if (!wnd) return { retVal: false, lpPoint: null };
-
-    const rect = { ...wnd.rcClient };
-    OffsetRect(rect, wnd.rcWindow.left, wnd.rcWindow.top);
-
-    return { retVal: true, lpPoint: { x: params.lpPoint.x - rect.left, y: params.lpPoint.y - rect.top } }
+    const point = { ...params.lpPoint };
+    if (NtUserScreenToClient(params.hWnd, point)) {
+        return { retVal: true, lpPoint: point };
+    }
+    else {
+        return { retVal: false, lpPoint: point };
+    }
 }
 
 function UserFindWindow(peb: PEB, params: FIND_WINDOW): HWND {

@@ -2,7 +2,7 @@ import { COLOR } from "../types/user32.types.js";
 import { HBRUSH } from "../types/gdi32.types.js";
 import { NtGdiCreateSolidBrush } from "./gdi/ntgdi.js";
 
-const SYS_COLORS = [
+const SYS_COLORS_CLASSIC = [
     0xc0c0c0, 0xa56e3a, 0x800000, 0x808080, 0xc0c0c0, 0xffffff,
     0x000000, 0x000000, 0x000000, 0xffffff, 0xc0c0c0, 0xc0c0c0,
     0x808080, 0x800000, 0xffffff, 0xc0c0c0, 0x808080, 0x808080,
@@ -11,9 +11,18 @@ const SYS_COLORS = [
     0xc0c0c0
 ];
 
+const SYS_COLORS_STANDARD = [
+    0xc8d0d4, 0xa56e3a, 0x6a240a, 0x808080, 0xc8d0d4, 0xffffff,
+    0x000000, 0x000000, 0x000000, 0xffffff, 0xc8d0d4, 0xc8d0d4,
+    0x808080, 0x6a240a, 0xffffff, 0xc8d0d4, 0x808080, 0x808080,
+    0x000000, 0xc8d0d4, 0xffffff, 0x404040, 0xc8d0d4, 0x000000,
+    0xe1ffff, 0xb5b5b5, 0x800000, 0xf0caa6, 0xc0c0c0, 0x6a240a,
+    0xc8d0d4,
+]
+
 export function IntGetSysColor(nIndex: COLOR): number {
     // Windows Classic Theme colours
-    return SYS_COLORS[nIndex];
+    return SYS_COLORS_STANDARD[nIndex];
 }
 
 export function IntGetSysColorBrush(nIndex: COLOR): HBRUSH {

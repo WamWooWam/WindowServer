@@ -1,8 +1,10 @@
+import WND from "../wnd.js";
 import { WS } from "../../types/user32.types.js";
 
-export default abstract class WindowElementBase extends HTMLElement {
+export default class WindowElementBase extends HTMLElement {
     private _style: number = 0;
     private _exStyle: number = 0;
+    private _wnd: WND;
 
     static get observedAttributes() {
         return ['window-title', 'window-style', 'window-ex-style'];
@@ -32,8 +34,18 @@ export default abstract class WindowElementBase extends HTMLElement {
         this.setAttribute("window-ex-style", value);
     }
 
-    constructor() {
+    protected get wnd(): WND {
+        return this._wnd;
+    }
+
+    constructor(wnd: WND = null) {
         super();
+
+        if (wnd) {
+            this._wnd = wnd;
+            this.dwStyle = wnd.dwStyle.toString();
+            this.dwExStyle = wnd.dwExStyle.toString();
+        }
     }
 
     connectedCallback() {
@@ -45,7 +57,7 @@ export default abstract class WindowElementBase extends HTMLElement {
     }
 
     attributeChangedCallback(name: string, oldValue: string, newValue: string) {
-        if(!this.isConnected) return;
+        if (!this.isConnected) return;
         switch (name) {
             case "window-title":
                 break;
@@ -60,8 +72,8 @@ export default abstract class WindowElementBase extends HTMLElement {
     }
 
     applyStyles(dwNewStyle: string): void {
-        if(dwNewStyle === null) return;
-        
+        if (dwNewStyle === null) return;
+
         const dwStyle = this.parseWindowStyle(dwNewStyle);
         if (dwStyle === this._style) {
             return;
@@ -73,7 +85,7 @@ export default abstract class WindowElementBase extends HTMLElement {
     }
 
     applyExStyles(dwNewStyle: string): void {
-        if(dwNewStyle === null) return;
+        if (dwNewStyle === null) return;
 
         const dwStyle = this.parseExWindowStyle(dwNewStyle);
         if (dwStyle === this._exStyle) {

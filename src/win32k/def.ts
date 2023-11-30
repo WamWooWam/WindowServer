@@ -120,7 +120,7 @@ function NtDefCreateElement(peb: PEB, hWnd: HWND, uMsg: number, wParam: WPARAM, 
         };
     }
 
-    const pRootElement = new WindowElement();
+    const pRootElement = new WindowElement(wnd);
     pRootElement.title = wnd.lpszName;
     pRootElement.dwStyle = wnd.dwStyle.toString();
     wnd.pRootElement = pRootElement;
