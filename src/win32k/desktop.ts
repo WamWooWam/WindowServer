@@ -186,7 +186,7 @@ function NtUserDesktopCreateElement(peb: PEB, wnd: WND) {
                 message: result === HT.CLIENT ? WM.MOUSEMOVE : WM.NCMOUSEMOVE,
                 wParam: result,
                 lParam: (point.x << 16) + point.y,
-                pt: point
+                pt: { x, y }
             });
         });
     }
@@ -231,7 +231,7 @@ function NtUserDesktopCreateElement(peb: PEB, wnd: WND) {
                 message: result === HT.CLIENT ? wmc : wmnc,
                 wParam: result,
                 lParam: (point.x << 16) + point.y,
-                pt: point
+                pt: { x, y }
             });
         });
     }
@@ -272,7 +272,7 @@ function NtUserDesktopCreateElement(peb: PEB, wnd: WND) {
                 message: result === HT.CLIENT ? wmc : wmnc,
                 wParam: result,
                 lParam: (point.x << 16) + point.y,
-                pt: point
+                pt: { x, y }
             });
         });
     }

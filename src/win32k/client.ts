@@ -18,8 +18,8 @@ export function NtUserScreenToClient(hWnd: HWND, lpPoint: POINT): boolean {
         OffsetRect(rcWindow, pParent.rcWindow.left + pParent.rcClient.left, pParent.rcWindow.top + pParent.rcClient.top);
     }
 
-    lpPoint.x -= rcWindow.left;
-    lpPoint.y -= rcWindow.top;
+    lpPoint.x -= (rcWindow.left + wnd.rcClient.left);
+    lpPoint.y -= (rcWindow.top + wnd.rcClient.top);
 
     return true;
 }
