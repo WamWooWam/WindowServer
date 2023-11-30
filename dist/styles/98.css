@@ -1,16 +1,19 @@
 /*! 98.css v0.1.20 - https://github.com/jdan/98.css */
 @font-face {
-    font-family: "Tahoma";
+    font-family: 'Tahoma';
+    src: url('tahoma-webfont.woff2') format('woff2'),
+         url('tahoma-webfont.woff') format('woff');
+    font-weight: normal;
     font-style: normal;
-    font-weight: 400;
-    src: url(fonts/tahoma.ttf) format("ttf");
+
 }
 
 @font-face {
-    font-family: "Pixelated MS Sans Serif";
+    font-family: 'Tahoma';
+    src: url('tahomabd-webfont.woff2') format('woff2'),
+         url('tahomabd-webfont.woff') format('woff');
+    font-weight: bold;
     font-style: normal;
-    font-weight: 700;
-    src: url(fonts/tahomabd.ttf) format("ttf");
 }
 
 :root {
@@ -202,7 +205,7 @@ select,
 table,
 textarea,
 ul.tree-view {
-    -webkit-font-smoothing: none;
+    /* -webkit-font-smoothing: none; */
     font-family: 'Tahoma', 'Arial', sans-serif;
     font-size: 8pt;
     -webkit-user-select: none;
