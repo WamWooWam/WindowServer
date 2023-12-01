@@ -1,4 +1,4 @@
-import { HWND, LPARAM, LRESULT, MSG, SC, SW, VK, WM, WPARAM, WS } from "../types/user32.types.js";
+import { HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, MA, MSG, SC, SW, VK, WA, WM, WPARAM, WS } from "../types/user32.types.js";
 import { NtDefNCHitTest, NtDefNCLButtonDown, NtDefNCLButtonUp } from "./nc.js";
 import { WMP, WND_DATA } from "../types/user32.int.types.js";
 
@@ -61,6 +61,23 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
                 return lParam;
             case WM.QUERYOPEN:
                 return true;
+            case WM.NCACTIVATE:
+                return true;
+            case WM.ACTIVATE:
+                if (LOWORD(wParam) != WA.INACTIVE && !(wnd.dwStyle & WS.MINIMIZE)) {
+                    // await NtUserSetFocus(wnd);
+                }
+                break;
+            case WM.MOUSEACTIVATE: {
+                if (wnd.dwStyle & WS.CHILD) {
+                    let parent = ObGetObject<WND>(wnd.hParent);
+                    if (parent) {
+                        return await NtDispatchMessage(peb, [parent.hWnd, WM.MOUSEACTIVATE, wParam, lParam]);
+                    }
+                }
+
+                return ((HIWORD(lParam) == WM.LBUTTONDOWN && LOWORD(lParam) == HT.CAPTION) ? MA.NOACTIVATE : MA.ACTIVATE);
+            }
         }
     }
     finally {

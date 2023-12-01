@@ -348,10 +348,10 @@ export async function NtUserSetWindowPos(wnd: WND, hWndInsertAfter: HWND, x: num
 
     // these two should also notify the shell
     if (params.uFlags & SWP.HIDEWINDOW) {
-        wnd.dwStyle &= ~WS.VISIBLE;
+        NtUserIntSetStyle(wnd, WS.VISIBLE, 0);
     }
     else if (params.uFlags & SWP.SHOWWINDOW) {
-        wnd.dwStyle |= WS.VISIBLE;
+        NtUserIntSetStyle(wnd, 0, WS.VISIBLE);
     }
 }
 
@@ -541,13 +541,11 @@ export async function NtUserWinPosShowWindow(Wnd: WND, Cmd: number) {
     }
     else {
         /* if parent is not visible simply toggle WS.VISIBLE and return */
-        // if (ShowFlag) IntSetStyle(Wnd, WS.VISIBLE, 0);
-        // else IntSetStyle(Wnd, 0, WS.VISIBLE);
-
         if (ShowFlag)
-            Wnd.dwStyle |= WS.VISIBLE;
+            NtUserIntSetStyle(Wnd, WS.VISIBLE, 0);
         else
-            Wnd.dwStyle &= ~WS.VISIBLE;
+            NtUserIntSetStyle(Wnd, 0, WS.VISIBLE);
+
     }
 
     // if (EventMsg) IntNotifyWinEvent(EventMsg, Wnd, OBJID_WINDOW, CHILDID_SELF, WEF_SETBYWNDPTI);
@@ -631,7 +629,7 @@ function NtUserWinPosInitSavedPos(wnd: WND, restoreRect: RECT) {
         wnd.savedPos.flags |= WPF.MAXINIT;
 
         if (NtUserIsDesktopWindow(wnd.wndParent)) {
-            if (wnd.stateFlags.maximizesToMonitor) {
+            if (wnd.stateFlags.bMaximizesToMonitor) {
                 wnd.savedPos.flags &= ~WPF.MAXINIT;
                 wnd.savedPos.maxPos.x = wnd.savedPos.maxPos.y = -1;
             }
@@ -691,7 +689,7 @@ function NtUserIntGetWindowPlacement(wnd: WND, wpl: WINDOWPLACEMENT) {
         wpl.ptMinPosition.x = wpl.ptMinPosition.y = -1;
 
     if (wnd.savedPos.flags & WPF.MAXINIT && // Return if set and not maximized to monitor!
-        !(wnd.stateFlags.maximizesToMonitor)) {
+        !(wnd.stateFlags.bMaximizesToMonitor)) {
         wpl.ptMaxPosition.x = wnd.savedPos.maxPos.x;
         wpl.ptMaxPosition.y = wnd.savedPos.maxPos.y;
     }
@@ -773,7 +771,6 @@ function NtUserIntWinPosFindIconPos(wnd: WND, pos: POINT) {
     wnd.savedPos.iconPos.x = pos.x;
     wnd.savedPos.iconPos.y = pos.y;
     wnd.savedPos.flags |= WPF.MININIT;
-    // TRACE("Position is set! X:%d Y:%d\n", Pos.x, Pos.y);
     return;
 }
 

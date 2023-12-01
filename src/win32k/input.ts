@@ -1,10 +1,11 @@
-import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
 import { HT, HWND, WM, WS } from "../types/user32.types.js";
 import { INRECT, InflateRect, OffsetRect, POINT } from "../types/gdi32.types.js";
+import { NtGetDesktopWindow, NtUserIsDesktopWindow } from "./window.js";
+import { NtIntMouseActivateWindow, NtUserActivateWindow } from "./focus.js";
 import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
+import DESKTOP from "./desktop.js";
 import { NtDoNCHitTest } from "./nc.js";
-import { NtGetDesktopWindow } from "./window.js";
 import { NtPostMessage } from "./msg.js";
 import { NtUserScreenToClient } from "./client.js";
 import { PEB } from "../types/types.js";
@@ -44,7 +45,7 @@ async function NtOnPointerDown(e: PointerEvent) {
         if (!desk) continue;
 
         NtUserHitTestWindow(desk, x, y, (hWnd, result) =>
-            OnHitWindowMouseDOwn(hWnd, x, y, result, wmc, wmnc));
+            OnHitWindowMouseDown(hWnd, x, y, result, wmc, wmnc));
     }
 }
 
@@ -111,16 +112,18 @@ function OnHitWindowMouseUp(x: number, y: number, result: HT, hWnd: HWND, wmc: W
     });
 }
 
-async function OnHitWindowMouseDOwn(hWnd: HWND, x: number, y: number, result: HT, wmc: WM, wmnc: WM) {
-    const peb = ObGetObject<WND>(hWnd)?.peb;
-    await NtUserSetActiveWindow(peb, hWnd);
+async function OnHitWindowMouseDown(hWnd: HWND, x: number, y: number, result: HT, wmc: WM, wmnc: WM) {
+    const wnd = ObGetObject<WND>(hWnd);
+    const peb = wnd?.peb;
+
+    // TODO: there's a lot wrong currently with activating windows
+    if (wnd && NtUserIsDesktopWindow(wnd.wndParent))
+        await NtIntMouseActivateWindow(ObGetObject<WND>(hWnd));
 
     const point = { x, y };
     if (result === HT.CLIENT)
         NtUserScreenToClient(hWnd, point);
 
-    // TODO: there's a lot wrong currently with activating windows
-    NtPostMessage(null, [hWnd, WM.ACTIVATE, hWnd, 0]);
     NtPostMessage(null, {
         hWnd,
         message: result === HT.CLIENT ? wmc : wmnc,

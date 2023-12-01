@@ -1,10 +1,12 @@
-import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
 import { GET_MESSAGE, GET_MESSAGE_REPLY, WMP, WNDPROC_PARAMS } from "../types/user32.int.types.js";
+import { GetW32ProcInfo, W32PROCINFO } from "./shared.js";
 import { HANDLE, PEB } from "../types/types.js";
-import { HWND_BROADCAST, LRESULT, MSG, WM } from "../types/user32.types.js";
+import { HT, HWND_BROADCAST, LRESULT, MA, MAKEWPARAM, MSG, WM } from "../types/user32.types.js";
+import { NtIntMouseActivateWindow, NtUserActivateWindow } from "./focus.js";
 import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
-import { GetW32ProcInfo } from "./shared.js";
+import DESKTOP from "./desktop.js";
+import { NtUserIntGetNonChildAncestor } from "./window.js";
 import { PsProcess } from "../process.js";
 import WND from "./wnd.js";
 
@@ -28,7 +30,7 @@ export async function NtGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MES
     };
 }
 
-export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
+export async function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
     let _msg: MSG = msg as MSG;
     if (msg instanceof Array) { // WNDPROC_PARAMS
         _msg = { hWnd: msg[0], message: msg[1], wParam: msg[2], lParam: msg[3] };
@@ -64,11 +66,6 @@ export async function NtDispatchMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Pr
     let _msg: MSG = msg as MSG;
     if (msg instanceof Array) { // WNDPROC_PARAMS
         _msg = { hWnd: msg[0], message: msg[1], wParam: msg[2], lParam: msg[3] };
-    }
-
-    if (_msg.hWnd && _msg.message === WM.LBUTTONDOWN || _msg.message === WM.MBUTTONDOWN || _msg.message === WM.RBUTTONDOWN) {
-        NtUserSetActiveWindow(peb, _msg.hWnd);
-        NtPostMessage(peb, [_msg.hWnd, WM.ACTIVATE, _msg.hWnd, 0]);
     }
 
     const wnd = ObGetObject<WND>(_msg.hWnd);

@@ -1,10 +1,11 @@
+import { GetW32ProcInfo, W32PROCINFO } from "./shared.js";
 import { HWND, HWND_TOP, MAKEWPARAM, SWP, WA, WM, WS } from "../types/user32.types.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
+import { NtGetDesktopWindow, NtUserIsDesktopWindow } from "./window.js";
 import { NtSetWindowPos, NtUserSetWindowPos } from "./wndpos.js";
 
-import { GetW32ProcInfo } from "./shared.js";
+import DESKTOP from "./desktop.js";
 import { IntIsWindowVisible } from "./sizemove.js";
-import { NtGetDesktopWindow } from "./window.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import { WMP } from "../types/user32.int.types.js";
@@ -23,6 +24,16 @@ export function NtUserGetForegroundWindow(): HWND {
 
     return pti.hwndActive;
 }
+
+export function NtUserIntGetFocusProcInfo(peb: PEB): W32PROCINFO {
+    let desktop = ObGetObject<DESKTOP>(peb.hDesktop);
+    if (!desktop) {
+        return null;
+    }
+
+    return desktop.pActiveProcess;
+}
+
 
 async function NtUserSendDeactivateMessages(hwndPrev: HWND, hWnd: HWND, clear: boolean): Promise<boolean> {
     let lParam = hWnd ?? 0;
@@ -45,6 +56,50 @@ async function NtUserSendDeactivateMessages(hwndPrev: HWND, hWnd: HWND, clear: b
     }
 
     return true;
+}
+
+
+export async function NtUserActivateWindow(peb: PEB, hWnd: HWND, dwType: number): Promise<boolean> {
+    let wnd = ObGetObject<WND>(hWnd);
+    let pti = GetW32ProcInfo(peb);
+    if (!pti) {
+        console.warn("NtUserActivateWindow: pti is null");
+        return false;
+    }
+
+    if (wnd) {
+        if (gpqForeground === null) {
+            await NtUserIntSetForegroundMessageQueue(peb, wnd, dwType != 0, 0);
+        }
+        else {
+            // same window
+            if (pti.hwndActive === hWnd) {
+                const wParam = NtUserGetForegroundWindow() === hWnd;
+                await NtDispatchMessage(peb, [hWnd, WM.NCACTIVATE, wParam, hWnd]);
+
+                if (wParam) {
+                    // TODO: update shell hook
+                    await NtSetWindowPos(peb, hWnd, HWND_TOP, 0, 0, 0, 0, SWP.NOSIZE | SWP.NOMOVE);
+                }
+            }
+            else {
+                // set the active window
+                await NtUserCoIntSetActiveWindow(peb, wnd, dwType != 0, true, true);
+            }
+        }
+    }
+    else {
+        // handle with no window
+        if (gpqForeground === peb && pti.hwndActive) {
+            // use active window from current process
+            wnd = ObGetObject<WND>(pti.hwndActive);
+            if (wnd) {
+                await NtDispatchMessage(peb, [wnd.hWnd, WM.NCACTIVATE, true, 0]);
+                // TODO: update shell hook
+                await NtSetWindowPos(peb, wnd.hWnd, HWND_TOP, 0, 0, 0, 0, SWP.NOSIZE | SWP.NOMOVE);
+            }
+        }
+    }
 }
 
 /**
@@ -135,51 +190,208 @@ export async function NtUserDeactivateWindow(peb: PEB): Promise<boolean> {
     return true;
 }
 
-export async function NtUserActivateWindow(peb: PEB, hWnd: HWND, dwType: number): Promise<boolean> {
-    let wnd = ObGetObject<WND>(hWnd);
+
+
+async function NtUserCoIntSetActiveWindow(peb: PEB, wnd: WND, bMouse: boolean, bFocus: boolean, async: boolean): Promise<boolean> {
     let pti = GetW32ProcInfo(peb);
     if (!pti) {
-        console.warn("NtUserActivateWindow: pti is null");
         return false;
     }
 
-    if (wnd) {
-        if (gpqForeground === null) {
-            await NtUserIntSetForegroundMessageQueue(peb, wnd, dwType != 0, 0);
-        }
-        else {
-            // same window
-            if (pti.hwndActive === hWnd) {
-                const wParam = NtUserGetForegroundWindow() === hWnd;
-                await NtDispatchMessage(peb, [hWnd, WM.NCACTIVATE, wParam, hWnd]);
+    let pWndChg = ObGetObject<WND>(pti.hwndActive);
+    let hWndPrev = pti.hwndActive;
 
-                if (wParam) {
-                    // TODO: update shell hook
-                    await NtSetWindowPos(peb, hWnd, HWND_TOP, 0, 0, 0, 0, SWP.NOSIZE | SWP.NOMOVE);
-                }
-            }
-            else {
-                // set the active window
-                await NtUserIntSetActiveWindow(wnd, dwType != 0, true, true);
-            }
-        }
+    if (!wnd || NtUserIsDesktopWindow(wnd))
+        return false;
+
+    let hWnd = wnd.hWnd;
+    if (wnd.dwExStyle & WS.EX.NOACTIVATE)
+        return true;
+
+    if (peb !== wnd.peb) {
+        return false;
+    }
+
+    if (!ObGetObject<WND>(wnd.hWnd)) {
+        return false;
+    }
+
+    if (wnd === pWndChg) {
+        return true;
+    }
+
+    if (wnd.stateFlags.bIsBeingActivated) return true;
+
+    // cbt.fMouse     = bMouse;
+    // cbt.hWndActive = hWndPrev;
+    // if (co_HOOK_CallHooks( WH_CBT, HCBT_ACTIVATE, (WPARAM)hWnd, (LPARAM)&cbt))
+    // {
+    //    ERR("SetActiveWindow: WH_CBT Call Hook return!\n");
+    //    return FALSE;
+    // }
+
+
+    if ((pWndChg = ObGetObject<WND>(pti.hwndActive)) && pWndChg.stateFlags.bIsDestroyed) {
+        pti.hwndActive = 0;
     }
     else {
-        // handle with no window
-        if (gpqForeground === peb && pti.hwndActive) {
-            // use active window from current process
-            wnd = ObGetObject<WND>(pti.hwndActive);
-            if (wnd) {
-                await NtDispatchMessage(peb, [wnd.hWnd, WM.NCACTIVATE, true, 0]);
-                // TODO: update shell hook
-                await NtSetWindowPos(peb, wnd.hWnd, HWND_TOP, 0, 0, 0, 0, SWP.NOSIZE | SWP.NOMOVE);
-            }
-        }
+        pti.hwndActivePrev = pti.hwndActive;
     }
+
+    let wndPrev = ObGetObject<WND>(pti.hwndActive);
+
+    if (wndPrev) {
+        if (peb === gpqForeground)
+            gpqForegroundPrev = peb;
+        if (!await NtUserSendDeactivateMessages(wndPrev.hWnd, hWnd, true))
+            return false;
+    }
+
+    wndPrev = ObGetObject<WND>(pti.hwndActivePrev); // keep making sure it's valid
+
+    if (pti.hwndActivePrev != pti.hwndActive || pWndChg != wndPrev || !(wnd && ObGetObject<WND>(wnd.hWnd)) || pti != GetW32ProcInfo(peb)) {
+        return false; // something's changed, bail
+    }
+
+    if (!wndPrev) {
+        // ThreadQueue->QF_flags &= ~QF_FOCUSNULLSINCEACTIVE; ?
+    }
+
+    pti.hwndActive = wnd.hWnd;
+    wnd.stateFlags.bIsBeingActivated = true;
+
+    // IntNotifyWinEvent(EVENT_SYSTEM_FOREGROUND, Wnd, OBJID_WINDOW, CHILDID_SELF, WEF_SETBYWNDPTI);
+
+    wndPrev = ObGetObject<WND>(pti.hwndActivePrev); // keep making sure it's valid
+
+    await NtUserIntSendActivateMessages(peb, wndPrev, wnd, bMouse, async);
+
+    // TODO: focus messages
+
+    wnd.stateFlags.bIsBeingActivated = false;
+
+    return (pti.hwndActive === wnd.hWnd);
 }
 
-async function NtUserIntSetActiveWindow(wnd: WND, bMouse: boolean, bFocus: boolean, async: boolean) {
-    // TODO: this
+function IsFGLocked() {
+    return false;
+}
+
+function ToggleFGActivate(peb: PEB) {
+    let pti = GetW32ProcInfo(peb);
+    let ret = pti.flags.bAllowForegroundActivate;
+    if (ret) {
+        pti.flags.bAllowForegroundActivate = false;
+    }
+
+    return ret;
+}
+
+function IsAllowedFGActive(peb: PEB, wnd: WND): boolean {
+    if (!ToggleFGActivate(peb) ||              // bits not set,
+        // pti->rpdesk != gpdeskInputDesktop ||  // not current Desktop,
+        peb == gpqForeground || // if already the queue foreground,
+        IsFGLocked() ||                       // foreground is locked,
+        (wnd.dwExStyle & WS.EX.NOACTIVATE))    // or, does not become the foreground window when the user clicks it.
+    {
+        return false;
+    }
+    return true;
+}
+
+export async function NtIntMouseActivateWindow(Wnd: WND): Promise<boolean> {
+    if (Wnd && (Wnd.dwExStyle & WS.EX.NOACTIVATE))
+        return true;
+    return await NtUserIntSetForegroundAndFocusWindow(Wnd.peb, Wnd, true, true);
+}
+
+async function NtUserIntSetForegroundAndFocusWindow(peb: PEB, wnd: WND, bMouse: boolean, bFlash: boolean) {
+    async function IntUserSetActiveWindow(peb: PEB, wnd: WND, bMouse: boolean, bFocus: boolean, async: boolean): Promise<boolean> {
+        const pti = GetW32ProcInfo(peb);
+        if (!pti) {
+            return;
+        }
+
+        while (wnd) {
+            let doFG = false;
+            let allowFG = false;
+            let ret = false;
+
+            if (peb === wnd.peb) {
+                if (IsAllowedFGActive(peb, wnd)) {
+                    doFG = true;
+                }
+                else {
+                    break;
+                }
+
+                allowFG = pti.nVisibleWindows === 0;
+            }
+            else {
+                if (!gpqForeground || gpqForeground == peb) {
+                    doFG = true;
+                }
+                else
+                    doFG = false;
+                if (doFG) {
+                    if (pti.flags.bAllowForegroundActivate || pti.nVisibleWindows !== 0)
+                        allowFG = true;
+                    else
+                        allowFG = false;
+                }
+                else
+                    allowFG = false;
+            }
+
+            if (doFG) {
+                pti.flags.bAllowForegroundActivate = true;
+                await NtUserIntSetForegroundAndFocusWindow(peb, wnd, bMouse, true);
+                pti.flags.bAllowForegroundActivate = allowFG;
+            }
+
+            return ret;
+        }
+
+        return await NtUserCoIntSetActiveWindow(peb, wnd, bMouse, bFocus, async);
+    }
+
+    let hWnd = wnd?.hWnd ?? 0;
+    let ret = false;
+
+    let prevForegroundQueue = NtUserIntGetFocusProcInfo(peb);
+    let pti = GetW32ProcInfo(peb);
+    if (wnd && prevForegroundQueue) {
+        let wndPti = GetW32ProcInfo(wnd.peb);
+        if (wndPti === prevForegroundQueue) {
+            // same queue, just activate the window
+            if (pti === prevForegroundQueue) {
+                ret = await IntUserSetActiveWindow(peb, wnd, bMouse, true, true);
+            }
+            else if (wndPti.hwndActive === wnd.hWnd) {
+                ret = true; // do nothing
+            }
+            else {
+                NtPostMessage(wnd.peb, [hWnd, WMP.ASYNC_SETACTIVEWINDOW, hWnd, 0]);
+                ret = true;
+            }
+
+            return ret;
+        }
+    }
+
+    if (!wnd) return false;
+
+    if (pti === GetW32ProcInfo(wnd.peb)) {
+        ret = await IntUserSetActiveWindow(peb, wnd, bMouse, true, false);
+    }
+    else if (GetW32ProcInfo(wnd.peb).hwndActive === wnd.hWnd) {
+        // do nothing
+    }
+    else {
+        NtPostMessage(wnd.peb, [hWnd, WMP.ASYNC_SETACTIVEWINDOW, hWnd, 0]);
+    }
+
+    return false; // why do we keep ret if we always return false?
 }
 
 function NtUserIntMakeWindowActive(wnd: WND) {
@@ -196,6 +408,8 @@ function NtUserIntMakeWindowActive(wnd: WND) {
 
 async function NtUserIntSendActivateMessages(peb: PEB, wndPrev: WND, wnd: WND, mouseActivate: boolean, async: boolean) {
     const pti = GetW32ProcInfo(peb);
+    console.log("Focusing Window %s", wnd?.lpszName);
+
     if (wnd) {
         if (!(wnd.dwStyle & WS.CHILD)) {
             let pWndTemp = ObGetObject<WND>(NtGetDesktopWindow(peb)).wndChild;
@@ -232,7 +446,7 @@ async function NtUserIntSendActivateMessages(peb: PEB, wndPrev: WND, wnd: WND, m
     let newPti = GetW32ProcInfo(newPeb);
 
     if (!(pti.flags.bInActivateAppMsg) && oldPeb != newPeb) {
-        let desktop = ObGetObject<WND>(NtGetDesktopWindow(oldPeb));
+        let desktop = ObGetObject<WND>(NtGetDesktopWindow(peb));
         let children = desktop.pChildren;
 
         if (oldPti) {
@@ -326,7 +540,7 @@ async function NtUserIntSetForegroundMessageQueue(peb: PEB, wnd: WND, mouseActiv
                     await NtUserSetWindowPos(wnd, HWND_TOP, 0, 0, 0, 0, SWP.NOSIZE | SWP.NOMOVE);
                 }
                 else {
-                    await NtUserIntSetActiveWindow(wnd, mouseActivate, true, true);
+                    await NtUserCoIntSetActiveWindow(peb, wnd, mouseActivate, true, true);
                 }
             }
         }

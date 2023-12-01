@@ -20,8 +20,11 @@ export interface W32PROCINFO {
     hwndActivePrev: HWND;
     hwndCapture: HWND;
 
+    nVisibleWindows: number;
+
     flags: {
         bInActivateAppMsg: boolean;
+        bAllowForegroundActivate: boolean;
     }
 }
 
@@ -39,6 +42,8 @@ export interface W32CLASSINFO {
 }
 
 export function GetW32ProcInfo(peb: PEB): W32PROCINFO | null {
+    if (!peb) return null;
+
     let info = peb.lpSubsystems.get(SUBSYS_USER32);
     // if (!(info?.lpParams)) {
     //     throw new Error("W32PROCINFO not initialized");

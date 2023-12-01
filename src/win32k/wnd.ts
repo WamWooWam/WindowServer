@@ -21,6 +21,7 @@ import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
+import { NtUserIntSetStyle } from "./window.js";
 
 export default class WND {
     private _hWnd: HWND;
@@ -42,15 +43,17 @@ export default class WND {
     private _zIndex: number;
 
     public stateFlags = {
-        isLinked: false,
-        sendSizeMoveMsgs: false,
+        bIsLinked: false,
+        bSendSizeMoveMsgs: false,
         /**
          * Set if DefWindowProc is called for WM_NCHITTEST, so we can skip a user<->kernel space transition
          * and just return the result of the kernel call
          */
-        overrides_NCHITTEST: true,
-        hasHadInitialPaint: false,
-        maximizesToMonitor: false
+        bOverridesNCHITTEST: true,
+        bHasHadInitialPaint: false,
+        bMaximizesToMonitor: false,
+        bIsBeingActivated: false,
+        bIsDestroyed: false
     }
 
     public savedPos: {
@@ -218,7 +221,7 @@ export default class WND {
             this._dwExStyle &= ~WS.EX.WINDOWEDGE;
 
         if (!(this.dwStyle & (WS.CHILD | WS.POPUP)))
-            this.stateFlags.sendSizeMoveMsgs = true;
+            this.stateFlags.bSendSizeMoveMsgs = true;
 
         this.FixWindowCoordinates();
 
@@ -329,11 +332,11 @@ export default class WND {
     }
 
     public Show(): void {
-        this.dwStyle = this.dwStyle | WS.VISIBLE;
+        NtUserIntSetStyle(this, 0, WS.VISIBLE);
     }
 
     public Hide(): void {
-        this.dwStyle = this.dwStyle & ~WS.VISIBLE;
+        NtUserIntSetStyle(this, WS.VISIBLE, 0);
     }
 
     public async MoveWindow(x: number, y: number, cx: number, cy: number, bRepaint: boolean): Promise<void> {
@@ -367,13 +370,13 @@ export default class WND {
         }
 
 
-        if (this.stateFlags.sendSizeMoveMsgs) {
+        if (this.stateFlags.bSendSizeMoveMsgs) {
             await NtDispatchMessage(this._peb, [this._hWnd, WM.SIZE, 0, { cx: newCX, cy: newCY }]);
             await NtDispatchMessage(this._peb, [this._hWnd, WM.MOVE, 0, { x: this.rcWindow.left, y: this.rcWindow.top }]);
         }
 
-        if (bRepaint && ((oldCX !== newCX || oldCY !== newCY) || !this.stateFlags.hasHadInitialPaint)) {
-            this.stateFlags.hasHadInitialPaint = true;
+        if (bRepaint && ((oldCX !== newCX || oldCY !== newCY) || !this.stateFlags.bHasHadInitialPaint)) {
+            this.stateFlags.bHasHadInitialPaint = true;
 
             if (this._hDC && !(this.dwStyle & WS.CHILD)) {
                 GreResizeDC(this._hDC, this.rcClient);

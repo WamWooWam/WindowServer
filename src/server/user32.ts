@@ -76,8 +76,10 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
             hwndActive: null,
             hwndActivePrev: null,
             hwndCapture: null,
+            nVisibleWindows: 0,
             flags: {
-                bInActivateAppMsg: false
+                bInActivateAppMsg: false,
+                bAllowForegroundActivate: false,
             }
         }
 

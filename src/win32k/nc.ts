@@ -1,11 +1,11 @@
 import { HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, SC, SM, WM, WMSZ, WPARAM, WS } from "../types/user32.types.js";
 import { INRECT, InflateRect, RECT } from "../types/gdi32.types.js";
 import { NtDispatchMessage, NtSendMessageTimeout } from "./msg.js";
+import { NtIntMouseActivateWindow, NtUserActivateWindow } from "./focus.js";
 import { NtUserGetWindowBorders, NtUserHasWindowEdge } from "./window.js";
 
 import { NtDefWindowProc } from "./def.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
-import { NtUserSetActiveWindow } from "./desktop.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
@@ -172,7 +172,7 @@ export async function NtDefNCLButtonDown(peb: PEB, hWnd: HWND, Msg: number, wPar
             break;
         case HT.CAPTION: {
             if ((wnd.dwExStyle & WS.EX.NOACTIVATE) !== WS.EX.NOACTIVATE)
-                NtUserSetActiveWindow(peb, wnd.hWnd);
+                await NtIntMouseActivateWindow(wnd);
 
             await NtDispatchMessage(peb, [hWnd, WM.SYSCOMMAND, SC.MOVE + HT.CAPTION, lParam]);
             break;
@@ -308,7 +308,7 @@ export function NtDefNCHitTest(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARAM
 }
 
 export async function NtDoNCHitTest(wnd: WND, x: number, y: number) {
-    if (!wnd.stateFlags.overrides_NCHITTEST) {
+    if (!wnd.stateFlags.bOverridesNCHITTEST) {
         return await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
     }
 

@@ -5,6 +5,7 @@ import { HT, HWND, HWND_TOP, SM, SW, SWP, WM, WS } from "../types/user32.types.j
 import { NtDefWindowProc } from "./def.js";;
 import DesktopElement from "./html/DesktopElement.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
+import { GetW32ProcInfo, W32PROCINFO } from "./shared.js";
 import { NtCreateWindowEx } from "./window.js";
 import WND from "./wnd.js";
 import { NtSetWindowPos, NtUserShowWindow } from "./wndpos.js";
@@ -23,8 +24,9 @@ export default class DESKTOP {
     dwSessionId: number;
     hwndDesktop: HWND;
     lpszDesktop: string;
-    hActiveWindow: HWND;
     hCaptureWindow?: HWND;
+
+    pActiveProcess: W32PROCINFO;
 }
 
 export function NtGetDefaultDesktop(): HANDLE {
@@ -60,7 +62,7 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
     desktop.dwSessionId = 0;
     desktop.hwndDesktop = hWnd;
     desktop.lpszDesktop = pDeskParams.lpszDesktop;
-    desktop.hActiveWindow = hWnd;
+    desktop.pActiveProcess = GetW32ProcInfo(peb);
 
     const hDesktop = ObSetObject(desktop, "DESKTOP", 0);
     peb.hDesktop = hDesktop;
@@ -68,42 +70,6 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
     return hDesktop;
 }
 
-export async function NtUserSetActiveWindow(peb: PEB, hWnd: HWND): Promise<HWND> {
-    const desktop = ObGetObject<DESKTOP>(peb.hDesktop);
-    if (!desktop) {
-        return null;
-    }
-
-    if (hWnd === desktop.hwndDesktop) {
-        return null;
-    }
-
-    if (hWnd === desktop.hActiveWindow) {
-        return hWnd;
-    }
-
-    const newWnd = ObGetObject<WND>(hWnd);
-    if (!newWnd) {
-        return null;
-    }
-
-    if ((newWnd.dwStyle & (WS.POPUP | WS.CHILD)) === WS.CHILD) {
-        return null; // child windows cannot be active, only top level windows
-    }
-
-    const oldActiveWindow = desktop.hActiveWindow;
-    const oldWnd = ObGetObject<WND>(oldActiveWindow);
-    if (oldWnd) {
-        oldWnd.dwStyle &= ~WS.ACTIVE;
-    }
-
-    newWnd.dwStyle |= WS.ACTIVE;
-
-    await NtSetWindowPos(peb, hWnd, HWND_TOP, 0, 0, 0, 0, SWP.NOSIZE | SWP.NOMOVE | SWP.NOACTIVATE)
-
-    desktop.hActiveWindow = hWnd;
-    return oldActiveWindow;
-}
 
 export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: number, lParam: number): Promise<number> {
     const wnd = ObGetObject<WND>(hWnd);

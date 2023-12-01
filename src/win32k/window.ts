@@ -1,28 +1,12 @@
 import { CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
-import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
-import {
-    GA,
-    GW,
-    HWND,
-    HWND_BOTTOM,
-    HWND_NOTOPMOST,
-    HWND_TOP,
-    HWND_TOPMOST,
-    MAKEWPARAM,
-    MINMAXINFO,
-    SM,
-    SW,
-    SWP,
-    WM,
-    WS,
-} from "../types/user32.types.js";
-import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
+import { GA, GW, HWND, HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST, MAKEWPARAM, MINMAXINFO, SM, SW, SWP, WM, WS, } from "../types/user32.types.js";
 import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
-import { NtDefAddChild, NtDefRemoveChild } from "./def.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow, NtUserWinPosShowWindow } from "./wndpos.js";
 import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
+import DESKTOP from "./desktop.js";
+import { GetW32ProcInfo } from "./shared.js";
 import { GreAllocDCForMonitor } from "./gdi/dc.js";
 import { NtFindClass } from "./class.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
@@ -61,6 +45,13 @@ function NtUserWndSetNext(wnd: WND, wNext: WND) {
 function NtUserWndSetChild(wnd: WND, wChild: WND) {
     wnd.wndChild = wChild;
 }
+
+export function NtUserIntGetNonChildAncestor(pWnd: WND): WND {
+    while (pWnd && (pWnd.dwStyle & (WS.CHILD | WS.POPUP)) === WS.CHILD)
+        pWnd = pWnd.wndParent;
+    return pWnd;
+}
+
 
 export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
     if (wnd === wInsertAfter) {
@@ -145,7 +136,7 @@ export function NtIntIsChildWindow(wnd: WND, baseWindow: WND) {
 
 export function NtUserIntLinkHwnd(wnd: WND, hWndPrev: HWND) {
     if (hWndPrev === HWND_TOPMOST) {
-        if (!(wnd.dwExStyle & WS.EX.TOPMOST) && wnd.stateFlags.isLinked) return;
+        if (!(wnd.dwExStyle & WS.EX.TOPMOST) && wnd.stateFlags.bIsLinked) return;
 
         wnd.dwExStyle &= ~WS.EX.TOPMOST;
         hWndPrev = HWND_TOP;
@@ -211,7 +202,7 @@ export function NtUserIntLinkHwnd(wnd: WND, hWndPrev: HWND) {
             }
         }
 
-        wnd.stateFlags.isLinked = true;
+        wnd.stateFlags.bIsLinked = true;
     }
 }
 
@@ -294,7 +285,7 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
 
     if (wndNewParent != wndOldParent) {
         NtUserUnlinkWindow(wnd);
-        wnd.stateFlags.isLinked = false;
+        wnd.stateFlags.bIsLinked = false;
 
         NtUserWndSetParent(wnd, wndNewParent);
 
@@ -478,10 +469,10 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | 
     }
     if (newMinMax.ptMaxSize.x >= (monitor.rcMonitor.right - monitor.rcMonitor.left) &&
         newMinMax.ptMaxSize.y >= (monitor.rcMonitor.bottom - monitor.rcMonitor.top)) {
-        wnd.stateFlags.maximizesToMonitor = true;
+        wnd.stateFlags.bMaximizesToMonitor = true;
     }
     else {
-        wnd.stateFlags.maximizesToMonitor = false;
+        wnd.stateFlags.bMaximizesToMonitor = false;
     }
 
 
@@ -679,7 +670,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
 
     // notify object create
 
-    if (wnd.stateFlags.sendSizeMoveMsgs) {
+    if (wnd.stateFlags.bSendSizeMoveMsgs) {
         // send WM_SIZE && WM_MOVE
     }
 
@@ -747,6 +738,13 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
     if (!wnd) {
         return false;
     }
+
+    const state = GetW32ProcInfo(wnd.peb);
+    if (!state) {
+        return false;
+    }
+
+    state.nVisibleWindows--;
 
     if ((wnd.dwStyle & WS.CHILD)) {
         await NtSendParentNotify(peb, wnd, WM.DESTROY);
@@ -988,11 +986,12 @@ export function NtUserIntSetStyle(pwnd: WND, set_bits: number, clear_bits: numbe
     pwnd.dwStyle = styleNew;
     if ((styleOld ^ styleNew) & WS.VISIBLE) // State Change.
     {
+        let pti = GetW32ProcInfo(pwnd.peb);
         if (styleOld & WS.VISIBLE) {
-            // hide window
+            pti.nVisibleWindows--;
         }
         if (styleNew & WS.VISIBLE) {
-            // show window
+            pti.nVisibleWindows++;
         }
     }
     return styleOld;

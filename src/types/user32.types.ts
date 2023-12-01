@@ -886,6 +886,13 @@ export enum GW {
     ENABLEDPOPUP = 6,
 }
 
+export enum MA {
+    ACTIVATE = 1,
+    ACTIVATEANDEAT = 2,
+    NOACTIVATE = 3,
+    NOACTIVATEANDEAT = 4,
+}
+
 export type HWND = HANDLE;
 export type HINSTANCE = HANDLE;
 export type HICON = HANDLE;
