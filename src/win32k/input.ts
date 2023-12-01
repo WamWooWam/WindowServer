@@ -1,12 +1,13 @@
-import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
-import { INRECT, InflateRect, OffsetRect, POINT } from "../types/gdi32.types.js";
-import { PEB } from "../types/types.js";
-import { HT, HWND, WM, WS } from "../types/user32.types.js";
-import { NtUserScreenToClient } from "./client.js";
 import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
-import { NtPostMessage } from "./msg.js";
+import { HT, HWND, WM, WS } from "../types/user32.types.js";
+import { INRECT, InflateRect, OffsetRect, POINT } from "../types/gdi32.types.js";
+import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
+
 import { NtDoNCHitTest } from "./nc.js";
 import { NtGetDesktopWindow } from "./window.js";
+import { NtPostMessage } from "./msg.js";
+import { NtUserScreenToClient } from "./client.js";
+import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
 
 let captureElement: HTMLElement;
@@ -185,15 +186,13 @@ async function NtUserHitTestWindowRecursive(lpPoint: POINT, hWnd: HWND, callback
         return -1;
 
     if ((pWnd.dwStyle & WS.VISIBLE) !== WS.VISIBLE ||
-        (pWnd.dwStyle & WS.DISABLED) === WS.DISABLED ||
-        (pWnd.dwStyle & WS.ICONIC) === WS.ICONIC)
+        (pWnd.dwStyle & WS.DISABLED) === WS.DISABLED)
         return -1;
 
     const rcWindow = pWnd.rcWindow;
     for (let pParent = ObGetObject<WND>(pWnd.hParent); pParent; pParent = ObGetObject<WND>(pParent.hParent)) {
         if ((pParent.dwStyle & WS.VISIBLE) !== WS.VISIBLE ||
-            (pParent.dwStyle & WS.DISABLED) === WS.DISABLED ||
-            (pParent.dwStyle & WS.ICONIC) === WS.ICONIC)
+            (pParent.dwStyle & WS.DISABLED) === WS.DISABLED)
             break;
 
         OffsetRect(rcWindow, pParent.rcWindow.left + pParent.rcClient.left, pParent.rcWindow.top + pParent.rcClient.top);

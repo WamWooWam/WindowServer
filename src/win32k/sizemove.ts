@@ -30,11 +30,10 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
     const isIconic = (style & WS.ICONIC) === WS.ICONIC;
     const isMaximized = (style & WS.MAXIMIZE) === WS.MAXIMIZE;
 
-    if (isMaximized && sysCommand !== SC.MOVE || !IntIsWindowVisible(wnd)) {
+    if ((isMaximized) || !IntIsWindowVisible(wnd)) {
         return;
     }
 
-    const dragFullWindows = true; // TODO: make this configurable
     const cursorPos = NtUserGetCursorPos(peb);
     let capturePoint = { ...cursorPos };
 
@@ -231,10 +230,10 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
                 }
             }
 
-            if (!isIconic) {
-                await NtSetWindowPos(peb, wnd.hWnd, null, newRect.left, newRect.top, newRect.right - newRect.left,
-                    newRect.bottom - newRect.top, SWP.NOACTIVATE | ((hitTest == HT.CAPTION) ? SWP.NOSIZE : 0) | SWP.NOZORDER);
-            }
+            // if (!isIconic) {
+            await NtSetWindowPos(peb, wnd.hWnd, null, newRect.left, newRect.top, newRect.right - newRect.left,
+                newRect.bottom - newRect.top, SWP.NOACTIVATE | ((hitTest == HT.CAPTION) ? SWP.NOSIZE : 0) | SWP.NOZORDER);
+            // }
             sizingRect = newRect;
         }
     }
@@ -252,7 +251,7 @@ export function IntIsWindowVisible(wnd: WND) {
         if (!temp) return true;
         if (!(temp.dwStyle & WS.VISIBLE)) break;
         if (temp.dwStyle & WS.MINIMIZE && temp != wnd) break;
-        // if (Temp . fnid == FNID_DESKTOP) return TRUE;
+        // if (Temp.fnid == FNID_DESKTOP) return TRUE;
         temp = ObGetObject<WND>(temp.hParent);
     }
 

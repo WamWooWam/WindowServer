@@ -13,14 +13,14 @@ export function NtInitSysMetrics(peb: PEB) {
     // TODO: there are many more metrics to set here
     view[SM.CXSCREEN] = monitor.rcMonitor.right;
     view[SM.CYSCREEN] = monitor.rcMonitor.bottom;
-    view[SM.CXMINIMIZED] = 100;
-    view[SM.CYMINIMIZED] = 32;
+    view[SM.CXMINIMIZED] = 160;
+    view[SM.CYMINIMIZED] = 24;
     view[SM.CXSIZE] = 18;
     view[SM.CYSIZE] = 18;
     view[SM.CXFRAME] = 4;
     view[SM.CYFRAME] = 4;
-    view[SM.CXMINTRACK] = 112;
-    view[SM.CYMINTRACK] = 27;
+    view[SM.CXMINTRACK] = 160;
+    view[SM.CYMINTRACK] = 24;
     view[SM.CXMAXTRACK] = monitor.rcMonitor.right + 12;
     view[SM.CYMAXTRACK] = monitor.rcMonitor.bottom + 12;
     view[SM.CXBORDER] = 1;
@@ -28,6 +28,8 @@ export function NtInitSysMetrics(peb: PEB) {
     view[SM.CYCAPTION] = 18;
     view[SM.CXDLGFRAME] = 3;
     view[SM.CYDLGFRAME] = 3;
+    view[SM.CXMINSPACING] = 8;
+    view[SM.CYMINSPACING] = 8;
 
     const hook = (monitor: MONITOR) => {
         view[SM.CXSCREEN] = monitor.rcMonitor.right;

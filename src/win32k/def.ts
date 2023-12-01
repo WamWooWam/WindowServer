@@ -59,6 +59,8 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
                 return await NtDefWndHandleSysCommand(peb, wnd, wParam, lParam);
             case WM.GETMINMAXINFO:
                 return lParam;
+            case WM.QUERYOPEN:
+                return true;
         }
     }
     finally {

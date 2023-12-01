@@ -67,11 +67,14 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
         return;
     }
 
+    // if (wnd.pRootElement)
+    //     wnd.pRootElement.remove();
+
     NtUserWndSetPrev(wnd, wInsertAfter);
     if (wnd.wndPrev) {
         console.assert(wnd != wInsertAfter.wndNext);
 
-        NtUserWndSetNext(wnd, wInsertAfter.wndNext);     
+        NtUserWndSetNext(wnd, wInsertAfter.wndNext);
 
         if (wnd.wndNext) {
             NtUserWndSetPrev(wnd.wndNext, wnd);
@@ -80,11 +83,18 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
         console.assert(wnd != wnd.wndPrev);
         NtUserWndSetNext(wnd.wndPrev, wnd);
 
-        // TODO: i dont know if this is where this should be done
-        wnd.wndParent?.pRootElement.insertBefore(wnd.pRootElement, wInsertAfter.pRootElement.nextSibling);
+        // TODO: i don't know if this is where this should be done
+        if (wInsertAfter) {
+            wInsertAfter.pRootElement.insertAdjacentElement("afterend", wnd.pRootElement);
+        }
+        else {
+            wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
+        }
     }
     else {
         console.assert(wnd != wnd.wndParent?.wndChild);
+        const oldParent = wnd.wndParent;
+
         NtUserWndSetNext(wnd, wnd.wndParent?.wndChild);
 
         if (wnd.wndNext) {
@@ -93,8 +103,13 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
 
         NtUserWndSetChild(wnd.wndParent, wnd);
 
-        // TODO: i dont know if this is where this should be done
-        wnd.wndParent?.pRootElement.insertBefore(wnd.pRootElement, wnd.wndParent?.pRootElement.firstChild);
+        // TODO: i dont know if this is where this should be done        
+        if (wInsertAfter) {
+            wInsertAfter.pRootElement.insertAdjacentElement("afterbegin", wnd.pRootElement);
+        }
+        else {
+            wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
+        }
     }
 }
 
@@ -110,9 +125,6 @@ export function NtUserUnlinkWindow(wnd: WND) {
 
     if (wnd.wndParent && wnd.wndParent.wndChild === wnd)
         NtUserWndSetChild(wnd.wndParent, wnd.wndNext);
-
-    if (wnd.pRootElement)
-        wnd.pRootElement.remove();
 
     NtUserWndSetNext(wnd, null);
     NtUserWndSetPrev(wnd, null);
@@ -386,7 +398,7 @@ export function NtIntGetWindowBorders(dwStyle: number, dwExStyle: number) {
 }
 
 // TODO: this is a stub
-export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, maxPos: POINT, minTrackSize: SIZE, maxTrackSize: SIZE) {
+export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | POINT, maxPos: POINT, minTrackSize: SIZE, maxTrackSize: SIZE) {
     let rc = wnd.rcWindow;
     const minMax: MINMAXINFO = {
         ptReserved: { x: rc.left, y: rc.top },
@@ -445,7 +457,7 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
     minMax.ptMaxPosition.x = -xinc;
     minMax.ptMaxPosition.y = -yinc;
 
-    let newMinMax = await NtDispatchMessage(peb, [wnd.hWnd, WM.GETMINMAXINFO, 0, minMax]);
+    let newMinMax = await NtDispatchMessage(peb, [wnd.hWnd, WM.GETMINMAXINFO, 0, minMax]) as MINMAXINFO;
     let monitor = NtGetPrimaryMonitor();
     let rcWork = { ...monitor.rcMonitor };
 
@@ -466,10 +478,10 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
     }
     if (newMinMax.ptMaxSize.x >= (monitor.rcMonitor.right - monitor.rcMonitor.left) &&
         newMinMax.ptMaxSize.y >= (monitor.rcMonitor.bottom - monitor.rcMonitor.top)) {
-        // Window.state |= WNDS_MAXIMIZESTOMONITOR;
+        wnd.stateFlags.maximizesToMonitor = true;
     }
     else {
-        // Window.state &= ~WNDS_MAXIMIZESTOMONITOR;
+        wnd.stateFlags.maximizesToMonitor = false;
     }
 
 
@@ -479,7 +491,14 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE, m
         newMinMax.ptMinTrackSize.y);
 
     if (maxSize) {
-        Object.assign(maxSize, newMinMax.ptMaxSize);
+        // windows treats POINT and SIZE as effectively equivalent so special case that here
+        if ('cx' in maxSize && 'cy' in maxSize) {
+            maxSize.cx = newMinMax.ptMaxSize.x;
+            maxSize.cy = newMinMax.ptMaxSize.y;
+        }
+        else {
+            Object.assign(maxSize, newMinMax.ptMaxSize);
+        }
     }
     if (maxPos) {
         Object.assign(maxPos, newMinMax.ptMaxPosition);
@@ -617,8 +636,8 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     await wnd.CreateElement();
 
     const size = {
-        cx: createStruct.nWidth,
-        cy: createStruct.nHeight
+        cx: wnd.rcWindow.right - wnd.rcWindow.left,
+        cy: wnd.rcWindow.bottom - wnd.rcWindow.top
     };
 
     if (!(wnd.dwStyle & (WS.CHILD | WS.POPUP)) && (wnd.dwStyle & WS.THICKFRAME)) {
@@ -959,4 +978,22 @@ export function NtUserGetWindow(hWnd: HWND, uCmd: GW): HWND {
 
 export function NtUserGetAncestor(hWnd: HWND, uCmd: GA): HWND {
     return NtUserIntGetAncestor(ObGetObject<WND>(hWnd), uCmd)?.hWnd || 0;
+}
+
+export function NtUserIntSetStyle(pwnd: WND, set_bits: number, clear_bits: number) {
+    let styleOld, styleNew;
+    styleOld = pwnd.dwStyle;
+    styleNew = (pwnd.dwStyle | set_bits) & ~clear_bits;
+    if (styleNew == styleOld) return styleNew;
+    pwnd.dwStyle = styleNew;
+    if ((styleOld ^ styleNew) & WS.VISIBLE) // State Change.
+    {
+        if (styleOld & WS.VISIBLE) {
+            // hide window
+        }
+        if (styleNew & WS.VISIBLE) {
+            // show window
+        }
+    }
+    return styleOld;
 }

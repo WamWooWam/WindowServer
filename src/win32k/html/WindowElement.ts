@@ -107,7 +107,7 @@ export default class WindowElement extends WindowElementBase {
             this.titleBar.classList.add("inactive");
         }
 
-        if ((style & WS.MAXIMIZED) === WS.MAXIMIZED) {
+        if ((style & WS.MAXIMIZE) === WS.MAXIMIZE) {
             this.windowBody.classList.add("maximized");
             this.maximizeButton.setAttribute("aria-label", "Restore");
         }
@@ -118,9 +118,11 @@ export default class WindowElement extends WindowElementBase {
 
         if ((style & WS.ICONIC) === WS.ICONIC) {
             this.windowBody.classList.add("minimized");
+            this.minimizeButton.setAttribute("aria-label", "Restore");
         }
         else {
             this.windowBody.classList.remove("minimized");
+            this.minimizeButton.setAttribute("aria-label", "Minimize");
         }
 
         if ((style & WS.DISABLED) === WS.DISABLED) {

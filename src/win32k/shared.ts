@@ -1,14 +1,4 @@
-import {
-    HBRUSH,
-    HCURSOR,
-    HICON,
-    HINSTANCE,
-    HWND,
-    LPARAM,
-    LRESULT,
-    MSG,
-    WPARAM
-} from "../types/user32.types.js";
+import { HBRUSH, HCURSOR, HICON, HINSTANCE, HWND, LPARAM, LRESULT, MSG, WPARAM } from "../types/user32.types.js";
 
 import { PEB } from "../types/types.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
@@ -29,6 +19,10 @@ export interface W32PROCINFO {
     hwndActive: HWND;
     hwndActivePrev: HWND;
     hwndCapture: HWND;
+
+    flags: {
+        bInActivateAppMsg: boolean;
+    }
 }
 
 export interface W32CLASSINFO {

@@ -14,7 +14,7 @@ import {
 } from "../types/user32.types.js";
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
-import { HDC, RECT } from "../types/gdi32.types.js";
+import { HDC, POINT, RECT } from "../types/gdi32.types.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetObject } from "../objects.js";
 import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
@@ -49,8 +49,17 @@ export default class WND {
          * and just return the result of the kernel call
          */
         overrides_NCHITTEST: true,
-        hasHadInitialPaint: false
+        hasHadInitialPaint: false,
+        maximizesToMonitor: false
     }
+
+    public savedPos: {
+        normalRect: RECT,
+        iconPos: POINT,
+        maxPos: POINT,
+        flags: number,
+        initialized: boolean
+    };
 
     private _hRootElement: HANDLE;
 
@@ -212,6 +221,14 @@ export default class WND {
             this.stateFlags.sendSizeMoveMsgs = true;
 
         this.FixWindowCoordinates();
+
+        this.savedPos = {
+            flags: 0,
+            iconPos: { x: 0, y: 0 },
+            maxPos: { x: 0, y: 0 },
+            normalRect: { left: 0, top: 0, right: 0, bottom: 0 },
+            initialized: false
+        }
 
         pti.hWnds.push(this._hWnd);
     }
@@ -381,14 +398,8 @@ export default class WND {
     public Dispose(): void {
         this.Hide();
 
-        if (this.wndParent) {
-            // const parent = ObGetObject<WND>(this._hParent);
-            // if (parent) {
-            //     parent.RemoveChild(this._hWnd);
-            // }
-
+        if (this.wndParent)
             ObCloseHandle(this.wndParent.hWnd);
-        }
 
         if (this.wndOwner)
             ObCloseHandle(this.wndOwner.hWnd);

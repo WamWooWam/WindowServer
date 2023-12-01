@@ -68,7 +68,6 @@ export namespace WS {
     export const CHILDWINDOW = CHILD;
 
     export const ACTIVE = 0x00000001;
-    export const MAXIMIZED = 0x00000002;
 
     export namespace EX {
         export const DLGMODALFRAME = 0x00000001;
@@ -1005,4 +1004,11 @@ export interface DRAWITEMSTRUCT {
     itemData: number;
 }
 
+export interface WINDOWPLACEMENT {
+    flags: number;
+    showCmd: number;
+    ptMinPosition: POINT;
+    ptMaxPosition: POINT;
+    rcNormalPosition: RECT;
+}
 export default USER32;

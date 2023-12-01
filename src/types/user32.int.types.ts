@@ -10,6 +10,17 @@ export enum WMP {
     REMOVECHILD = 0x8002,
     UPDATEWINDOWSTYLE = 0x8003,
     ASYNC_SETWINDOWPOS = 0x8004,
+    ASYNC_SHOWWINDOW = 0x8005,
+    ASYNC_SETACTIVEWINDOW = 0x8006,
+}
+
+// window placement flags, not windows presentation foundation
+export enum WPF {
+    SETMINPOSITION = 0x0001,
+    RESTORETOMAXIMIZED = 0x0002,
+    ASYNCWINDOWPLACEMENT = 0x0004,
+    MININIT = 0x0008,
+    MAXINIT = 0x0010
 }
 
 export interface WND_DATA {
