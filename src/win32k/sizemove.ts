@@ -9,11 +9,11 @@ import { NtDispatchMessage } from "./msg.js";
 import { NtDoNCHitTest } from "./nc.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
+import { NtSetWindowPos } from "./wndpos.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
-import { NtSetWindowPos } from "./wndpos.js";
 
 export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lParam: LPARAM) {
     const pRootElement = wnd.pRootElement as WindowElement;
@@ -233,7 +233,7 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
 
             if (!isIconic) {
                 await NtSetWindowPos(peb, wnd.hWnd, null, newRect.left, newRect.top, newRect.right - newRect.left,
-                    newRect.bottom - newRect.top, SWP.NOACTIVATE | ((hitTest == HT.CAPTION) ? SWP.NOSIZE : 0));
+                    newRect.bottom - newRect.top, SWP.NOACTIVATE | ((hitTest == HT.CAPTION) ? SWP.NOSIZE : 0) | SWP.NOZORDER);
             }
             sizingRect = newRect;
         }

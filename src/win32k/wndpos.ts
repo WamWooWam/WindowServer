@@ -1,16 +1,17 @@
-import { ObGetObject } from "../objects.js";
-import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
-import { PEB } from "../types/types.js";
-import { WMP } from "../types/user32.int.types.js";
 import { GA, GW, HWND, HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST, LOWORD, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
+import { NtUserGetWindow, NtUserIntGetAncestor, NtUserIntLinkHwnd, NtUserIsDesktopWindow, NtWinPosGetMinMaxInfo } from "./window.js";
+import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
+
+import { GetW32ProcInfo } from "./shared.js";
+import { IntIsWindowVisible } from "./sizemove.js";
+import { NtDispatchMessage } from "./msg.js";
+import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtUserClientToScreen } from "./client.js";
 import { NtUserGetCursorPos } from "./cursor.js";
 import { NtUserGetForegroundWindow } from "./focus.js";
-import { NtIntGetSystemMetrics } from "./metrics.js";
-import { NtDispatchMessage } from "./msg.js";
-import { GetW32ProcInfo } from "./shared.js";
-import { IntIsWindowVisible } from "./sizemove.js";
-import { NtUserGetWindow, NtUserIntGetAncestor, NtUserIntLinkHwnd, NtUserIsDesktopWindow, NtWinPosGetMinMaxInfo } from "./window.js";
+import { ObGetObject } from "../objects.js";
+import { PEB } from "../types/types.js";
+import { WMP } from "../types/user32.int.types.js";
 import WND from "./wnd.js";
 
 interface WINDOWPOS {
@@ -290,7 +291,7 @@ async function NtUserWinPosDoNCCALCSize(wnd: WND, winPos: WINDOWPOS, windowRect:
     return wvrFlags;
 }
 
-export async function NtUserSetWindowPos(wnd: WND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, flags: number): Promise<boolean> {
+export async function NtUserSetWindowPos(wnd: WND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, flags: SWP): Promise<boolean> {
     const params: WINDOWPOS = {
         hWnd: wnd.hWnd,
         hWndInsertAfter,
@@ -337,10 +338,12 @@ export async function NtUserSetWindowPos(wnd: WND, hWndInsertAfter: HWND, x: num
     let oldWindowRect = { ...wnd.rcWindow };
     let oldClientRect = { ...wnd.rcClient };
 
-    if (windowRect.left != oldClientRect.left || clientRect.top != oldClientRect.top) {
+    if (windowRect.left != oldWindowRect.left || windowRect.top != oldWindowRect.top) {
         // ReactOS transforms all child coordinates to screen coordinates here
         // For now, we're not going to do that because each child window has its own transform
     }
+
+    wnd.MoveWindow(windowRect.left, windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, true);
 
     // these two should also notify the shell
     if (params.uFlags & SWP.HIDEWINDOW) {
@@ -526,7 +529,7 @@ export async function NtUserWinPosShowWindow(Wnd: WND, Cmd: number) {
         Swp |= SWP.NOACTIVATE | SWP.NOZORDER;
     }
 
-    //if (IntIsWindowVisible(Wnd)) {
+    if (IntIsWindowVisible(Wnd)) {
         await NtUserSetWindowPos(Wnd,
             0 != (Wnd.dwExStyle & WS.EX.TOPMOST) ? HWND_TOPMOST : HWND_TOP,
             NewPos.left,
@@ -534,17 +537,17 @@ export async function NtUserWinPosShowWindow(Wnd: WND, Cmd: number) {
             NewPos.right, // NewPos.right - NewPos.left, when minimized and restore, the window becomes smaller.
             NewPos.bottom,// NewPos.bottom - NewPos.top,
             LOWORD(Swp));
-    // }
-    // else {
-    //     /* if parent is not visible simply toggle WS.VISIBLE and return */
-    //     // if (ShowFlag) IntSetStyle(Wnd, WS.VISIBLE, 0);
-    //     // else IntSetStyle(Wnd, 0, WS.VISIBLE);
+    }
+    else {
+        /* if parent is not visible simply toggle WS.VISIBLE and return */
+        // if (ShowFlag) IntSetStyle(Wnd, WS.VISIBLE, 0);
+        // else IntSetStyle(Wnd, 0, WS.VISIBLE);
 
         if (ShowFlag)
             Wnd.dwStyle |= WS.VISIBLE;
         else
             Wnd.dwStyle &= ~WS.VISIBLE;
-    // }
+    }
 
     // if (EventMsg) IntNotifyWinEvent(EventMsg, Wnd, OBJID_WINDOW, CHILDID_SELF, WEF_SETBYWNDPTI);
 

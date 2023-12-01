@@ -1,10 +1,10 @@
 import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
 import { GET_MESSAGE, GET_MESSAGE_REPLY, WMP, WNDPROC_PARAMS } from "../types/user32.int.types.js";
-import { GetW32ProcInfo, HWNDS } from "./shared.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { HWND_BROADCAST, LRESULT, MSG, WM } from "../types/user32.types.js";
 import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
+import { GetW32ProcInfo } from "./shared.js";
 import { PsProcess } from "../process.js";
 import WND from "./wnd.js";
 

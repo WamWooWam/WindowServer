@@ -1,17 +1,17 @@
 import { HWND, LPARAM, LRESULT, MSG, SC, SW, VK, WM, WPARAM, WS } from "../types/user32.types.js";
 import { NtDefNCHitTest, NtDefNCLButtonDown, NtDefNCLButtonUp } from "./nc.js";
-import { NtDestroyWindow } from "./window.js";
 import { WMP, WND_DATA } from "../types/user32.int.types.js";
 
 import { GetW32ProcInfo } from "./shared.js";
 import { NtDefCalcNCSizing } from "./nc.js";
 import { NtDefWndDoSizeMove } from "./sizemove.js";
+import { NtDestroyWindow } from "./window.js";
 import { NtDispatchMessage } from "./msg.js";
+import { NtUserShowWindow } from "./wndpos.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
-import { NtUserShowWindow } from "./wndpos.js";
 
 export function HasThickFrame(dwStyle: number) {
     return (dwStyle & WS.THICKFRAME) === WS.THICKFRAME && !((dwStyle & (WS.DLGFRAME | WS.BORDER)) === WS.DLGFRAME);
@@ -39,9 +39,9 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
             case WMP.CREATEELEMENT:
                 return await NtDefCreateElement(peb, hWnd, Msg, wParam, lParam);
             case WMP.ADDCHILD:
-                return await NtDefAddChild(peb, hWnd, wParam);
+                return await NtDefAddChild(hWnd, wParam);
             case WMP.REMOVECHILD:
-                return await NtDefRemoveChild(peb, hWnd, wParam);
+                return await NtDefRemoveChild(hWnd, wParam);
             case WMP.UPDATEWINDOWSTYLE:
                 return await NtDefUpdateWindowStyle(peb, hWnd, wParam, lParam);
             case WM.NCCALCSIZE:
@@ -68,7 +68,7 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
     return 0; // TODO
 }
 
-function NtDefAddChild(peb: PEB, hWnd: HWND, hWndChild: HWND): LRESULT {
+export function NtDefAddChild(hWnd: HWND, hWndChild: HWND): LRESULT {
     const wnd = ObGetObject<WND>(hWnd);
     const childWnd = ObGetObject<WND>(hWndChild);
     if (!wnd || !childWnd) {
@@ -82,7 +82,7 @@ function NtDefAddChild(peb: PEB, hWnd: HWND, hWndChild: HWND): LRESULT {
     return 0;
 }
 
-function NtDefRemoveChild(peb: PEB, hWnd: HWND, hWndChild: HWND): LRESULT {
+export function NtDefRemoveChild(hWnd: HWND, hWndChild: HWND): LRESULT {
     const wnd = ObGetObject<WND>(hWnd);
     const childWnd = ObGetObject<WND>(hWndChild);
     if (!wnd || !childWnd) {

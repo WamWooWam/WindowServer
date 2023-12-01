@@ -349,7 +349,7 @@ export enum WM {
     
     COMMAND = 0x0111,
 
-    ASYNC_SETWINDOWPOS = 0x0400,
+    PARENTNOTIFY = 0x0210,
 
     USER = 0x0400,
 }

@@ -15,9 +15,9 @@ import {
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { HDC, RECT } from "../types/gdi32.types.js";
-import { HWNDS, W32CLASSINFO, W32PROCINFO } from "./shared.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetObject } from "../objects.js";
+import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
@@ -56,14 +56,14 @@ export default class WND {
 
     public data: any;
 
-    public hwndLastActive: HWND;
+    public wndLastActive: WND;
 
     // windows uses a doubly linked list to keep track of windows and their z-order :D
-    private _wndNext: WND;
-    private _wndPrev: WND;
-    private _wndChild: WND;
-    private _wndParent: WND;
-    private _wndOwner: WND;
+    private _wndNext: WND = null;
+    private _wndPrev: WND = null;
+    private _wndChild: WND = null;
+    private _wndParent: WND = null;
+    private _wndOwner: WND = null;
 
     public get wndNext(): WND {
         return this._wndNext;
@@ -170,6 +170,7 @@ export default class WND {
 
         this.wndParent = wndParent;
         this.wndOwner = wndOwner;
+        this.wndLastActive = this;
 
         this._rcClient = {
             left: cs.x,
@@ -213,9 +214,6 @@ export default class WND {
         this.FixWindowCoordinates();
 
         pti.hWnds.push(this._hWnd);
-
-        // TODO: hacky asf 
-        HWNDS.push(this._hWnd);
     }
 
     public get peb(): PEB {
@@ -465,14 +463,6 @@ export default class WND {
     async CreateElement() {
         if (!this.pRootElement) {
             await NtDispatchMessage(this._peb, [this._hWnd, WMP.CREATEELEMENT, 0, 0])
-
-            if (this.wndParent) {
-                await NtDispatchMessage(this._peb, [this.wndParent.hWnd, WMP.ADDCHILD, this._hWnd, 0]);
-            }
-            else {
-                // for now, just add it to the body
-                document.body.appendChild(this.pRootElement);
-            }
         }
 
         // for now, dont do a dirty flag, just set the style

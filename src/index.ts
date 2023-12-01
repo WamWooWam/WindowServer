@@ -29,7 +29,7 @@ import { NtInit } from "./boot.js";
         if (index === -1) return;
 
         for (const row of processList.getElementsByTagName("tr")) {
-            row.className = "";
+            row.className = ""; 
         }
 
         row.className = "highlighted";
@@ -49,16 +49,20 @@ import { NtInit } from "./boot.js";
     }
 
     const UpdateStates = () => {
-        const rows = processList.getElementsByTagName("tr");
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            const proc = ObGetObject<PsProcess>(parseInt(row.id));
-            if (proc) {
-                (<HTMLElement>row.children[2]).innerText = ObGetOwnedHandleCount(proc.handle).toString();
+        try {
+            const rows = processList.getElementsByTagName("tr");
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const proc = ObGetObject<PsProcess>(parseInt(row.id));
+                if (proc) {
+                    (<HTMLElement>row.children[2]).innerText = ObGetOwnedHandleCount(proc.handle).toString();
+                }
             }
-        }
 
-        document.getElementById("handles").innerText = [...ObEnumHandles()].length.toString();
+            document.getElementById("handles").innerText = [...ObEnumHandles()].length.toString();
+        } catch (error) {
+
+        }
     }
 
     const UpdateButtons = () => {
@@ -85,7 +89,7 @@ import { NtInit } from "./boot.js";
 
     const QuitProc = async () => {
         const proc = GetSelectedProcess();
-        
+
         try {
             NtPostProcessMessage(proc, { hWnd: null, message: WM.QUIT, wParam: 0, lParam: 0 });
         }

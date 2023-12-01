@@ -81,6 +81,13 @@ export default class WindowElementBase extends HTMLElement {
 
         this._style = dwStyle;
 
+        if (!(dwStyle & WS.VISIBLE)) {
+            this.style.display = "none";
+        }
+        else {
+            this.style.display = "";
+        }
+
         this.applyStylesCore(dwStyle);
     }
 

@@ -1,7 +1,5 @@
 import { CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
 import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
-import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
-import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
 import {
     GA,
     GW,
@@ -10,6 +8,7 @@ import {
     HWND_NOTOPMOST,
     HWND_TOP,
     HWND_TOPMOST,
+    MAKEWPARAM,
     MINMAXINFO,
     SM,
     SW,
@@ -17,7 +16,11 @@ import {
     WM,
     WS,
 } from "../types/user32.types.js";
+import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
+import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
+import { NtDefAddChild, NtDefRemoveChild } from "./def.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
+import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow, NtUserWinPosShowWindow } from "./wndpos.js";
 import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import { GreAllocDCForMonitor } from "./gdi/dc.js";
@@ -25,10 +28,9 @@ import { NtFindClass } from "./class.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtSetLastError } from "../error.js";
+import { NtUserScreenToClient } from "./client.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
-import { NtUserScreenToClient } from "./client.js";
-import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow } from "./wndpos.js";
 
 const gNestedWindowLimit = 50;
 
@@ -37,7 +39,7 @@ export function NtGetDesktopWindow(peb: PEB): HWND {
 }
 
 export function NtUserIsDesktopWindow(wnd: WND) {
-    return wnd.hWnd == NtGetDesktopWindow(wnd.peb);
+    return wnd && wnd.hWnd == NtGetDesktopWindow(wnd.peb);
 }
 
 function NtUserWndSetParent(wnd: WND, wParent: WND) {
@@ -57,7 +59,6 @@ function NtUserWndSetNext(wnd: WND, wNext: WND) {
 }
 
 function NtUserWndSetChild(wnd: WND, wChild: WND) {
-    if(!wnd) return;
     wnd.wndChild = wChild;
 }
 
@@ -69,22 +70,31 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
     NtUserWndSetPrev(wnd, wInsertAfter);
     if (wnd.wndPrev) {
         console.assert(wnd != wInsertAfter.wndNext);
-        NtUserWndSetNext(wnd, wInsertAfter.wndNext);
+
+        NtUserWndSetNext(wnd, wInsertAfter.wndNext);     
+
         if (wnd.wndNext) {
             NtUserWndSetPrev(wnd.wndNext, wnd);
         }
 
         console.assert(wnd != wnd.wndPrev);
         NtUserWndSetNext(wnd.wndPrev, wnd);
+
+        // TODO: i dont know if this is where this should be done
+        wnd.wndParent?.pRootElement.insertBefore(wnd.pRootElement, wInsertAfter.pRootElement.nextSibling);
     }
     else {
         console.assert(wnd != wnd.wndParent?.wndChild);
         NtUserWndSetNext(wnd, wnd.wndParent?.wndChild);
+
         if (wnd.wndNext) {
             NtUserWndSetPrev(wnd.wndNext, wnd);
         }
 
         NtUserWndSetChild(wnd.wndParent, wnd);
+
+        // TODO: i dont know if this is where this should be done
+        wnd.wndParent?.pRootElement.insertBefore(wnd.pRootElement, wnd.wndParent?.pRootElement.firstChild);
     }
 }
 
@@ -100,6 +110,9 @@ export function NtUserUnlinkWindow(wnd: WND) {
 
     if (wnd.wndParent && wnd.wndParent.wndChild === wnd)
         NtUserWndSetChild(wnd.wndParent, wnd.wndNext);
+
+    if (wnd.pRootElement)
+        wnd.pRootElement.remove();
 
     NtUserWndSetNext(wnd, null);
     NtUserWndSetPrev(wnd, null);
@@ -323,6 +336,14 @@ export async function NtUserSetParent(peb: PEB, hWnd: HWND, hWndParent: HWND): P
     }
     else {
         return null;
+    }
+}
+
+export async function NtUserSendParentNotify(wnd: WND, msg: number) {
+    if ((wnd.dwStyle & (WS.CHILD | WS.POPUP)) == WS.CHILD && !(wnd.dwExStyle & WS.EX.NOPARENTNOTIFY)) {
+        if (wnd.wndParent && !NtUserIsDesktopWindow(wnd.wndParent)) {
+            await NtDispatchMessage(wnd.wndParent.peb, [wnd.wndParent.hWnd, WM.PARENTNOTIFY, MAKEWPARAM(msg, wnd.hMenu), wnd.hWnd]);
+        }
     }
 }
 
@@ -577,6 +598,9 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
 
     const wnd = new WND(peb, state, createStruct, lpWindowName, lpClassInfo, parentWnd, ownerWnd);
 
+    let hWnd = wnd.hWnd;
+    let hwndInsertAfter = HWND_TOP;
+
     // we have a window! we can now send funny messages to it
 
     // reset these
@@ -593,17 +617,30 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     await wnd.CreateElement();
 
     const size = {
-        cx: createStruct.x,
-        cy: createStruct.y
+        cx: createStruct.nWidth,
+        cy: createStruct.nHeight
     };
 
     if (!(wnd.dwStyle & (WS.CHILD | WS.POPUP)) && (wnd.dwStyle & WS.THICKFRAME)) {
         await NtWinPosGetMinMaxInfo(peb, wnd, maxSize, maxPos, minTrackSize, maxTrackSize);
+        if (size.cx > maxTrackSize.cx) size.cx = maxTrackSize.cx;
+        if (size.cy > maxTrackSize.cy) size.cy = maxTrackSize.cy;
+        if (size.cx < minTrackSize.cx) size.cx = minTrackSize.cx;
+        if (size.cy < minTrackSize.cy) size.cy = minTrackSize.cy;
     }
 
-    await wnd.MoveWindow(createStruct.x, createStruct.y, createStruct.nWidth, createStruct.nHeight, false);
+    await wnd.MoveWindow(createStruct.x, createStruct.y, size.cx, size.cy, false);
 
     await NtDispatchMessage(peb, [wnd.hWnd, WM.NCCREATE, 0, createStruct]);
+
+    if (parentWnd) {
+        if ((createStruct.dwStyle & (WS.CHILD | WS.MAXIMIZE)) === WS.CHILD) {
+            NtUserIntLinkHwnd(wnd, HWND_BOTTOM);
+        }
+        else {
+            NtUserIntLinkHwnd(wnd, hwndInsertAfter);
+        }
+    }
 
     // if (parentWnd !== null) {
     //     parentWnd.AddChild(wnd.hWnd);
@@ -619,6 +656,40 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     if (result === -1) {
         wnd.Dispose();
         return 0;
+    }
+
+    // notify object create
+
+    if (wnd.stateFlags.sendSizeMoveMsgs) {
+        // send WM_SIZE && WM_MOVE
+    }
+
+    if (wnd.dwStyle & (WS.MINIMIZE | WS.MAXIMIZE)) {
+        // maximize/minimize
+    }
+
+    await NtUserSendParentNotify(wnd, WM.CREATE);
+
+    if (wnd.wndOwner === null || !(wnd.wndOwner.dwStyle & WS.VISIBLE) || (wnd.wndOwner.dwExStyle & WS.EX.TOOLWINDOW)) {
+        if (NtUserIsDesktopWindow(wnd.wndParent) && (wnd.dwStyle & WS.VISIBLE)
+            && (!(wnd.dwExStyle & WS.EX.TOOLWINDOW) || (wnd.dwExStyle & WS.EX.APPWINDOW))) {
+            // TODO: notify the shell
+            // co_IntShellHookNotify(HSHELL_WINDOWCREATED, (WPARAM)hWnd, 0);
+        }
+    }
+
+    let dwShowMode = SW.SHOW;
+    if (wnd.dwStyle & WS.VISIBLE) {
+        if (wnd.dwStyle | WS.MAXIMIZE) {
+            dwShowMode = SW.SHOW;
+        }
+        else if (wnd.dwStyle & WS.MINIMIZE) {
+            dwShowMode = SW.SHOWMINIMIZED;
+        }
+
+        await NtUserWinPosShowWindow(wnd, dwShowMode);
+
+        // TODO: MDI child
     }
 
     performance.measure("NtCreateWindowEx", { start: mark, end: performance.now() });

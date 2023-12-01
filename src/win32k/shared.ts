@@ -21,8 +21,6 @@ export interface MSG_QUEUE {
     DispatchMessage(lpMsg: MSG): Promise<LRESULT>;
 }
 
-export const HWNDS: HWND[] = [];
-
 export interface W32PROCINFO {
     classes: W32CLASSINFO[];
     lpMsgQueue: MSG_QUEUE;

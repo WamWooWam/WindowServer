@@ -137,4 +137,6 @@ export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: numb
 function NtUserDesktopCreateElement(peb: PEB, wnd: WND) {
     const pRootElement = new DesktopElement();
     wnd.pRootElement = pRootElement;
+
+    document.body.appendChild(pRootElement);
 }

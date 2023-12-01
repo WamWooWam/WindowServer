@@ -1,12 +1,13 @@
-import { ObGetObject } from "../objects.js";
-import { PEB } from "../types/types.js";
 import { HWND, HWND_TOP, MAKEWPARAM, SWP, WA, WM, WS } from "../types/user32.types.js";
-import { NtDispatchMessage } from "./msg.js";
+
 import { GetW32ProcInfo } from "./shared.js";
 import { IntIsWindowVisible } from "./sizemove.js";
+import { NtDispatchMessage } from "./msg.js";
 import { NtGetDesktopWindow } from "./window.js";
-import WND from "./wnd.js";
 import { NtSetWindowPos } from "./wndpos.js";
+import { ObGetObject } from "../objects.js";
+import { PEB } from "../types/types.js";
+import WND from "./wnd.js";
 
 let gpqForeground: PEB = null;
 let gpqForegroundPrev: PEB = null;
@@ -200,7 +201,7 @@ function NtUserIntMakeWindowActive(wnd: WND) {
         }
     }
 
-    owner.hwndLastActive = wnd.hWnd;
+    owner.wndLastActive = wnd;
 }
 
 async function NtUserIntSendActivateMessages(peb: PEB, wndPrev: WND, wnd: WND, mouseActivate: boolean, async: boolean) {
