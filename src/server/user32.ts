@@ -1,6 +1,6 @@
 import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
-import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
+import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
 import { NtDispatchMessage, NtGetMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
 import { NtInitSysMetrics, NtIntGetSystemMetrics } from "../win32k/metrics.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
@@ -17,6 +17,7 @@ import { StaticWndProc } from "./user32/static.js";
 import W32MSG_QUEUE from "../win32k/msgqueue.js";
 import { W32PROCINFO } from "../win32k/shared.js";
 import WND from "../win32k/wnd.js";
+import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow } from "../win32k/wndpos.js";
 
 const DefaultClasses: WNDCLASSEX[] = [
     {
@@ -70,7 +71,11 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
         procInfo = {
             classes: [],
             hWnds: [],
-            lpMsgQueue: null
+            lpMsgQueue: null,
+            hwndFocus: null,
+            hwndActive: null,
+            hwndActivePrev: null,
+            hwndCapture: null
         }
 
         const msgQueue = new W32MSG_QUEUE(peb, procInfo);
@@ -112,9 +117,9 @@ async function UserCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promise<CRE
 }
 
 async function UserShowWindow(peb: PEB, data: SHOW_WINDOW): Promise<SHOW_WINDOW_REPLY> {
-    await NtShowWindow(peb, data.hWnd, data.nCmdShow);
+    let retVal = await NtUserShowWindow(data.hWnd, data.nCmdShow);
 
-    return { retVal: true };
+    return { retVal };
 }
 
 async function UserGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {

@@ -27,6 +27,10 @@ export interface W32PROCINFO {
     classes: W32CLASSINFO[];
     lpMsgQueue: MSG_QUEUE;
     hWnds: HWND[];
+    hwndFocus: HWND;
+    hwndActive: HWND;
+    hwndActivePrev: HWND;
+    hwndCapture: HWND;
 }
 
 export interface W32CLASSINFO {

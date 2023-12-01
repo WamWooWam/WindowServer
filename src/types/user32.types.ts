@@ -349,6 +349,8 @@ export enum WM {
     
     COMMAND = 0x0111,
 
+    ASYNC_SETWINDOWPOS = 0x0400,
+
     USER = 0x0400,
 }
 
@@ -390,6 +392,11 @@ export enum SWP {
     NOREPOSITION = NOOWNERZORDER,
     DEFERERASE = 0x2000,
     ASYNCWINDOWPOS = 0x4000,
+
+    // undocumented!
+    NOCLIENTSIZE = 0x0800,
+    NOCLIENTMOVE = 0x1000,
+    STATECHANGED = 0x8000,
 }
 
 export enum BS {
@@ -856,6 +863,28 @@ export enum ODS {
     INACTIVE = 0x0080,
     NOACCEL = 0x0100,
     NOFOCUSRECT = 0x0200,
+}
+
+export enum WA {
+    INACTIVE = 0,
+    ACTIVE = 1,
+    CLICKACTIVE = 2,
+}
+
+export enum GA {
+    PARENT = 1,
+    ROOT = 2,
+    ROOTOWNER = 3,
+}
+
+export enum GW {
+    HWNDFIRST = 0,
+    HWNDLAST = 1,
+    HWNDNEXT = 2,
+    HWNDPREV = 3,
+    OWNER = 4,
+    CHILD = 5,
+    ENABLEDPOPUP = 6,
 }
 
 export type HWND = HANDLE;

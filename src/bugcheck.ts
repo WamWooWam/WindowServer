@@ -1,4 +1,4 @@
-import { ObDestroyHandle, ObEnumObjects } from "./objects.js";
+import { ObDestroyHandle, ObEnumHandles } from "./objects.js";
 
 const BUGCHECK_CODES = {
     [0xEF]: 'CRITICAL_PROCESS_DIED',
@@ -32,7 +32,7 @@ export function KeBugCheckEx(
 
     const stack = error.stack;
     // attempt to destroy all handles 
-    for (const handle of ObEnumObjects()) {
+    for (const handle of ObEnumHandles()) {
         try {
             ObDestroyHandle(handle);
         } catch { }

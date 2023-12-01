@@ -1,0 +1,600 @@
+import { ObGetObject } from "../objects.js";
+import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
+import { PEB } from "../types/types.js";
+import { WMP } from "../types/user32.int.types.js";
+import { GA, GW, HWND, HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST, LOWORD, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
+import { NtUserClientToScreen } from "./client.js";
+import { NtUserGetCursorPos } from "./cursor.js";
+import { NtUserGetForegroundWindow } from "./focus.js";
+import { NtIntGetSystemMetrics } from "./metrics.js";
+import { NtDispatchMessage } from "./msg.js";
+import { GetW32ProcInfo } from "./shared.js";
+import { IntIsWindowVisible } from "./sizemove.js";
+import { NtUserGetWindow, NtUserIntGetAncestor, NtUserIntLinkHwnd, NtUserIsDesktopWindow, NtWinPosGetMinMaxInfo } from "./window.js";
+import WND from "./wnd.js";
+
+interface WINDOWPOS {
+    hWnd: HWND;
+    hWndInsertAfter: HWND;
+    x: number;
+    y: number;
+    cx: number;
+    cy: number;
+    uFlags: number;
+}
+
+interface NCCALCSIZE_PARAMS {
+    rgrc: RECT[];
+    lppos: WINDOWPOS;
+}
+
+const SWP_AGG_NOGEOMETRYCHANGE =
+    (SWP.NOSIZE | SWP.NOCLIENTSIZE | SWP.NOZORDER)
+const SWP_AGG_NOPOSCHANGE =
+    (SWP.NOSIZE | SWP.NOMOVE | SWP.NOCLIENTSIZE | SWP.NOCLIENTMOVE | SWP.NOZORDER)
+const SWP_AGG_STATUSFLAGS =
+    (SWP_AGG_NOPOSCHANGE | SWP.FRAMECHANGED | SWP.HIDEWINDOW | SWP.SHOWWINDOW)
+const SWP_AGG_NOCLIENTCHANGE =
+    (SWP.NOCLIENTSIZE | SWP.NOCLIENTMOVE)
+
+function IsPointInWindow(wnd: WND, x: number, y: number) {
+    const rect = wnd.rcWindow;
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+async function NtUserDoWinPosChanging(wnd: WND, winPos: WINDOWPOS): Promise<{ windowRect: RECT, clientRect: RECT }> {
+    if (!(winPos.uFlags & SWP.NOSENDCHANGING) && !((winPos.uFlags & SWP.SHOWWINDOW))) {
+        await NtDispatchMessage(wnd.peb, [wnd.hWnd, WM.WINDOWPOSCHANGING, 0, winPos]);
+    }
+
+    const windowRect = { ...wnd.rcWindow };
+    const clientRect = (wnd.dwStyle & WS.MINIMIZE) ? { ...wnd.rcWindow } : { ...wnd.rcClient };
+
+    if (!(winPos.uFlags & SWP.NOSIZE)) {
+        if (wnd.dwStyle & WS.MINIMIZE) {
+            windowRect.right = windowRect.left + NtIntGetSystemMetrics(wnd.peb, SM.CXMINIMIZED);
+            windowRect.bottom = windowRect.top + NtIntGetSystemMetrics(wnd.peb, SM.CYMINIMIZED);
+        }
+        else {
+            windowRect.right = windowRect.left + winPos.cx;
+            windowRect.bottom = windowRect.top + winPos.cy;
+        }
+    }
+
+    if (!(winPos.uFlags & SWP.NOMOVE)) {
+        let X, Y;
+        X = winPos.x;
+        Y = winPos.y;
+
+        let wParent = wnd.wndParent;
+        if (
+            wParent && !NtUserIsDesktopWindow(wParent)) {
+            X += wParent.rcClient.left;
+            Y += wParent.rcClient.top;
+        }
+
+        windowRect.left = X;
+        windowRect.top = Y;
+        windowRect.right += X - wnd.rcWindow.left;
+        windowRect.bottom += Y - wnd.rcWindow.top;
+
+        OffsetRect(clientRect, X - wnd.rcWindow.left, Y - wnd.rcWindow.top);
+    }
+
+    return { windowRect, clientRect };
+}
+
+function NtUserFixupWinPosFlags(winPos: WINDOWPOS, wnd: WND) {
+    let wParent: WND;
+    let pt: POINT = { x: 0, y: 0 };
+
+    /* Finally make sure that all coordinates are valid */
+    if (winPos.x < -32768) winPos.x = -32768;
+    else if (winPos.x > 32767) winPos.x = 32767;
+    if (winPos.y < -32768) winPos.y = -32768;
+    else if (winPos.y > 32767) winPos.y = 32767;
+
+    winPos.cx = Math.max(winPos.cx, 0);
+    winPos.cy = Math.max(winPos.cy, 0);
+
+    wParent = NtUserIntGetAncestor(wnd, GA.PARENT);
+    if (!IntIsWindowVisible(wParent) &&
+        /* Fix B : wine msg test_SetParent:WmSetParentSeq_2:25 wParam bits! */
+        (winPos.uFlags & SWP_AGG_STATUSFLAGS) == SWP_AGG_NOPOSCHANGE) winPos.uFlags |= SWP.NOREDRAW;
+
+    if (wnd.dwStyle & WS.VISIBLE) winPos.uFlags &= ~SWP.SHOWWINDOW;
+    else {
+        winPos.uFlags &= ~SWP.HIDEWINDOW;
+        if (!(winPos.uFlags & SWP.SHOWWINDOW)) winPos.uFlags |= SWP.NOREDRAW;
+    }
+
+    /* Check for right size */
+    if (wnd.rcWindow.right - wnd.rcWindow.left == winPos.cx &&
+        wnd.rcWindow.bottom - wnd.rcWindow.top == winPos.cy) {
+        winPos.uFlags |= SWP.NOSIZE;
+    }
+
+    pt.x = winPos.x;
+    pt.y = winPos.y;
+    if (wParent)
+        NtUserClientToScreen(wParent.hWnd, pt);
+    // TRACE("WPFU C2S wpx %d wpy %d ptx %d pty %d\n", winPos.x, winPos.y, pt.x, pt.y);
+    /* Check for right position */
+    if (wnd.rcWindow.left == pt.x && wnd.rcWindow.top == pt.y) {
+        //ERR("In right pos\n");
+        winPos.uFlags |= SWP.NOMOVE;
+    }
+
+    if (winPos.hWnd != NtUserGetForegroundWindow() && (wnd.dwStyle & (WS.POPUP | WS.CHILD)) != WS.CHILD) {
+        /* Bring to the top when activating */
+        if (!(winPos.uFlags & (SWP.NOACTIVATE | SWP.HIDEWINDOW)) &&
+            (winPos.uFlags & SWP.NOZORDER ||
+                (winPos.hWndInsertAfter != HWND_TOPMOST && winPos.hWndInsertAfter != HWND_NOTOPMOST))) {
+            winPos.uFlags &= ~SWP.NOZORDER;
+            winPos.hWndInsertAfter = (0 != (wnd.dwExStyle & WS.EX.TOPMOST) ? HWND_TOPMOST : HWND_TOP);
+        }
+    }
+
+    /* Check hwndInsertAfter */
+    if (!(winPos.uFlags & SWP.NOZORDER)) {
+        if (winPos.hWndInsertAfter == HWND_TOP) {
+            /* Keep it topmost when it's already topmost */
+            if ((wnd.dwExStyle & WS.EX.TOPMOST) != 0)
+                winPos.hWndInsertAfter = HWND_TOPMOST;
+
+            if (NtUserGetWindow(winPos.hWnd, GW.HWNDFIRST) == winPos.hWnd) {
+                winPos.uFlags |= SWP.NOZORDER;
+            }
+        }
+        else if (winPos.hWndInsertAfter == HWND_BOTTOM) {
+            if (!(wnd.dwExStyle & WS.EX.TOPMOST) && NtUserGetWindow(winPos.hWnd, GW.HWNDLAST) == winPos.hWnd)
+                winPos.uFlags |= SWP.NOZORDER;
+        }
+        else if (winPos.hWndInsertAfter == HWND_TOPMOST) {
+            if ((wnd.dwExStyle & WS.EX.TOPMOST) && NtUserGetWindow(winPos.hWnd, GW.HWNDFIRST) == winPos.hWnd)
+                winPos.uFlags |= SWP.NOZORDER;
+        }
+        else if (winPos.hWndInsertAfter == HWND_NOTOPMOST) {
+            if (!(wnd.dwExStyle & WS.EX.TOPMOST))
+                winPos.uFlags |= SWP.NOZORDER;
+        }
+        else /* hwndInsertAfter must be a sibling of the window */ {
+            const insAfterWnd = ObGetObject<WND>(winPos.hWndInsertAfter);
+            if (!insAfterWnd) {
+                return true;
+            }
+
+            if (insAfterWnd.wndParent != wnd.wndParent) {
+                /* Note from wine User32 Win test_SetWindowPos:
+                   "Returns TRUE also for windows that are not siblings"
+                   "Does not seem to do anything even without passing flags, still returns TRUE"
+                   "Same thing the other way around."
+                   ".. and with these windows."
+                 */
+                return false;
+            }
+            else {
+                /*
+                 * We don't need to change the Z order of hwnd if it's already
+                 * inserted after hwndInsertAfter or when inserting hwnd after
+                 * itself.
+                 */
+                if ((winPos.hWnd == winPos.hWndInsertAfter) ||
+                    ((insAfterWnd.wndNext) && (winPos.hWnd == insAfterWnd.wndNext.hWnd))) {
+                    winPos.uFlags |= SWP.NOZORDER;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+function FixClientRect(ClientRect: RECT, WindowRect: RECT) {
+    if (ClientRect.left < WindowRect.left) {
+        ClientRect.left = WindowRect.left;
+    }
+    else if (WindowRect.right < ClientRect.left) {
+        ClientRect.left = WindowRect.right;
+    }
+    if (ClientRect.right < WindowRect.left) {
+        ClientRect.right = WindowRect.left;
+    }
+    else if (WindowRect.right < ClientRect.right) {
+        ClientRect.right = WindowRect.right;
+    }
+    if (ClientRect.top < WindowRect.top) {
+        ClientRect.top = WindowRect.top;
+    }
+    else if (WindowRect.bottom < ClientRect.top) {
+        ClientRect.top = WindowRect.bottom;
+    }
+    if (ClientRect.bottom < WindowRect.top) {
+        ClientRect.bottom = WindowRect.top;
+    }
+    else if (WindowRect.bottom < ClientRect.bottom) {
+        ClientRect.bottom = WindowRect.bottom;
+    }
+}
+
+async function NtUserWinPosDoNCCALCSize(wnd: WND, winPos: WINDOWPOS, windowRect: RECT, clientRect: RECT, validRects: RECT[]): Promise<number> {
+    let Parent: WND;
+    let wvrFlags = 0;
+
+    /* Send WM.NCCALCSIZE message to get new client area */
+    if ((winPos.uFlags & (SWP.FRAMECHANGED | SWP.NOSIZE)) != SWP.NOSIZE) {
+        let params: NCCALCSIZE_PARAMS = {
+            rgrc: [null, null, null],
+            lppos: null,
+        }
+        let winposCopy: WINDOWPOS;
+
+        params.rgrc[0] = windowRect;      // new coordinates of a window that has been moved or resized
+        params.rgrc[1] = wnd.rcWindow; // window before it was moved or resized
+        params.rgrc[2] = wnd.rcClient; // client area before the window was moved or resized
+
+        Parent = wnd.wndParent;
+        if (0 != (wnd.dwStyle & WS.CHILD) && Parent) {
+            OffsetRect((params.rgrc[0]), - Parent.rcClient.left, - Parent.rcClient.top);
+            OffsetRect((params.rgrc[1]), - Parent.rcClient.left, - Parent.rcClient.top);
+            OffsetRect((params.rgrc[2]), - Parent.rcClient.left, - Parent.rcClient.top);
+        }
+
+        params.lppos = winposCopy;
+        winposCopy = { ...winPos };
+
+        params = await NtDispatchMessage(wnd.peb, [wnd.hWnd, WM.NCCALCSIZE, true, params]);
+
+        /* If the application send back garbage, ignore it */
+        if (params.rgrc[0].left <= params.rgrc[0].right &&
+            params.rgrc[0].top <= params.rgrc[0].bottom) {
+            clientRect = params.rgrc[0]; // First rectangle contains the coordinates of the new client rectangle resulting from the move or resize
+            if ((wnd.dwStyle & WS.CHILD) && Parent) {
+                OffsetRect(clientRect, Parent.rcClient.left, Parent.rcClient.top);
+            }
+            FixClientRect(clientRect, windowRect);
+        }
+
+        if (clientRect.left != wnd.rcClient.left ||
+            clientRect.top != wnd.rcClient.top) {
+            winPos.uFlags &= ~SWP.NOCLIENTMOVE;
+        }
+
+        if (clientRect.right - clientRect.left != wnd.rcClient.right - wnd.rcClient.left) {
+            winPos.uFlags &= ~SWP.NOCLIENTSIZE;
+        }
+
+        if (clientRect.bottom - clientRect.top != wnd.rcClient.bottom - wnd.rcClient.top) {
+            winPos.uFlags &= ~SWP.NOCLIENTSIZE;
+        }
+
+        validRects[0] = params.rgrc[1]; // second rectangle contains the valid destination rectangle
+        validRects[1] = params.rgrc[2]; // third rectangle contains the valid source rectangle
+    }
+    else {
+        if (!(winPos.uFlags & SWP.NOMOVE) &&
+            (clientRect.left != wnd.rcClient.left ||
+                clientRect.top != wnd.rcClient.top)) {
+            winPos.uFlags &= ~SWP.NOCLIENTMOVE;
+        }
+    }
+
+    if (winPos.uFlags & (SWP.NOCOPYBITS | SWP.NOREDRAW | SWP.SHOWWINDOW | SWP.HIDEWINDOW)) {
+        validRects[0] = { top: 0, left: 0, bottom: 0, right: 0 };
+        validRects[1] = { top: 0, left: 0, bottom: 0, right: 0 };
+    }
+    else {
+        // get_valid_rects( & Window.rcClient, ClientRect, wvrFlags, validRects);
+    }
+
+    return wvrFlags;
+}
+
+export async function NtUserSetWindowPos(wnd: WND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, flags: number): Promise<boolean> {
+    const params: WINDOWPOS = {
+        hWnd: wnd.hWnd,
+        hWndInsertAfter,
+        x,
+        y,
+        cx,
+        cy,
+        uFlags: flags,
+    };
+
+    const cursorPos = NtUserGetCursorPos(wnd.peb);
+    const isInWindow = IsPointInWindow(wnd, cursorPos.x, cursorPos.y);
+
+    if (flags & SWP.ASYNCWINDOWPOS) {
+        params.uFlags &= ~SWP.ASYNCWINDOWPOS;
+
+        const result = await NtDispatchMessage(wnd.peb, [wnd.hWnd, WMP.ASYNC_SETWINDOWPOS, 0, params]);
+        if (!result) {
+            return false;
+        }
+
+        return true;
+    }
+
+    const { windowRect, clientRect } = await NtUserDoWinPosChanging(wnd, params);
+
+    if (!NtUserFixupWinPosFlags(params, wnd)) {
+        return true;
+    }
+
+    let ancestor = NtUserIntGetAncestor(wnd, GA.PARENT);
+    if ((params.uFlags & (SWP.NOZORDER | SWP.HIDEWINDOW | SWP.SHOWWINDOW)) !== SWP.NOZORDER && ancestor && NtUserIsDesktopWindow(ancestor)) {
+        // TODO: NtUserWinPosDoOwnedPopups
+        // params.hWndInsertAfter = NtUserWinPosDoOwnedPopups(wnd, params.hWndInsertAfter);
+    }
+
+    let validRects: RECT[] = [null, null];
+    let wvrFlags = await NtUserWinPosDoNCCALCSize(wnd, params, windowRect, clientRect, validRects);
+
+    if (!(params.uFlags & SWP.NOZORDER)) {
+        NtUserIntLinkHwnd(wnd, params.hWndInsertAfter);
+    }
+
+    let oldWindowRect = { ...wnd.rcWindow };
+    let oldClientRect = { ...wnd.rcClient };
+
+    if (windowRect.left != oldClientRect.left || clientRect.top != oldClientRect.top) {
+        // ReactOS transforms all child coordinates to screen coordinates here
+        // For now, we're not going to do that because each child window has its own transform
+    }
+
+    // these two should also notify the shell
+    if (params.uFlags & SWP.HIDEWINDOW) {
+        wnd.dwStyle &= ~WS.VISIBLE;
+    }
+    else if (params.uFlags & SWP.SHOWWINDOW) {
+        wnd.dwStyle |= WS.VISIBLE;
+    }
+}
+
+export async function NtSetWindowPos(peb: PEB, hWnd: HWND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, uFlags: number) {
+    return NtUserSetWindowPos(ObGetObject<WND>(hWnd), hWndInsertAfter, x, y, cx, cy, uFlags);
+}
+
+export async function NtUserWinPosShowWindow(Wnd: WND, Cmd: number) {
+    let WasVisible: boolean;
+    let Swp = 0;
+    let EventMsg = 0;
+    let NewPos: RECT = { left: 0, top: 0, right: 0, bottom: 0 };
+    let ShowFlag: boolean;
+    let style: number;
+    let Parent: WND;
+    let pti = GetW32ProcInfo(Wnd.peb);
+    let ShowOwned = false;
+    let FirstTime = false;
+
+    WasVisible = (Wnd.dwStyle & WS.VISIBLE) !== 0;
+    style = Wnd.dwStyle;
+
+    //    if ( pti.ppi.usi.dwFlags & STARTF_USESHOWWINDOW )
+    //    {
+    //       if ((Wnd.dwStyle & (WS.POPUP|WS.CHILD)) != WS.CHILD)
+    //       {
+    //          if ((Wnd.dwStyle & WS.CAPTION) == WS.CAPTION)
+    //          {
+    //             if (Wnd.wndOwner == NULL)
+    //             {
+    //                if ( Cmd == SW.SHOWNORMAL || Cmd == SW.SHOW)
+    //                {
+    //                     Cmd = SW.SHOWDEFAULT;
+    //                }
+    //                FirstTime = TRUE;
+    //                TRACE("co_WPSW FT 1\n");
+    //             }
+    //          }
+    //       }
+    //    }
+
+    //    if ( Cmd == SW.SHOWDEFAULT )
+    //    {
+    //       if ( pti.ppi.usi.dwFlags & STARTF_USESHOWWINDOW )
+    //       {
+    //          Cmd = pti.ppi.usi.wShowWindow;
+    //          FirstTime = TRUE;
+    //          TRACE("co_WPSW FT 2\n");
+    //       }
+    //    }
+
+    //    if (FirstTime)
+    //    {
+    //       pti.ppi.usi.dwFlags &= ~(STARTF_USEPOSITION|STARTF_USESIZE|STARTF_USESHOWWINDOW);
+    //    }
+
+    switch (Cmd) {
+        case SW.HIDE:
+            {
+                if (!WasVisible) {
+                    //ERR("co_WinPosShowWindow Exit Bad\n");
+                    return false;
+                }
+                Swp |= SWP.HIDEWINDOW | SWP.NOSIZE | SWP.NOMOVE;
+                if (Wnd.hWnd != pti.hwndActive)
+                    Swp |= SWP.NOACTIVATE | SWP.NOZORDER;
+                break;
+            }
+
+        case SW.FORCEMINIMIZE: /* FIXME: Does not work if thread is hung. */
+        case SW.SHOWMINNOACTIVE:
+            Swp |= SWP.NOACTIVATE | SWP.NOZORDER;
+        /* Fall through. */
+        case SW.SHOWMINIMIZED:
+        case SW.MINIMIZE: /* CORE-15669: SW.MINIMIZE also shows */
+            Swp |= SWP.SHOWWINDOW;
+            {
+                Swp |= SWP.NOACTIVATE;
+                // if (!(style & WS.MINIMIZE)) {
+                //     //    IntShowOwnedPopups(Wnd, FALSE );
+                //     // Fix wine Win test_SetFocus todo #1 & #2,
+                //     if (Cmd == SW.SHOWMINIMIZED) {
+                //         //ERR("co_WinPosShowWindow Set focus 1\n");
+                //         if ((style & (WS.CHILD | WS.POPUP)) == WS.CHILD)
+                //             NtUserSetFocus(Wnd.wndParent);
+                //         else
+                //             NtUserSetFocus(0);
+                //     }
+
+                //     Swp |= co_WinPosMinMaximize(Wnd, Cmd, & NewPos);
+
+                //     EventMsg = EVENT_SYSTEM_MINIMIZESTART;
+                // }
+                // else {
+                //     if (WasVisible) {
+                //         //ERR("co_WinPosShowWindow Exit Good\n");
+                //         return TRUE;
+                //     }
+                //     Swp |= SWP.NOSIZE | SWP.NOMOVE;
+                // }
+                break;
+            }
+
+        case SW.SHOWMAXIMIZED:
+            {
+                Swp |= SWP.SHOWWINDOW;
+                // if (!(style & WS.MAXIMIZE)) {
+                //     ShowOwned = TRUE;
+
+                //     Swp |= co_WinPosMinMaximize(Wnd, SW.MAXIMIZE, & NewPos);
+
+                //     EventMsg = EVENT_SYSTEM_MINIMIZEEND;
+                // }
+                // else {
+                //     if (WasVisible) {
+                //         //ERR("co_WinPosShowWindow Exit Good 1\n");
+                //         return TRUE;
+                //     }
+                //     Swp |= SWP.NOSIZE | SWP.NOMOVE;
+                // }
+                break;
+            }
+
+        case SW.SHOWNA:
+            Swp |= SWP.NOACTIVATE | SWP.SHOWWINDOW | SWP.NOSIZE | SWP.NOMOVE;
+            if (style & WS.CHILD && !(Wnd.dwExStyle & WS.EX.MDICHILD)) Swp |= SWP.NOZORDER;
+            break;
+        case SW.SHOW:
+            if (WasVisible) return (true); // Nothing to do!
+            Swp |= SWP.SHOWWINDOW | SWP.NOSIZE | SWP.NOMOVE;
+            /* Don't activate the topmost window. */
+            if (style & WS.CHILD && !(Wnd.dwExStyle & WS.EX.MDICHILD)) Swp |= SWP.NOACTIVATE | SWP.NOZORDER;
+            break;
+
+        case SW.SHOWNOACTIVATE:
+            Swp |= SWP.NOACTIVATE | SWP.NOZORDER;
+        /* Fall through. */
+        case SW.SHOWNORMAL:
+        case SW.SHOWDEFAULT:
+        case SW.RESTORE:
+            // if (!WasVisible) Swp |= SWP.SHOWWINDOW;
+            // if (style & (WS.MINIMIZE | WS.MAXIMIZE)) {
+            //     Swp |= co_WinPosMinMaximize(Wnd, Cmd, & NewPos);
+            //     if (style & WS.MINIMIZE) EventMsg = EVENT_SYSTEM_MINIMIZEEND;
+            // }
+            // else {
+            //     if (WasVisible) {
+            //         //ERR("co_WinPosShowWindow Exit Good 3\n");
+            //         return TRUE;
+            //     }
+            //     Swp |= SWP.NOSIZE | SWP.NOMOVE;
+            // }
+            if (style & WS.CHILD &&
+                !(Wnd.dwExStyle & WS.EX.MDICHILD) &&
+                !(Swp & SWP.STATECHANGED))
+                Swp |= SWP.NOACTIVATE | SWP.NOZORDER;
+            break;
+
+        default:
+            //ERR("co_WinPosShowWindow Exit Good 4\n");
+            return false;
+    }
+
+    ShowFlag = (Cmd != SW.HIDE);
+
+    if ((ShowFlag != WasVisible || Cmd == SW.SHOWNA) && Cmd != SW.SHOWMAXIMIZED && !(Swp & SWP.STATECHANGED)) {
+        await NtDispatchMessage(Wnd.peb, [Wnd.hWnd, WM.SHOWWINDOW, ShowFlag, 0]);
+        // if (!VerifyWnd(Wnd)) return WasVisible;
+    }
+
+    /* We can't activate a child window */
+    if ((Wnd.dwStyle & WS.CHILD) &&
+        !(Wnd.dwExStyle & WS.EX.MDICHILD) &&
+        Cmd != SW.SHOWNA) {
+        //ERR("SWP Child No active and ZOrder\n");
+        Swp |= SWP.NOACTIVATE | SWP.NOZORDER;
+    }
+
+    //if (IntIsWindowVisible(Wnd)) {
+        await NtUserSetWindowPos(Wnd,
+            0 != (Wnd.dwExStyle & WS.EX.TOPMOST) ? HWND_TOPMOST : HWND_TOP,
+            NewPos.left,
+            NewPos.top,
+            NewPos.right, // NewPos.right - NewPos.left, when minimized and restore, the window becomes smaller.
+            NewPos.bottom,// NewPos.bottom - NewPos.top,
+            LOWORD(Swp));
+    // }
+    // else {
+    //     /* if parent is not visible simply toggle WS.VISIBLE and return */
+    //     // if (ShowFlag) IntSetStyle(Wnd, WS.VISIBLE, 0);
+    //     // else IntSetStyle(Wnd, 0, WS.VISIBLE);
+
+        if (ShowFlag)
+            Wnd.dwStyle |= WS.VISIBLE;
+        else
+            Wnd.dwStyle &= ~WS.VISIBLE;
+    // }
+
+    // if (EventMsg) IntNotifyWinEvent(EventMsg, Wnd, OBJID_WINDOW, CHILDID_SELF, WEF_SETBYWNDPTI);
+
+    // if (ShowOwned) IntShowOwnedPopups(Wnd, TRUE);
+
+    // if ((Cmd == SW.HIDE) || (Cmd == SW.MINIMIZE)) {
+    //     if (Wnd == pti.MessageQueue.wndActive && pti.MessageQueue == IntGetFocusMessageQueue()) {
+    //         if (UserIsDesktopWindow(Wnd.wndParent)) {
+    //             if (!ActivateOtherWindowMin(Wnd)) {
+    //                 co_WinPosActivateOtherWindow(Wnd);
+    //             }
+    //         }
+    //         else {
+    //             co_WinPosActivateOtherWindow(Wnd);
+    //         }
+    //     }
+
+    //     /* Revert focus to parent */
+    //     if (Wnd == pti.MessageQueue.wndFocus) {
+    //         Parent = Wnd.wndParent;
+    //         if (UserIsDesktopWindow(Wnd.wndParent))
+    //             Parent = 0;
+    //         co_UserSetFocus(Parent);
+    //     }
+    //     // Hide, just return.
+    //     if (Cmd == SW.HIDE) return WasVisible;
+    // }
+
+    // /* FIXME: Check for window destruction. */
+
+    // if ((Wnd.state & WNDS_SENDSIZEMOVEMSGS) &&
+    //     !(Wnd.state2 & WNDS2_INDESTROY)) {
+    //     co_WinPosSendSizeMove(Wnd);
+    // }
+
+    // /* if previous state was minimized Windows sets focus to the window */
+    // if (style & WS.MINIMIZE) {
+    //     co_UserSetFocus(Wnd);
+    //     // Fix wine Win test_SetFocus todo #3,
+    //     if (!(style & WS.CHILD)) co_IntSendMessage(UserHMGetHandle(Wnd), WM.ACTIVATE, WA_ACTIVE, 0);
+    // }
+    //ERR("co_WinPosShowWindow EXIT\n");
+    return WasVisible;
+}
+
+export async function NtUserShowWindow(hWnd: HWND, nCmdShow: number) {
+    const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return false;
+    }
+
+    return NtUserWinPosShowWindow(wnd, nCmdShow);
+}

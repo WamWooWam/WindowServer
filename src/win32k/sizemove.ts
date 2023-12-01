@@ -1,5 +1,5 @@
 import { HT, LPARAM, SC, SM, SWP, VK, WM, WMSZ, WPARAM, WS } from "../types/user32.types.js";
-import { NtIntGetClientRect, NtSetWindowPos, NtUserMapWindowPoints, NtWinPosGetMinMaxInfo } from "./window.js";
+import { NtIntGetClientRect, NtUserMapWindowPoints, NtWinPosGetMinMaxInfo } from "./window.js";
 import { NtUserGetCapture, NtUserGetCursorPos, NtUserReleaseCapture, NtUserSetCapture } from "./cursor.js";
 import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
 
@@ -13,6 +13,7 @@ import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
+import { NtSetWindowPos } from "./wndpos.js";
 
 export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lParam: LPARAM) {
     const pRootElement = wnd.pRootElement as WindowElement;
@@ -144,7 +145,7 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
         }
 
         if (msg.message !== WM.MOUSEMOVE && msg.message !== WM.KEYDOWN) {
-            // NtTranslateMessage(msg);
+            // await NtTranslateMessage(peb, msg);
             await NtDispatchMessage(peb, msg);
             continue;
         }
@@ -231,7 +232,7 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
             }
 
             if (!isIconic) {
-                NtSetWindowPos(peb, wnd.hWnd, null, newRect.left, newRect.top, newRect.right - newRect.left,
+                await NtSetWindowPos(peb, wnd.hWnd, null, newRect.left, newRect.top, newRect.right - newRect.left,
                     newRect.bottom - newRect.top, SWP.NOACTIVATE | ((hitTest == HT.CAPTION) ? SWP.NOSIZE : 0));
             }
             sizingRect = newRect;

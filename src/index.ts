@@ -4,7 +4,7 @@ import { PsCreateProcess, PsRegisterProcessHooks, PsQuitProcess, PsTerminateProc
 import { HANDLE } from "./types/types.js";
 import { PsProcess } from "./process.js";
 import { WM } from "./types/user32.types.js";
-import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from "./objects.js";
+import { ObDumpHandles, ObEnumHandles, ObGetObject, ObGetOwnedHandleCount } from "./objects.js";
 import { NtInit } from "./boot.js";
 
 (async () => {
@@ -58,7 +58,7 @@ import { NtInit } from "./boot.js";
             }
         }
 
-        document.getElementById("handles").innerText = [...ObEnumObjects()].length.toString();
+        document.getElementById("handles").innerText = [...ObEnumHandles()].length.toString();
     }
 
     const UpdateButtons = () => {

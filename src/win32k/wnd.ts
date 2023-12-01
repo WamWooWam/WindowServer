@@ -33,10 +33,6 @@ export default class WND {
     private _pClsInfo: W32CLASSINFO;
     private _lpszName: string;
 
-    private _hParent: HWND; // parent window (if this is a WS.CHILD like a control)
-    private _hOwner: HWND; // owner window (if this is a WS.POPUP like a dialog)
-    private _phwndChildren: HWND[];
-
     private _hMenu: HMENU;
     private _lpParam: any;
 
@@ -46,6 +42,7 @@ export default class WND {
     private _zIndex: number;
 
     public stateFlags = {
+        isLinked: false,
         sendSizeMoveMsgs: false,
         /**
          * Set if DefWindowProc is called for WM_NCHITTEST, so we can skip a user<->kernel space transition
@@ -59,14 +56,98 @@ export default class WND {
 
     public data: any;
 
+    public hwndLastActive: HWND;
+
+    // windows uses a doubly linked list to keep track of windows and their z-order :D
+    private _wndNext: WND;
+    private _wndPrev: WND;
+    private _wndChild: WND;
+    private _wndParent: WND;
+    private _wndOwner: WND;
+
+    public get wndNext(): WND {
+        return this._wndNext;
+    }
+
+    public set wndNext(value: WND) {
+        if (this._wndNext) {
+            ObCloseHandle(this._wndNext.hWnd);
+        }
+
+        this._wndNext = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
+
+    public get wndPrev(): WND {
+        return this._wndPrev;
+    }
+
+    public set wndPrev(value: WND) {
+        if (this._wndPrev) {
+            ObCloseHandle(this._wndPrev.hWnd);
+        }
+
+        this._wndPrev = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
+
+    public get wndChild(): WND {
+        return this._wndChild;
+    }
+
+    public set wndChild(value: WND) {
+        if (this._wndChild) {
+            ObCloseHandle(this._wndChild.hWnd);
+        }
+
+        this._wndChild = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
+
+    public get wndParent(): WND {
+        return this._wndParent;
+    }
+
+    public set wndParent(value: WND) {
+        if (this._wndParent) {
+            ObCloseHandle(this._wndParent.hWnd);
+        }
+
+        this._wndParent = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
+
+    public get wndOwner(): WND {
+        return this._wndOwner;
+    }
+
+    public set wndOwner(value: WND) {
+        if (this._wndOwner) {
+            ObCloseHandle(this._wndOwner.hWnd);
+        }
+
+        this._wndOwner = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
+
     constructor(
         peb: PEB,
         pti: W32PROCINFO,
         cs: CREATE_WINDOW_EX,
         lpszName: string,
         lpClass: W32CLASSINFO,
-        hParent: HWND,
-        hOwner: HWND,
+        wndParent: WND,
+        wndOwner: WND,
     ) {
         // Automatically add WS.EX.WINDOWEDGE if we have a thick frame
         if ((cs.dwExStyle & WS.EX.DLGMODALFRAME) ||
@@ -82,13 +163,13 @@ export default class WND {
         this._dwExStyle = cs.dwExStyle;
         this._lpfnWndProc = lpClass.lpfnWndProc;
         this._pClsInfo = lpClass;
-        this._hParent = hParent;
-        this._hOwner = hOwner;
         this._hMenu = cs.hMenu;
         this._lpParam = cs.lpParam;
         this._lpszName = lpszName;
         this._peb = peb;
-        this._phwndChildren = [];
+
+        this.wndParent = wndParent;
+        this.wndOwner = wndOwner;
 
         this._rcClient = {
             left: cs.x,
@@ -146,11 +227,11 @@ export default class WND {
     }
 
     public get hParent(): HWND {
-        return this._hParent;
+        return this.wndParent?.hWnd ?? 0;
     }
 
     public get hOwner(): HWND {
-        return this._hOwner;
+        return this.wndOwner?.hWnd ?? 0;
     }
 
     public get dwStyle(): number {
@@ -165,6 +246,13 @@ export default class WND {
 
     public get dwExStyle(): number {
         return this._dwExStyle;
+    }
+
+    public set dwExStyle(value: number) {
+        let oldStyle = this._dwExStyle;
+        this._dwExStyle = value;
+        // TODO: update window style
+        // this.UpdateWindowStyle(oldStyle, value);
     }
 
     public get hInstance(): HINSTANCE {
@@ -191,12 +279,12 @@ export default class WND {
         return this._hDC;
     }
 
-    public get pChildren(): HWND[] {
-        return [...this._phwndChildren];
-    }
-
     public get pRootElement() {
         return ObGetObject<HTMLElement>(this._hRootElement);
+    }
+
+    public get pChildren(): HWND[] {
+        return [...this.GetChildren()];
     }
 
     public set pRootElement(value: HTMLElement) {
@@ -219,35 +307,6 @@ export default class WND {
 
     public get lpClass(): W32CLASSINFO {
         return this._pClsInfo;
-    }
-
-    public AddChild(hWnd: HWND): void {
-        this._phwndChildren.splice(0, 0, hWnd);
-        this.FixZOrder();
-    }
-
-    public RemoveChild(hWnd: HWND): void {
-        if (!this._phwndChildren)
-            return;
-
-        const index = this._phwndChildren.findIndex(h => h === hWnd);
-        if (index !== -1)
-            this._phwndChildren.splice(index, 1);
-
-        this.FixZOrder();
-    }
-
-    public MoveChild(hWnd: HWND, idx: number): void {
-        if (!this._phwndChildren)
-            return;
-
-        const index = this._phwndChildren.findIndex(h => h === hWnd);
-        if (index !== -1)
-            this._phwndChildren.splice(index, 1);
-
-        this._phwndChildren.splice(idx, 0, hWnd);
-
-        this.FixZOrder();
     }
 
     public async WndProc(msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
@@ -321,38 +380,20 @@ export default class WND {
         }
     }
 
-    public FixZOrder(): void {
-        let deadWindows = [];
-        for (let i = 0; i < this._phwndChildren.length; i++) {
-            const hWnd = this._phwndChildren[i];
-            const wnd = ObGetObject<WND>(hWnd);
-            if (!wnd) {
-                deadWindows.push(hWnd);
-                continue;
-            }
-
-            wnd.zIndex = this._phwndChildren.length - i;
-        }
-
-        for (let i = 0; i < deadWindows.length; i++) {
-            this.RemoveChild(deadWindows[i]);
-        }
-    }
-
     public Dispose(): void {
         this.Hide();
 
-        if (this._hParent) {
-            const parent = ObGetObject<WND>(this._hParent);
-            if (parent) {
-                parent.RemoveChild(this._hWnd);
-            }
+        if (this.wndParent) {
+            // const parent = ObGetObject<WND>(this._hParent);
+            // if (parent) {
+            //     parent.RemoveChild(this._hWnd);
+            // }
 
-            ObCloseHandle(this._hParent);
+            ObCloseHandle(this.wndParent.hWnd);
         }
 
-        if (this._hOwner)
-            ObCloseHandle(this._hOwner);
+        if (this.wndOwner)
+            ObCloseHandle(this.wndOwner.hWnd);
 
         if (this._hDC)
             ObCloseHandle(this._hDC);
@@ -425,8 +466,8 @@ export default class WND {
         if (!this.pRootElement) {
             await NtDispatchMessage(this._peb, [this._hWnd, WMP.CREATEELEMENT, 0, 0])
 
-            if (this._hParent) {
-                await NtDispatchMessage(this._peb, [this._hParent, WMP.ADDCHILD, this._hWnd, 0]);
+            if (this.wndParent) {
+                await NtDispatchMessage(this._peb, [this.wndParent.hWnd, WMP.ADDCHILD, this._hWnd, 0]);
             }
             else {
                 // for now, just add it to the body
@@ -447,8 +488,7 @@ export default class WND {
         }
         else {
             // use the parent's DC, with an additional transform
-            const parent = ObGetObject<WND>(this._hParent);
-            this._hDC = ObDuplicateHandle(parent._hDC);
+            this._hDC = ObDuplicateHandle(this.wndParent?.hDC ?? 0);
         }
 
         if (!this._hDC)
@@ -465,5 +505,13 @@ export default class WND {
 
         NtPostMessage(this._peb, [this._hWnd, WMP.UPDATEWINDOWSTYLE, dwNewStyle, dwOldStyle]);
         NtPostMessage(this._peb, [this._hWnd, WM.STYLECHANGED, -16, { oldStyle: dwOldStyle, newStyle: dwNewStyle }]);
+    }
+
+    public *GetChildren(): IterableIterator<HWND> {
+        let child = this.wndChild;
+        while (child) {
+            yield child.hWnd;
+            child = child.wndNext;
+        }
     }
 }

@@ -1,6 +1,6 @@
 import { HWND, LPARAM, LRESULT, MSG, SC, SW, VK, WM, WPARAM, WS } from "../types/user32.types.js";
 import { NtDefNCHitTest, NtDefNCLButtonDown, NtDefNCLButtonUp } from "./nc.js";
-import { NtDestroyWindow, NtShowWindow } from "./window.js";
+import { NtDestroyWindow } from "./window.js";
 import { WMP, WND_DATA } from "../types/user32.int.types.js";
 
 import { GetW32ProcInfo } from "./shared.js";
@@ -11,6 +11,7 @@ import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
+import { NtUserShowWindow } from "./wndpos.js";
 
 export function HasThickFrame(dwStyle: number) {
     return (dwStyle & WS.THICKFRAME) === WS.THICKFRAME && !((dwStyle & (WS.DLGFRAME | WS.BORDER)) === WS.DLGFRAME);
@@ -78,8 +79,6 @@ function NtDefAddChild(peb: PEB, hWnd: HWND, hWndChild: HWND): LRESULT {
         wnd.pRootElement.appendChild(childWnd.pRootElement);
     }
 
-    wnd.AddChild(hWndChild);
-
     return 0;
 }
 
@@ -93,8 +92,6 @@ function NtDefRemoveChild(peb: PEB, hWnd: HWND, hWndChild: HWND): LRESULT {
     if (wnd.pRootElement) {
         wnd.pRootElement.removeChild(childWnd.pRootElement);
     }
-
-    wnd.RemoveChild(hWndChild);
 
     return 0;
 }
@@ -146,13 +143,13 @@ async function NtDefWndHandleSysCommand(peb: PEB, wnd: WND, wParam: WPARAM, lPar
     // console.log(`NtDefWndHandleSysCommand: probably ${SC[wParam & 0xFFF0]}`);
     switch (wParam & 0xFFF0) {
         case SC.MINIMIZE:
-            await NtShowWindow(peb, wnd.hWnd, SW.MINIMIZE);
+            await NtUserShowWindow(wnd.hWnd, SW.MINIMIZE);
             return 0;
         case SC.MAXIMIZE:
-            await NtShowWindow(peb, wnd.hWnd, SW.MAXIMIZE);
+            await NtUserShowWindow(wnd.hWnd, SW.MAXIMIZE);
             return 0;
         case SC.RESTORE:
-            await NtShowWindow(peb, wnd.hWnd, SW.RESTORE);
+            await NtUserShowWindow(wnd.hWnd, SW.RESTORE);
             return 0;
         case SC.CLOSE:
             await NtDispatchMessage(peb, [wnd.hWnd, WM.CLOSE, 0, 0]);

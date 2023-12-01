@@ -3,10 +3,10 @@ import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
 import { GetW32ProcInfo, W32CLASSINFO } from "./shared.js";
 import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
 import {
+    GA,
+    GW,
     HWND,
     HWND_BOTTOM,
-    HWND_BROADCAST,
-    HWND_MESSAGE,
     HWND_NOTOPMOST,
     HWND_TOP,
     HWND_TOPMOST,
@@ -18,7 +18,7 @@ import {
     WS,
 } from "../types/user32.types.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
-import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObEnumObjectsByType, ObGetObject } from "../objects.js";
+import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import { GreAllocDCForMonitor } from "./gdi/dc.js";
 import { NtFindClass } from "./class.js";
@@ -27,9 +27,303 @@ import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtSetLastError } from "../error.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
+import { NtUserScreenToClient } from "./client.js";
+import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow } from "./wndpos.js";
+
+const gNestedWindowLimit = 50;
 
 export function NtGetDesktopWindow(peb: PEB): HWND {
     return ObGetObject<DESKTOP>(peb.hDesktop)?.hwndDesktop;
+}
+
+export function NtUserIsDesktopWindow(wnd: WND) {
+    return wnd.hWnd == NtGetDesktopWindow(wnd.peb);
+}
+
+function NtUserWndSetParent(wnd: WND, wParent: WND) {
+    wnd.wndParent = wParent;
+}
+
+function NtUserWndSetOwner(wnd: WND, wOwner: WND) {
+    wnd.wndOwner = wOwner;
+}
+
+function NtUserWndSetPrev(wnd: WND, wPrev: WND) {
+    wnd.wndPrev = wPrev;
+}
+
+function NtUserWndSetNext(wnd: WND, wNext: WND) {
+    wnd.wndNext = wNext;
+}
+
+function NtUserWndSetChild(wnd: WND, wChild: WND) {
+    if(!wnd) return;
+    wnd.wndChild = wChild;
+}
+
+export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
+    if (wnd === wInsertAfter) {
+        return;
+    }
+
+    NtUserWndSetPrev(wnd, wInsertAfter);
+    if (wnd.wndPrev) {
+        console.assert(wnd != wInsertAfter.wndNext);
+        NtUserWndSetNext(wnd, wInsertAfter.wndNext);
+        if (wnd.wndNext) {
+            NtUserWndSetPrev(wnd.wndNext, wnd);
+        }
+
+        console.assert(wnd != wnd.wndPrev);
+        NtUserWndSetNext(wnd.wndPrev, wnd);
+    }
+    else {
+        console.assert(wnd != wnd.wndParent?.wndChild);
+        NtUserWndSetNext(wnd, wnd.wndParent?.wndChild);
+        if (wnd.wndNext) {
+            NtUserWndSetPrev(wnd.wndNext, wnd);
+        }
+
+        NtUserWndSetChild(wnd.wndParent, wnd);
+    }
+}
+
+export function NtUserUnlinkWindow(wnd: WND) {
+    console.assert(wnd !== wnd.wndNext);
+    console.assert(wnd !== wnd.wndPrev);
+
+    if (wnd.wndNext)
+        NtUserWndSetPrev(wnd.wndNext, wnd.wndPrev);
+
+    if (wnd.wndPrev)
+        NtUserWndSetNext(wnd.wndPrev, wnd.wndNext);
+
+    if (wnd.wndParent && wnd.wndParent.wndChild === wnd)
+        NtUserWndSetChild(wnd.wndParent, wnd.wndNext);
+
+    NtUserWndSetNext(wnd, null);
+    NtUserWndSetPrev(wnd, null);
+}
+
+export function NtIntIsChildWindow(wnd: WND, baseWindow: WND) {
+    let window = baseWindow;
+    do {
+        if (window === null || (wnd.dwStyle & (WS.POPUP | WS.CHILD)) !== WS.CHILD) {
+            return false;
+        }
+
+        window = window.wndParent;
+    } while (wnd !== window);
+
+    return true;
+}
+
+export function NtUserIntLinkHwnd(wnd: WND, hWndPrev: HWND) {
+    if (hWndPrev === HWND_TOPMOST) {
+        if (!(wnd.dwExStyle & WS.EX.TOPMOST) && wnd.stateFlags.isLinked) return;
+
+        wnd.dwExStyle &= ~WS.EX.TOPMOST;
+        hWndPrev = HWND_TOP;
+    }
+
+    NtUserUnlinkWindow(wnd); // remove from current list
+
+    if (hWndPrev === HWND_BOTTOM) {
+        let wndInsertAfter: WND;
+
+        wndInsertAfter = wnd.wndParent?.wndChild;
+        while (wndInsertAfter && wndInsertAfter.wndNext) {
+            wndInsertAfter = wndInsertAfter.wndNext;
+        }
+
+        NtUserLinkWindow(wnd, wndInsertAfter);
+        wnd.dwExStyle &= ~WS.EX.TOPMOST;
+    }
+    else if (hWndPrev === HWND_TOPMOST) {
+        NtUserLinkWindow(wnd, null);
+        wnd.dwExStyle |= WS.EX.TOPMOST;
+    }
+    else if (hWndPrev === HWND_TOP) {
+        let wndInsertBefore = wnd.wndParent?.wndChild;
+        if (!(wnd.dwExStyle & WS.EX.TOPMOST)) {
+            while (wndInsertBefore != null && wndInsertBefore.wndNext != null) {
+                if (!(wndInsertBefore.dwExStyle & WS.EX.TOPMOST)) {
+                    break;
+                }
+
+                if (wndInsertBefore === wnd.wndOwner) {
+                    wnd.dwExStyle |= WS.EX.TOPMOST;
+                    break;
+                }
+
+                wndInsertBefore = wndInsertBefore.wndNext;
+            }
+        }
+
+        NtUserLinkWindow(wnd, wndInsertBefore ? wndInsertBefore.wndPrev : null);
+    }
+    else {
+        // insert after
+        const wndInsertAfter = ObGetObject<WND>(hWndPrev);
+        if (!wndInsertAfter) {
+            NtUserIntLinkHwnd(wnd, HWND_TOP);
+            return;
+        }
+
+        if (wndInsertAfter === wnd) {
+            return;
+        }
+        else {
+            NtUserLinkWindow(wnd, wndInsertAfter);
+        }
+
+        if (!(wndInsertAfter.dwExStyle & WS.EX.TOPMOST)) {
+            wnd.dwExStyle &= ~WS.EX.TOPMOST;
+        }
+        else {
+            if (wndInsertAfter.wndNext && (wndInsertAfter.wndNext.dwExStyle & WS.EX.TOPMOST)) {
+                wnd.dwExStyle |= WS.EX.TOPMOST;
+            }
+        }
+
+        wnd.stateFlags.isLinked = true;
+    }
+}
+
+// ensures that when parenting windows from different processes, the input queues are attached
+function NtUserHandleOwnerSwap(wnd: WND, wndNewOwner: WND, wndOldOwner: WND) {
+    if (wndOldOwner) {
+        if (wnd.peb != wndOldOwner.peb) {
+            if (!wndNewOwner || wnd.peb === wndNewOwner.peb || wndOldOwner.peb !== wndNewOwner.peb) {
+                // TODO: AttachThreadInput
+                // NtUserAttachThreadInput(wnd.peb, wndOldOwner.peb, false); 
+            }
+        }
+    }
+
+    if (wndNewOwner) {
+        if (wnd.peb != wndNewOwner.peb) {
+            if (!wndOldOwner || wndOldOwner.peb !== wndNewOwner.peb) {
+                // TODO: AttachThreadInput
+                // NtUserAttachThreadInput(wnd.peb, wndNewOwner.peb, true);
+            }
+        }
+    }
+}
+
+export function NtUserIntSetOwner(peb: PEB, hWnd: HWND, hWndOwner: HWND) {
+    let wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) return null;
+
+    let wndOldOwner = wnd.wndOwner;
+    let ret = wndOldOwner?.hWnd;
+
+    let wndNewOwner = ObGetObject<WND>(hWndOwner);
+    if (!wndNewOwner && hWndOwner) {
+        NtSetLastError(peb, 0x00000057); // ERROR_INVALID_PARAMETER
+        return null;
+    }
+
+    NtUserHandleOwnerSwap(wnd, wndNewOwner, wndOldOwner);
+
+    // ReactOS ensures there's a maximum of 50 nested windows
+    NtUserWndSetOwner(wnd, wndNewOwner);
+
+    return ret;
+}
+
+export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND): Promise<WND> {
+    let flags = SWP.NOSIZE | SWP.NOZORDER;
+
+    if (NtIntIsChildWindow(wnd, wndNewParent)) {
+        NtSetLastError(peb, 0x00000057); // ERROR_INVALID_PARAMETER
+        return null; // don't set a child window as a parent
+    }
+
+    let wndExam = wndNewParent;
+    while (wndExam) {
+        if (wnd === wndExam) {
+            NtSetLastError(peb, 0x00000057); // ERROR_INVALID_PARAMETER
+            return null; // don't set a child window as a parent
+        }
+
+        wndExam = wndExam.wndParent;
+    }
+
+    let wasVisible = await NtUserShowWindow(wnd.hWnd, SW.HIDE);
+    if (wnd.peb !== peb) {
+        NtSetLastError(peb, 0x00000057); // ERROR_INVALID_PARAMETER
+        return null; // window must be in the same process
+    }
+
+    let pt = { x: 0, y: 0 };
+    let wndOldParent = wnd.wndParent;
+    if (wndOldParent && wndOldParent.dwExStyle & WS.EX.LAYOUTRTL)
+        pt.x = wnd.rcWindow.right;
+    else
+        pt.x = wnd.rcWindow.left;
+
+    pt.y = wnd.rcWindow.top;
+
+    NtUserScreenToClient(wndOldParent.hWnd, pt);
+
+    if (wndNewParent != wndOldParent) {
+        NtUserUnlinkWindow(wnd);
+        wnd.stateFlags.isLinked = false;
+
+        NtUserWndSetParent(wnd, wndNewParent);
+
+        if (wnd.dwStyle & WS.CHILD && wnd.wndOwner && wnd.wndOwner.dwExStyle & WS.EX.TOPMOST) {
+            wnd.dwExStyle |= WS.EX.TOPMOST;
+        }
+
+        NtUserIntLinkHwnd(wnd, ((0 == (wnd.dwExStyle & WS.EX.TOPMOST) && NtUserIsDesktopWindow(wndNewParent)) ? HWND_TOP : HWND_TOPMOST));
+    }
+
+    if (wndNewParent.hWnd === NtGetDesktopWindow(peb) && !(wnd.dwStyle & WS.CLIPSIBLINGS)) {
+        wnd.dwStyle |= WS.CLIPSIBLINGS; // TODO: make this flag do something
+    }
+
+    if ((wnd.dwStyle & (WS.CHILD | WS.POPUP)) == WS.CHILD) {
+        if (wnd.wndParent.hWnd != NtGetDesktopWindow(peb)) {
+            if (wndOldParent && (wnd.peb != wndOldParent.peb)) {
+                // TOOD: AttachThreadInput
+                // NtUserAttachThreadInput(wnd.peb, wndOldParent.peb, false);
+            }
+        }
+        if (wndNewParent.hWnd != NtGetDesktopWindow(peb)) {
+            if (wnd.peb != wndNewParent.peb) {
+                // TOOD: AttachThreadInput
+                // NtUserAttachThreadInput(wnd.peb, wndNewParent.peb, true);
+            }
+        }
+    }
+
+    // if (NtUserIsMessageWindow(wndOldParent) || NtUserIsMessageWindow(wndNewParent)) {
+    //     flags |= SWP.NOACTIVATE;
+    // }
+
+    // IntNotifyWinEvent(EVENT_OBJECT_PARENTCHANGE, wnd, OBJID_WINDOW, CHILDID_SELF, WEF_SETBYWNDPTI);
+
+    await NtUserSetWindowPos(wnd, (0 == (wnd.dwExStyle & WS.EX.TOPMOST) ? HWND_TOP : HWND_TOPMOST), pt.x, pt.y, 0, 0, flags);
+
+    if (wasVisible)
+        await NtUserShowWindow(wnd.hWnd, SW.SHOWNORMAL);
+
+    return wndOldParent;
+}
+
+export async function NtUserSetParent(peb: PEB, hWnd: HWND, hWndParent: HWND): Promise<HWND> {
+    let wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) return null;
+
+    let wndOldParent = await NtUserIntSetParent(peb, wnd, ObGetObject<WND>(hWndParent));
+    if (wndOldParent) {
+        return wndOldParent.hWnd;
+    }
+    else {
+        return null;
+    }
 }
 
 export function NtIntGetClientRect(peb: PEB, hWnd: HWND): RECT {
@@ -281,7 +575,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         hWndParent: _hwndParent
     };
 
-    const wnd = new WND(peb, state, createStruct, lpWindowName, lpClassInfo, _hwndParent, _hwndOwner);
+    const wnd = new WND(peb, state, createStruct, lpWindowName, lpClassInfo, parentWnd, ownerWnd);
 
     // we have a window! we can now send funny messages to it
 
@@ -332,26 +626,6 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     return wnd.hWnd;
 }
 
-export async function NtShowWindow(peb: PEB, hWnd: HWND, nCmdShow: number) {
-    const wnd = ObGetObject<WND>(hWnd);
-    if (wnd) {
-        switch (nCmdShow) {
-            case SW.HIDE:
-                wnd.Hide();
-                break;
-            case SW.SHOW:
-            case SW.SHOWDEFAULT:
-                wnd.Show();
-                await NtUserSetActiveWindow(peb, hWnd);
-                break;
-            default:
-                console.warn("NtShowWindow: unknown nCmdShow", nCmdShow);
-                break;
-        }
-    }
-
-}
-
 async function NtSendParentNotify(peb: PEB, pWnd: WND, msg: number) {
     if ((pWnd.dwStyle & (WS.CHILD | WS.POPUP)) == WS.CHILD
         && !(pWnd.dwExStyle & WS.EX.NOPARENTNOTIFY)) {
@@ -378,106 +652,6 @@ export function NtUserGetWindowRect(peb: PEB, hWnd: HWND): RECT {
 }
 
 
-export async function NtSetWindowPos(peb: PEB, hWnd: HWND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, uFlags: number) {
-    const wnd = ObGetObject<WND>(hWnd);
-    if (!wnd) {
-        return false;
-    }
-
-    if (uFlags & SWP.NOMOVE) {
-        x = wnd.rcWindow.left;
-        y = wnd.rcWindow.top;
-    }
-
-    if (uFlags & SWP.NOSIZE) {
-        cx = wnd.rcWindow.right - wnd.rcWindow.left;
-        cy = wnd.rcWindow.bottom - wnd.rcWindow.top;
-    }
-
-    if (((uFlags & SWP.NOZORDER) !== SWP.NOZORDER) && hWndInsertAfter !== null) {
-        const parentWnd = ObGetObject<WND>(wnd.hParent);
-        if (!parentWnd) {
-            return false;
-        }
-
-        let children = parentWnd.pChildren;
-
-        let insertIdx = children.indexOf(wnd.hWnd);
-        if (hWndInsertAfter === HWND_TOP) {
-            insertIdx = parentWnd.pChildren.findIndex((hWnd) => {
-                return ObGetObject<WND>(hWnd).dwExStyle & WS.EX.TOPMOST;
-            });
-
-            if (insertIdx === -1) {
-                insertIdx = 0;
-            }
-        }
-        else if (hWndInsertAfter === HWND_BOTTOM) {
-            insertIdx = children.length - 1;
-        }
-        else if (hWndInsertAfter === HWND_NOTOPMOST) {
-            insertIdx = children.findIndex((hWnd) => {
-                return !(ObGetObject<WND>(hWnd).dwExStyle & WS.EX.TOPMOST);
-            });
-
-            if (insertIdx === -1) {
-                insertIdx = 0;
-            }
-        }
-        else if (hWndInsertAfter === HWND_TOPMOST) {
-            insertIdx = 0;
-        }
-        else {
-            insertIdx = children.indexOf(hWndInsertAfter);
-        }
-
-
-        parentWnd.MoveChild(wnd.hWnd, insertIdx);
-    }
-
-    if (uFlags & SWP.NOACTIVATE) {
-        // TODO: check if we're the active window
-    }
-
-    if (uFlags & SWP.SHOWWINDOW) {
-        await NtShowWindow(peb, hWnd, SW.SHOWDEFAULT);
-    }
-
-    if (uFlags & SWP.HIDEWINDOW) {
-        await NtShowWindow(peb, hWnd, SW.HIDE);
-    }
-
-    if (uFlags & SWP.NOCOPYBITS) {
-        // TODO
-    }
-
-    if (uFlags & SWP.NOOWNERZORDER) {
-        // TODO
-    }
-
-    if (uFlags & SWP.FRAMECHANGED) {
-        // TODO
-    }
-
-    if (uFlags & SWP.NOSENDCHANGING) {
-        // TODO
-    }
-
-    if (uFlags & SWP.DEFERERASE) {
-        // TODO
-    }
-
-    if (uFlags & SWP.ASYNCWINDOWPOS) {
-        // TODO
-    }
-
-    if (uFlags & SWP.NOREDRAW) {
-        // TODO
-    }
-
-    await wnd.MoveWindow(x, y, cx, cy, uFlags & SWP.NOREDRAW ? false : true);
-}
-
 export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
     const wnd = ObGetObject<WND>(hWnd);
     if (!wnd) {
@@ -494,7 +668,7 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
 
     if ((wnd.dwStyle & WS.VISIBLE)) {
         if ((wnd.dwStyle & WS.CHILD)) {
-            await NtShowWindow(peb, hWnd, SW.HIDE);
+            await NtUserShowWindow(hWnd, SW.HIDE);
         }
         else {
             await NtSetWindowPos(peb, hWnd, 0, 0, 0, 0, 0, SWP.NOMOVE | SWP.NOSIZE | SWP.NOZORDER | SWP.NOACTIVATE | SWP.HIDEWINDOW);
@@ -532,13 +706,13 @@ export function NtUserGetDC(peb: PEB, hWnd: HWND): HDC {
     return ObDuplicateHandle(wnd.hDC);
 }
 
-export function NtUserIsWindowEnabled(hWnd: HWND) {
+export function NtUserIsWindowEnabled(hWnd: HWND): boolean {
     const wnd = ObGetObject<WND>(hWnd);
     if (!wnd) {
         return false;
     }
 
-    return !(wnd.dwStyle & WS.DISABLED);
+    return !(wnd.dwStyle & WS.DISABLED) && (wnd.hParent === null || NtUserIsWindowEnabled(wnd.hParent));
 }
 
 export function NtUserMapWindowPoints(fromWnd: WND, toWnd: WND, lpPoints: POINT[]) {
@@ -598,13 +772,14 @@ export function NtUserGetWindowBorders(peb: PEB, style: number, exStyle: number,
     return size;
 }
 
+
 export function NtFindWindow(peb: PEB, lpClassName: string, lpWindowName: string): HWND {
     const state = GetW32ProcInfo(peb);
     if (!state) {
         return 0;
     }
 
-    for (const hWnd of ObEnumObjectsByType("WND")) {
+    for (const hWnd of ObEnumHandlesByType("WND")) {
         const wnd = ObGetObject<WND>(hWnd);
         if (!wnd) continue;
 
@@ -615,4 +790,102 @@ export function NtFindWindow(peb: PEB, lpClassName: string, lpWindowName: string
     }
 
     return 0;
+}
+
+
+export function NtUserGetParent(wnd: WND) {
+    if (wnd.dwStyle & WS.POPUP) {
+        return wnd.wndOwner;
+    }
+    else if (wnd.dwStyle & WS.CHILD) {
+        return wnd.wndParent;
+    }
+
+    return null;
+}
+
+export function NtUserIntGetWindow(wnd: WND, uCmd: GW): WND {
+    if (!wnd) {
+        return null;
+    }
+
+    let foundWnd: WND = null;
+    switch (uCmd) {
+        case GW.HWNDNEXT:
+            foundWnd = wnd.wndNext;
+            break;
+        case GW.HWNDPREV:
+            foundWnd = wnd.wndPrev;
+            break;
+        case GW.HWNDLAST:
+            foundWnd = wnd.wndParent.wndChild;
+            while (foundWnd.wndNext) {
+                foundWnd = foundWnd.wndNext;
+            }
+            break;
+        case GW.HWNDFIRST:
+            foundWnd = wnd.wndParent;
+            if (foundWnd && foundWnd.wndChild)
+                foundWnd = foundWnd.wndChild;
+            break;
+        case GW.OWNER:
+            foundWnd = wnd.wndOwner;
+            break;
+        case GW.CHILD:
+            foundWnd = wnd.wndChild;
+            break;
+        default:
+            console.warn("NtUserIntGetWindow: unknown uCmd", uCmd);
+            break;
+    }
+
+    return foundWnd;
+}
+
+export function NtUserIntGetAncestor(wnd: WND, uCmd: GA): WND {
+    if (!wnd || wnd.hWnd === NtGetDesktopWindow(wnd.peb)) {
+        return null;
+    }
+
+    let foundWnd: WND = null;
+    switch (uCmd) {
+        case GA.PARENT: {
+            foundWnd = wnd.wndParent;
+            break;
+        }
+        case GA.ROOT: {
+            foundWnd = wnd;
+            let parent: WND = null;
+            while (true) {
+                if (!(parent = foundWnd.wndParent)) break;
+                if (NtUserIsDesktopWindow(parent)) break;
+
+                foundWnd = parent;
+            }
+            break;
+        }
+        case GA.ROOTOWNER: {
+            foundWnd = wnd;
+            let parent: WND = null;
+            while (true) {
+                parent = NtUserGetParent(foundWnd);
+                if (!parent) break;
+                foundWnd = parent;
+            }
+            break;
+        }
+        default:
+            console.warn("NtUserIntGetAncestor: unknown uCmd", uCmd);
+            break;
+    }
+
+    return foundWnd;
+}
+
+export function NtUserGetWindow(hWnd: HWND, uCmd: GW): HWND {
+    return NtUserIntGetWindow(ObGetObject<WND>(hWnd), uCmd)?.hWnd || 0;
+}
+
+export function NtUserGetAncestor(hWnd: HWND, uCmd: GA): HWND {
+    return NtUserIntGetAncestor(ObGetObject<WND>(hWnd), uCmd)?.hWnd || 0;
 }

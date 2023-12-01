@@ -3,7 +3,7 @@ import { GET_MESSAGE, GET_MESSAGE_REPLY, WMP, WNDPROC_PARAMS } from "../types/us
 import { GetW32ProcInfo, HWNDS } from "./shared.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { HWND_BROADCAST, LRESULT, MSG, WM } from "../types/user32.types.js";
-import { ObEnumObjectsByType, ObGetObject } from "../objects.js";
+import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import { PsProcess } from "../process.js";
 import WND from "./wnd.js";
@@ -39,7 +39,7 @@ export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
         if (_msg.message > WM.USER && _msg.message < WMP.CREATEELEMENT)
             return;
 
-        for (const hWnd of ObEnumObjectsByType("WND")) {
+        for (const hWnd of ObEnumHandlesByType("WND")) {
             const wnd = ObGetObject<WND>(hWnd);
             if (!wnd) continue;
 
