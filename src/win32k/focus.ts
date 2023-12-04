@@ -197,6 +197,9 @@ async function NtUserCoIntSetActiveWindow(peb: PEB, wnd: WND, bMouse: boolean, b
         return false;
     }
 
+    // hardcode this for now
+    async = false;
+
     let pWndChg = ObGetObject<WND>(pti.hwndActive);
     let hWndPrev = pti.hwndActive;
 
@@ -316,6 +319,9 @@ async function IntUserSetActiveWindow(peb: PEB, wnd: WND, bMouse: boolean, bFocu
         return;
     }
 
+    // hardcode this for now
+    async = false;
+    
     while (wnd) {
         let doFG = false;
         let allowFG = false;
@@ -386,7 +392,8 @@ async function NtUserIntSetForegroundAndFocusWindow(peb: PEB, wnd: WND, bMouse: 
 
     if (true) {
         ToggleFGActivate(peb);
-        NtUserIntSetForegroundMessageQueue(peb, wnd, bMouse, 0); 
+        await NtUserIntSetForegroundMessageQueue(peb, wnd, bMouse, 0); 
+        return;
         // we currently fall through to the next block, but reactos returns here
     }
 
@@ -421,6 +428,9 @@ function NtUserIntMakeWindowActive(wnd: WND) {
 async function NtUserIntSendActivateMessages(peb: PEB, wndPrev: WND, wnd: WND, mouseActivate: boolean, async: boolean) {
     const pti = NtUserGetProcInfo(peb);
     console.log("Focusing Window %s", wnd?.lpszName);
+
+    // hardcode this for now
+    async = false;
 
     if (wnd) {
         if (!(wnd.dwStyle & WS.CHILD)) {
@@ -576,18 +586,12 @@ async function NtUserIntSetForegroundMessageQueue(peb: PEB, wnd: WND, mouseActiv
             }
         }
 
-        pmqPrev = null;
-        if (pebPrev) { // && not in cleanup
-            pmqPrev = NtUserGetProcInfo(pebPrev);
-        }
-
-        pmq = NtUserGetProcInfo(peb);
-
-
-        if (pmqPrev && pmq == pmqPrev) {
+        if (pmqPrev && pmq != pmqPrev) {
             await NtUserDeactivateWindow(pebPrev);
         }
     }
+
+    return true;
 }
 
 export async function UserSetActiveWindow(peb: PEB, Wnd: WND) {
@@ -596,19 +600,7 @@ export async function UserSetActiveWindow(peb: PEB, Wnd: WND) {
 
         return await IntUserSetActiveWindow(peb, Wnd, false, true, false);
     }
-    /*
-       Yes your eyes are not deceiving you~!
-  
-       First part of wines Win.c test_SetActiveWindow:
-  
-       flush_events( TRUE );
-       ShowWindow(hwnd, SW_HIDE);
-       SetFocus(0);
-       SetActiveWindow(0);
-       check_wnd_state(0, 0, 0, 0); <-- This should pass if ShowWindow does it's job!!! As of 10/28/2012 it does!
-  
-       Now Handle wines Msg.c test_SetActiveWindow( 0 )...
-    */
+    
     let ptiForegroundPrev = NtUserGetProcInfo(gpqForegroundPrev);
     let wndActivePrev: WND;
     if (ptiForegroundPrev &&
