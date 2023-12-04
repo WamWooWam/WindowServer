@@ -1,11 +1,10 @@
 import { ObEnumHandlesByType, ObGetObject, ObSetObject } from "../objects.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { CREATE_DESKTOP, CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
-import { HT, HWND, HWND_TOP, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
+import { HT, HWND, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
 import { NtDefWindowProc } from "./def.js";;
 import DesktopElement from "./html/DesktopElement.js";
-import { NtIntGetSystemMetrics } from "./metrics.js";
-import { GetW32ProcInfo, W32PROCINFO } from "./shared.js";
+import { NtUserGetSystemMetrics } from "./metrics.js";
 import { NtCreateWindowEx } from "./window.js";
 import WND from "./wnd.js";
 import { NtSetWindowPos, NtUserShowWindow } from "./wndpos.js";
@@ -38,8 +37,8 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
     const cs: CREATE_WINDOW_EX = {
         x: 0,
         y: 0,
-        nWidth: NtIntGetSystemMetrics(peb, SM.CXSCREEN),
-        nHeight: NtIntGetSystemMetrics(peb, SM.CYSCREEN),
+        nWidth: NtUserGetSystemMetrics(peb, SM.CXSCREEN),
+        nHeight: NtUserGetSystemMetrics(peb, SM.CYSCREEN),
         dwStyle: WS.POPUP | WS.CLIPCHILDREN,
         dwExStyle: 0,
         hInstance: 0,
@@ -56,7 +55,7 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
         return null;
     }
 
-    await NtUserShowWindow(hWnd, SW.SHOWDEFAULT)
+    await NtUserShowWindow(peb, hWnd, SW.SHOWDEFAULT)
 
     const desktop = new DESKTOP();
     desktop.dwSessionId = 0;
@@ -80,8 +79,8 @@ export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: numb
             break;
         }
         case WM.DISPLAYCHANGE: {
-            const screenW = NtIntGetSystemMetrics(peb, SM.CXSCREEN);
-            const screenH = NtIntGetSystemMetrics(peb, SM.CYSCREEN);
+            const screenW = NtUserGetSystemMetrics(peb, SM.CXSCREEN);
+            const screenH = NtUserGetSystemMetrics(peb, SM.CYSCREEN);
 
             console.log("WM_DISPLAYCHANGE", screenW, screenH);
 
@@ -92,11 +91,13 @@ export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: numb
             return HT.CLIENT;
         }
         case WM.QUIT: {
-            return; // ignore quit messages
+            return 0; // ignore quit messages
         }
         default:
             return await NtDefWindowProc(hWnd, msg, wParam, lParam);
     }
+
+    return 0;
 }
 
 

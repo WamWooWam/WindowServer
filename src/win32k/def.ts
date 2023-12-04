@@ -1,12 +1,12 @@
 import { HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, MA, MSG, SC, SW, VK, WA, WM, WPARAM, WS } from "../types/user32.types.js";
-import { NtDefNCHitTest, NtDefNCLButtonDown, NtDefNCLButtonUp } from "./nc.js";
+import { NtDefNCLButtonDown, NtDefNCLButtonUp, NtUserDefNCHitTest } from "./nc.js";
 import { WMP, WND_DATA } from "../types/user32.int.types.js";
 
-import { GetW32ProcInfo } from "./shared.js";
 import { NtDefCalcNCSizing } from "./nc.js";
 import { NtDefWndDoSizeMove } from "./sizemove.js";
 import { NtDestroyWindow } from "./window.js";
 import { NtDispatchMessage } from "./msg.js";
+import { NtUserGetProcInfo } from "./shared.js";
 import { NtUserShowWindow } from "./wndpos.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
@@ -29,7 +29,7 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
         }
 
         const peb = wnd.peb;
-        const state = GetW32ProcInfo(peb);
+        const state = NtUserGetProcInfo(peb);
         if (!state) {
             console.warn("User32 not initialized");
             return 0;
@@ -47,7 +47,7 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
             case WM.NCCALCSIZE:
                 return NtDefCalcNCSizing(peb, hWnd, Msg, wParam, lParam);
             case WM.NCHITTEST:
-                return NtDefNCHitTest(peb, hWnd, Msg, wParam, lParam);
+                return NtUserDefNCHitTest(peb, hWnd, Msg, wParam, lParam);
             case WM.NCLBUTTONDOWN:
                 return await NtDefNCLButtonDown(peb, hWnd, Msg, wParam, lParam);
             case WM.NCLBUTTONUP:
@@ -116,7 +116,7 @@ export function NtDefRemoveChild(hWnd: HWND, hWndChild: HWND): LRESULT {
 }
 
 function NtDefCreateElement(peb: PEB, hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): LRESULT {
-    const state = GetW32ProcInfo(peb);
+    const state = NtUserGetProcInfo(peb);
     if (!state) {
         console.warn("User32 not initialized");
         return 0;
@@ -162,13 +162,13 @@ async function NtDefWndHandleSysCommand(peb: PEB, wnd: WND, wParam: WPARAM, lPar
     // console.log(`NtDefWndHandleSysCommand: probably ${SC[wParam & 0xFFF0]}`);
     switch (wParam & 0xFFF0) {
         case SC.MINIMIZE:
-            await NtUserShowWindow(wnd.hWnd, SW.MINIMIZE);
+            await NtUserShowWindow(peb, wnd.hWnd, SW.MINIMIZE);
             return 0;
         case SC.MAXIMIZE:
-            await NtUserShowWindow(wnd.hWnd, SW.MAXIMIZE);
+            await NtUserShowWindow(peb, wnd.hWnd, SW.MAXIMIZE);
             return 0;
         case SC.RESTORE:
-            await NtUserShowWindow(wnd.hWnd, SW.RESTORE);
+            await NtUserShowWindow(peb, wnd.hWnd, SW.RESTORE);
             return 0;
         case SC.CLOSE:
             await NtDispatchMessage(peb, [wnd.hWnd, WM.CLOSE, 0, 0]);

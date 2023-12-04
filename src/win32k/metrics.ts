@@ -41,8 +41,7 @@ export function NtInitSysMetrics(peb: PEB) {
     NtRegisterMonitorHook(hook);
 }
 
-// TODO: these should be stored in the shared memory of the process
-export function NtIntGetSystemMetrics(peb: PEB, nIndex: number): number {
+export function NtUserGetSystemMetrics(peb: PEB, nIndex: number): number {
     if (nIndex < 0 || nIndex >= SM.CMETRICS) {
         console.warn(`NtIntGetSystemMetrics: unknown nIndex ${nIndex}`);
         return 0;

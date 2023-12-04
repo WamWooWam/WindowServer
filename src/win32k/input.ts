@@ -1,14 +1,13 @@
 import { HT, HWND, WM, WS } from "../types/user32.types.js";
 import { INRECT, InflateRect, OffsetRect, POINT } from "../types/gdi32.types.js";
-import { NtGetDesktopWindow, NtUserIsDesktopWindow } from "./window.js";
-import { NtUserActivateWindow, NtUserIntSetForegroundWindowMouse } from "./focus.js";
 import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import DESKTOP from "./desktop.js";
-import { NtDoNCHitTest } from "./nc.js";
 import { NtPostMessage } from "./msg.js";
+import { NtUserActivateWindow } from "./focus.js";
+import { NtUserDoNCHitTest } from "./nc.js";
+import { NtUserIsDesktopWindow } from "./window.js";
 import { NtUserScreenToClient } from "./client.js";
-import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
 
 let captureElement: HTMLElement;
@@ -99,9 +98,10 @@ async function NtOnPointerUp(e: PointerEvent) {
 }
 
 function OnHitWindowMouseUp(x: number, y: number, result: HT, hWnd: HWND, wmc: WM, wmnc: WM) {
+    const wnd = ObGetObject<WND>(hWnd);
     const point = { x, y };
     if (result === HT.CLIENT)
-        NtUserScreenToClient(hWnd, point);
+        NtUserScreenToClient(wnd, point);
 
     NtPostMessage(null, {
         hWnd,
@@ -117,12 +117,12 @@ async function OnHitWindowMouseDown(hWnd: HWND, x: number, y: number, result: HT
     const peb = wnd?.peb;
 
     // TODO: there's a lot wrong currently with activating windows
-    if (wnd && NtUserIsDesktopWindow(wnd.wndParent))
+    if (wnd && NtUserIsDesktopWindow(peb, wnd.wndParent))
         await NtUserActivateWindow(peb, wnd.hWnd, 1)
 
     const point = { x, y };
     if (result === HT.CLIENT)
-        NtUserScreenToClient(hWnd, point);
+        NtUserScreenToClient(wnd, point);
 
     NtPostMessage(null, {
         hWnd,
@@ -134,6 +134,8 @@ async function OnHitWindowMouseDown(hWnd: HWND, x: number, y: number, result: HT
 }
 
 function OnHitWindowMouseMove(result: HT, x: number, y: number, hWnd: HWND) {
+    const wnd = ObGetObject<WND>(hWnd);
+
     switch (result) {
         case HT.TOP:
         case HT.BOTTOM:
@@ -158,7 +160,7 @@ function OnHitWindowMouseMove(result: HT, x: number, y: number, hWnd: HWND) {
 
     const point = { x, y };
     if (result === HT.CLIENT)
-        NtUserScreenToClient(hWnd, point);
+        NtUserScreenToClient(wnd, point);
 
     NtPostMessage(null, {
         hWnd,
@@ -215,7 +217,7 @@ async function NtUserHitTestWindowRecursive(lpPoint: POINT, hWnd: HWND, callback
         }
     }
 
-    const result = await NtDoNCHitTest(pWnd, lpPoint.x, lpPoint.y);
+    const result = await NtUserDoNCHitTest(pWnd, lpPoint.x, lpPoint.y);
     if (result !== HT.TRANSPARENT && result !== HT.NOWHERE && result !== HT.ERROR) {
         callback(hWnd, result);
         return hWnd;

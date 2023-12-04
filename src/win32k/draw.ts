@@ -14,7 +14,7 @@ import {
     WS
 } from "../types/user32.types.js";
 import DC, { GreSelectObject } from "./gdi/dc.js";
-import { DEFAULT_CHARSET, FW, HBRUSH, HDC, HFONT, NONANTIALIASED_QUALITY, NULL_PEN, PS, RECT, SIZE, TRANSPARENT } from "../types/gdi32.types.js";
+import { DEFAULT_CHARSET, FW, HBRUSH, HDC, HFONT, NONANTIALIASED_QUALITY, NULL_PEN, PS, RECT, TRANSPARENT } from "../types/gdi32.types.js";
 import { GreGetObj, GreGetStockObject } from "./gdi/obj.js";
 import { IntGetSysColor, IntGetSysColorBrush } from "./brush.js";
 import {
@@ -44,11 +44,10 @@ import {
     NtGdiMoveTo,
     NtGdiSelectObject,
     NtGdiSetBkMode,
-    NtGdiSetDCPenColor,
     NtGdiSetTextColor,
     NtGdiTextOut
 } from "./gdi/ntgdi.js";
-import { NtIntGetSystemMetrics, NtUserSystemParametersInfo } from "./metrics.js";
+import { NtUserGetSystemMetrics, NtUserSystemParametersInfo } from "./metrics.js";
 
 import BRUSH from "./gdi/brush.js";
 import { GreRectangle } from "./gdi/draw.js";
@@ -486,13 +485,13 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
                     return; /* ToolWindows don't have min/max buttons */
 
                 if (style & WS.SYSMENU)
-                    tempRect.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE);
+                    tempRect.right -= NtUserGetSystemMetrics(peb, SM.CXSIZE);
 
                 if (style & (WS.MAXIMIZEBOX | WS.MINIMIZEBOX))
-                    tempRect.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) - 2;
+                    tempRect.right -= NtUserGetSystemMetrics(peb, SM.CXSIZE) - 2;
 
-                tempRect.left = tempRect.right - NtIntGetSystemMetrics(peb, SM.CXSIZE) + 2;
-                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(peb, SM.CYSIZE) - 2;
+                tempRect.left = tempRect.right - NtUserGetSystemMetrics(peb, SM.CXSIZE) + 2;
+                tempRect.bottom = tempRect.top + NtUserGetSystemMetrics(peb, SM.CYSIZE) - 2;
                 tempRect.top += 2;
                 tempRect.right -= 2;
 
@@ -510,10 +509,10 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
                     return; /* ToolWindows don't have min/max buttons */
 
                 if (style & WS.SYSMENU)
-                    tempRect.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE);
+                    tempRect.right -= NtUserGetSystemMetrics(peb, SM.CXSIZE);
 
-                tempRect.left = tempRect.right - NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
-                tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(peb, SM.CYSIZE) - 2;
+                tempRect.left = tempRect.right - NtUserGetSystemMetrics(peb, SM.CXSIZE) + 1;
+                tempRect.bottom = tempRect.top + NtUserGetSystemMetrics(peb, SM.CYSIZE) - 2;
                 tempRect.top += 2;
                 tempRect.right -= 1;
 
@@ -530,12 +529,12 @@ export function NtUserDrawCaptionButton(pWnd: WND, rect: RECT, style: number, ex
 
                 /* A tool window has a smaller Close button */
                 if (exStyle & WS.EX.TOOLWINDOW) {
-                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(peb, SM.CXSMSIZE);
-                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(peb, SM.CYSMSIZE) - 2;
+                    tempRect.left = tempRect.right - NtUserGetSystemMetrics(peb, SM.CXSMSIZE);
+                    tempRect.bottom = tempRect.top + NtUserGetSystemMetrics(peb, SM.CYSMSIZE) - 2;
                 }
                 else {
-                    tempRect.left = tempRect.right - NtIntGetSystemMetrics(peb, SM.CXSIZE);
-                    tempRect.bottom = tempRect.top + NtIntGetSystemMetrics(peb, SM.CYSIZE) - 2;
+                    tempRect.left = tempRect.right - NtUserGetSystemMetrics(peb, SM.CXSIZE);
+                    tempRect.bottom = tempRect.top + NtUserGetSystemMetrics(peb, SM.CYSIZE) - 2;
                 }
                 tempRect.top += 2;
                 tempRect.right -= 2;
@@ -590,10 +589,10 @@ function UserDrawCaptionText(
 
     // Adjust for system menu.
     if (pWnd && pWnd.dwStyle & WS.SYSMENU) {
-        r.right -= NtIntGetSystemMetrics(peb, SM.CYCAPTION) - 1;
+        r.right -= NtUserGetSystemMetrics(peb, SM.CYCAPTION) - 1;
         if ((pWnd.dwStyle & (WS.MAXIMIZEBOX | WS.MINIMIZEBOX)) && !(pWnd.dwExStyle & WS.EX.TOOLWINDOW)) {
-            r.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
-            r.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
+            r.right -= NtUserGetSystemMetrics(peb, SM.CXSIZE) + 1;
+            r.right -= NtUserGetSystemMetrics(peb, SM.CXSIZE) + 1;
         }
     }
 

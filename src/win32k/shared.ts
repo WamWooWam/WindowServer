@@ -1,5 +1,7 @@
 import { HBRUSH, HCURSOR, HICON, HINSTANCE, HWND, LPARAM, LRESULT, MSG, WPARAM } from "../types/user32.types.js";
 
+import DESKTOP from "./desktop.js";
+import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 
@@ -41,7 +43,7 @@ export interface W32CLASSINFO {
     hModule: HINSTANCE;
 }
 
-export function GetW32ProcInfo(peb: PEB): W32PROCINFO | null {
+export function NtUserGetProcInfo(peb: PEB): W32PROCINFO | null {
     if (!peb) return null;
 
     let info = peb.lpSubsystems.get(SUBSYS_USER32);
@@ -50,4 +52,16 @@ export function GetW32ProcInfo(peb: PEB): W32PROCINFO | null {
     // }
 
     return info?.lpParams as W32PROCINFO;
+}
+
+export function NtUserGetDesktop(peb: PEB): DESKTOP {
+    const state = NtUserGetProcInfo(peb);
+    if (!state) {
+        console.warn("User32 not initialized");
+        return null;
+    }
+
+   const desktop = ObGetObject<DESKTOP>(peb.hDesktop);
+
+   return desktop;   
 }

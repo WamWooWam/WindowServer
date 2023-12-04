@@ -1,4 +1,4 @@
-import { HWND, LRESULT, MSG, WM } from "../types/user32.types.js";
+import { HWND, LRESULT, MSG } from "../types/user32.types.js";
 import { MSG_QUEUE, W32PROCINFO } from "./shared.js";
 
 import { ObGetObject } from "../objects.js";
@@ -47,7 +47,7 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
     }
 
     async PeekMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number, wRemoveMsg: number): Promise<MSG> {
-        
+
         throw new Error("Method not implemented.");
     }
 

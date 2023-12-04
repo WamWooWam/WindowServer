@@ -2,6 +2,7 @@ import { COLOR } from "../types/user32.types.js";
 import { HBRUSH } from "../types/gdi32.types.js";
 import { NtGdiCreateSolidBrush } from "./gdi/ntgdi.js";
 
+// classic theme
 const SYS_COLORS_CLASSIC = [
     0xc0c0c0, 0xa56e3a, 0x800000, 0x808080, 0xc0c0c0, 0xffffff,
     0x000000, 0x000000, 0x000000, 0xffffff, 0xc0c0c0, 0xc0c0c0,
@@ -11,6 +12,7 @@ const SYS_COLORS_CLASSIC = [
     0xc0c0c0
 ];
 
+// standard theme
 const SYS_COLORS_STANDARD = [
     0xc8d0d4, 0xa56e3a, 0x6a240a, 0x808080, 0xc8d0d4, 0xffffff,
     0x000000, 0x000000, 0x000000, 0xffffff, 0xc8d0d4, 0xc8d0d4,

@@ -4,10 +4,7 @@ import { OffsetRect, POINT } from "../types/gdi32.types.js";
 import { ObGetObject } from "../objects.js";
 import WND from "./wnd.js";
 
-export function NtUserScreenToClient(hWnd: HWND, lpPoint: POINT): boolean {
-    const wnd = ObGetObject<WND>(hWnd);
-    if (!wnd) return false;
-
+export function NtUserScreenToClient(wnd: WND, lpPoint: POINT): boolean {
     const rcWindow = wnd.rcWindow;
     for (let pParent = ObGetObject<WND>(wnd.hParent); pParent; pParent = ObGetObject<WND>(pParent.hParent)) {
         if ((pParent.dwStyle & WS.VISIBLE) !== WS.VISIBLE ||
@@ -24,10 +21,7 @@ export function NtUserScreenToClient(hWnd: HWND, lpPoint: POINT): boolean {
     return true;
 }
 
-export function NtUserClientToScreen(hWnd: HWND, lpPoint: POINT): boolean {
-    const wnd = ObGetObject<WND>(hWnd);
-    if (!wnd) return false;
-
+export function NtUserClientToScreen(wnd: WND, lpPoint: POINT): boolean {
     const rcWindow = wnd.rcWindow;
     for (let pParent = ObGetObject<WND>(wnd.hParent); pParent; pParent = ObGetObject<WND>(pParent.hParent)) {
         if ((pParent.dwStyle & WS.VISIBLE) !== WS.VISIBLE ||

@@ -1,15 +1,15 @@
 import { HT, LPARAM, SC, SM, SWP, VK, WM, WMSZ, WPARAM, WS } from "../types/user32.types.js";
-import { NtIntGetClientRect, NtUserMapWindowPoints, NtWinPosGetMinMaxInfo } from "./window.js";
 import { NtUserGetCapture, NtUserGetCursorPos, NtUserReleaseCapture, NtUserSetCapture } from "./cursor.js";
+import { NtUserGetClientRect, NtUserMapWindowPoints, NtUserWinPosGetMinMaxInfo } from "./window.js";
 import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
 
-import { GetW32ProcInfo } from "./shared.js";
 import { HasThickFrame } from "./def.js";
 import { NtDispatchMessage } from "./msg.js";
-import { NtDoNCHitTest } from "./nc.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
-import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtSetWindowPos } from "./wndpos.js";
+import { NtUserDoNCHitTest } from "./nc.js";
+import { NtUserGetProcInfo } from "./shared.js";
+import { NtUserGetSystemMetrics } from "./metrics.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
@@ -63,7 +63,7 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
     let minTrack = { cx: 0, cy: 0 };
     let maxTrack = { cx: 0, cy: 0 };
 
-    await NtWinPosGetMinMaxInfo(peb, wnd, null, null, minTrack, maxTrack);
+    await NtUserWinPosGetMinMaxInfo(peb, wnd, null, null, minTrack, maxTrack);
 
     let sizingRect = wnd.rcWindow as RECT;
     let mouseRect = { left: 0, top: 0, right: 0, bottom: 0 };
@@ -72,7 +72,7 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
 
     if (style & WS.CHILD) {
         let pWndParent = ObGetObject<WND>(wnd.hParent);
-        mouseRect = NtIntGetClientRect(peb, pWndParent.hWnd);
+        mouseRect = NtUserGetClientRect(peb, pWndParent.hWnd);
         let clientPoints = [{ x: mouseRect.left, y: mouseRect.top }, { x: mouseRect.right, y: mouseRect.bottom }];
         let sizingPoints = [{ x: sizingRect.left, y: sizingRect.top }, { x: sizingRect.right, y: sizingRect.bottom }];
 
@@ -123,7 +123,7 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
     let moved = false;
 
     while (true) {
-        const state = GetW32ProcInfo(peb);
+        const state = NtUserGetProcInfo(peb);
         if (!state) {
             console.warn("User32 not initialized");
             return 0;
@@ -265,24 +265,24 @@ export async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt
     let hitTest = 0;
     if ((wParam & 0xFFF0) === SC.MOVE) {
         if (wnd.dwStyle & WS.SYSMENU) {
-            rectWindow.left += NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
+            rectWindow.left += NtUserGetSystemMetrics(peb, SM.CXSIZE) + 1;
         }
         if (wnd.dwStyle & WS.MINIMIZEBOX) {
-            rectWindow.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
+            rectWindow.right -= NtUserGetSystemMetrics(peb, SM.CXSIZE) + 1;
         }
         if (wnd.dwStyle & WS.MAXIMIZEBOX) {
-            rectWindow.right -= NtIntGetSystemMetrics(peb, SM.CXSIZE) + 1;
+            rectWindow.right -= NtUserGetSystemMetrics(peb, SM.CXSIZE) + 1;
         }
 
         pt.x = (rectWindow.right + rectWindow.left) / 2;
-        pt.y = rectWindow.top + NtIntGetSystemMetrics(peb, SM.CYSIZE) / 2;
+        pt.y = rectWindow.top + NtUserGetSystemMetrics(peb, SM.CYSIZE) / 2;
         hitTest = HT.CAPTION;
     }
     else {
         pt.x = pt.y = 0;
 
         while (!hitTest) {
-            const state = GetW32ProcInfo(peb);
+            const state = NtUserGetProcInfo(peb);
             if (!state) {
                 console.warn("User32 not initialized");
                 return 0;
@@ -295,7 +295,7 @@ export async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt
                 case WM.MOUSEMOVE: {
                     pt.x = Math.min(Math.max(msg.pt.x, rectWindow.left), rectWindow.right - 1);
                     pt.y = Math.min(Math.max(msg.pt.y, rectWindow.top), rectWindow.bottom - 1);
-                    hitTest = await NtDoNCHitTest(wnd, pt.x, pt.y);
+                    hitTest = await NtUserDoNCHitTest(wnd, pt.x, pt.y);
                     if ((hitTest < HT.LEFT) || (hitTest > HT.BOTTOMRIGHT))
                         hitTest = 0;
                     break;
@@ -307,21 +307,21 @@ export async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt
                         case VK.UP:
                             hitTest = HT.TOP;
                             pt.x = (rectWindow.left + rectWindow.right) / 2;
-                            pt.y = rectWindow.top + NtIntGetSystemMetrics(peb, SM.CYFRAME) / 2;
+                            pt.y = rectWindow.top + NtUserGetSystemMetrics(peb, SM.CYFRAME) / 2;
                             break;
                         case VK.DOWN:
                             hitTest = HT.BOTTOM;
                             pt.x = (rectWindow.left + rectWindow.right) / 2;
-                            pt.y = rectWindow.bottom - NtIntGetSystemMetrics(peb, SM.CYFRAME) / 2;
+                            pt.y = rectWindow.bottom - NtUserGetSystemMetrics(peb, SM.CYFRAME) / 2;
                             break;
                         case VK.LEFT:
                             hitTest = HT.LEFT;
-                            pt.x = rectWindow.left + NtIntGetSystemMetrics(peb, SM.CXFRAME) / 2;
+                            pt.x = rectWindow.left + NtUserGetSystemMetrics(peb, SM.CXFRAME) / 2;
                             pt.y = (rectWindow.top + rectWindow.bottom) / 2;
                             break;
                         case VK.RIGHT:
                             hitTest = HT.RIGHT;
-                            pt.x = rectWindow.right - NtIntGetSystemMetrics(peb, SM.CXFRAME) / 2;
+                            pt.x = rectWindow.right - NtUserGetSystemMetrics(peb, SM.CXFRAME) / 2;
                             pt.y = (rectWindow.top + rectWindow.bottom) / 2;
                             break;
                         case VK.RETURN:

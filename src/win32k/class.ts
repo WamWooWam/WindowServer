@@ -1,5 +1,5 @@
 import { ATOM, HWND, LPARAM, WNDCLASS, WNDCLASSEX, WNDPROC, WPARAM } from "../types/user32.types.js";
-import { GetW32ProcInfo, W32CLASSINFO, W32PROCINFO } from "./shared.js";
+import { NtUserGetProcInfo, W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtDoCallbackAsync } from "../callback.js";
 import { PEB } from "../types/types.js";
@@ -33,10 +33,13 @@ function CreateWndProcCallback(peb: PEB, lpfnWndProc: number | WNDPROC): WNDPROC
 
         return LocalWndProcCallback;
     }
+    else {
+        throw new Error("Invalid WNDPROC??");
+    }
 }
 
 export function NtRegisterClassEx(peb: PEB, lpWndClass: WNDCLASS_WIRE | WNDCLASSEX): ATOM {
-    const state = GetW32ProcInfo(peb);
+    const state = NtUserGetProcInfo(peb);
     if (!state) {
         console.warn("User32 not initialized");
         return 0;

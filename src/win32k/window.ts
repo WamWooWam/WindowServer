@@ -1,29 +1,27 @@
 import { CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
-import { GA, GW, HWND, HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST, MAKEWPARAM, MINMAXINFO, SM, SW, SWP, WM, WS, } from "../types/user32.types.js";
+import { GA, GW, HWND, HWND_BOTTOM, HWND_TOP, HWND_TOPMOST, MAKEWPARAM, MINMAXINFO, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
 import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow, NtUserWinPosShowWindow } from "./wndpos.js";
+import { NtUserGetDesktop, NtUserGetProcInfo } from "./shared.js";
 import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
-import DESKTOP from "./desktop.js";
-import { GetW32ProcInfo } from "./shared.js";
 import { GreAllocDCForMonitor } from "./gdi/dc.js";
 import { NtFindClass } from "./class.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
-import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtSetLastError } from "../error.js";
+import { NtUserGetSystemMetrics } from "./metrics.js";
 import { NtUserScreenToClient } from "./client.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
 
-const gNestedWindowLimit = 50;
-
 export function NtGetDesktopWindow(peb: PEB): HWND {
-    return ObGetObject<DESKTOP>(peb.hDesktop)?.hwndDesktop;
+    const desktop = NtUserGetDesktop(peb);
+    return desktop?.hwndDesktop ?? null;
 }
 
-export function NtUserIsDesktopWindow(wnd: WND) {
-    return wnd && wnd.hWnd == NtGetDesktopWindow(wnd.peb);
+export function NtUserIsDesktopWindow(peb: PEB, wnd: WND) {
+    return wnd && wnd.hWnd == NtGetDesktopWindow(peb);
 }
 
 function NtUserWndSetParent(wnd: WND, wParent: WND) {
@@ -266,7 +264,7 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
         wndExam = wndExam.wndParent;
     }
 
-    let wasVisible = await NtUserShowWindow(wnd.hWnd, SW.HIDE);
+    let wasVisible = await NtUserShowWindow(peb, wnd.hWnd, SW.HIDE);
     if (wnd.peb !== peb) {
         NtSetLastError(peb, 0x00000057); // ERROR_INVALID_PARAMETER
         return null; // window must be in the same process
@@ -281,7 +279,7 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
 
     pt.y = wnd.rcWindow.top;
 
-    NtUserScreenToClient(wndOldParent.hWnd, pt);
+    NtUserScreenToClient(wndOldParent, pt);
 
     if (wndNewParent != wndOldParent) {
         NtUserUnlinkWindow(wnd);
@@ -293,7 +291,7 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
             wnd.dwExStyle |= WS.EX.TOPMOST;
         }
 
-        NtUserIntLinkHwnd(wnd, ((0 == (wnd.dwExStyle & WS.EX.TOPMOST) && NtUserIsDesktopWindow(wndNewParent)) ? HWND_TOP : HWND_TOPMOST));
+        NtUserIntLinkHwnd(wnd, ((0 == (wnd.dwExStyle & WS.EX.TOPMOST) && NtUserIsDesktopWindow(peb, wndNewParent)) ? HWND_TOP : HWND_TOPMOST));
     }
 
     if (wndNewParent.hWnd === NtGetDesktopWindow(peb) && !(wnd.dwStyle & WS.CLIPSIBLINGS)) {
@@ -324,7 +322,7 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
     await NtUserSetWindowPos(peb, wnd, (0 == (wnd.dwExStyle & WS.EX.TOPMOST) ? HWND_TOP : HWND_TOPMOST), pt.x, pt.y, 0, 0, flags);
 
     if (wasVisible)
-        await NtUserShowWindow(wnd.hWnd, SW.SHOWNORMAL);
+        await NtUserShowWindow(peb, wnd.hWnd, SW.SHOWNORMAL);
 
     return wndOldParent;
 }
@@ -344,20 +342,20 @@ export async function NtUserSetParent(peb: PEB, hWnd: HWND, hWndParent: HWND): P
 
 export async function NtUserSendParentNotify(wnd: WND, msg: number) {
     if ((wnd.dwStyle & (WS.CHILD | WS.POPUP)) == WS.CHILD && !(wnd.dwExStyle & WS.EX.NOPARENTNOTIFY)) {
-        if (wnd.wndParent && !NtUserIsDesktopWindow(wnd.wndParent)) {
+        if (wnd.wndParent && !NtUserIsDesktopWindow(wnd.peb, wnd.wndParent)) {
             await NtDispatchMessage(wnd.wndParent.peb, [wnd.wndParent.hWnd, WM.PARENTNOTIFY, MAKEWPARAM(msg, wnd.hMenu), wnd.hWnd]);
         }
     }
 }
 
-export function NtIntGetClientRect(peb: PEB, hWnd: HWND): RECT {
+export function NtUserGetClientRect(peb: PEB, hWnd: HWND): RECT {
     const wnd = ObGetObject<WND>(hWnd);
     if (wnd.dwStyle & WS.ICONIC) {
         return {
             top: 0,
             left: 0,
-            right: NtIntGetSystemMetrics(peb, SM.CXMINIMIZED),
-            bottom: NtIntGetSystemMetrics(peb, SM.CYMINIMIZED)
+            right: NtUserGetSystemMetrics(peb, SM.CXMINIMIZED),
+            bottom: NtUserGetSystemMetrics(peb, SM.CYMINIMIZED)
         }
     }
 
@@ -371,7 +369,7 @@ export function NtIntGetClientRect(peb: PEB, hWnd: HWND): RECT {
         }
     }
 }
-export function NtIntGetWindowBorders(dwStyle: number, dwExStyle: number) {
+export function NtUserIntGetWindowBorders(dwStyle: number, dwExStyle: number) {
     let adjust = 0;
 
     if (dwExStyle & WS.EX.WINDOWEDGE)      // 1st
@@ -389,7 +387,7 @@ export function NtIntGetWindowBorders(dwStyle: number, dwExStyle: number) {
 }
 
 // TODO: this is a stub
-export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | POINT, maxPos: POINT, minTrackSize: SIZE, maxTrackSize: SIZE) {
+export async function NtUserWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | POINT, maxPos: POINT, minTrackSize: SIZE, maxTrackSize: SIZE) {
     let rc = wnd.rcWindow;
     const minMax: MINMAXINFO = {
         ptReserved: { x: rc.left, y: rc.top },
@@ -406,10 +404,10 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | 
 
     const parentWindow = ObGetObject<WND>(wnd.hParent);
     if (parentWindow) {
-        rc = NtIntGetClientRect(peb, wnd.hParent);
+        rc = NtUserGetClientRect(peb, wnd.hParent);
     }
 
-    let adjust = NtIntGetWindowBorders(adjustedStyle, wnd.dwExStyle);
+    let adjust = NtUserIntGetWindowBorders(adjustedStyle, wnd.dwExStyle);
     if ((adjustedStyle & WS.THICKFRAME) && !(adjustedStyle & WS.CHILD) && !(adjustedStyle & WS.MINIMIZE))
         adjust += 1;
 
@@ -419,11 +417,11 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | 
     xinc = yinc = adjust;
 
     if ((adjustedStyle & WS.THICKFRAME) && (adjustedStyle & WS.CHILD) && !(adjustedStyle & WS.MINIMIZE)) {
-        xinc += NtIntGetSystemMetrics(peb, SM.CXFRAME) - NtIntGetSystemMetrics(peb, SM.CXDLGFRAME);
-        yinc += NtIntGetSystemMetrics(peb, SM.CYFRAME) - NtIntGetSystemMetrics(peb, SM.CYDLGFRAME);
+        xinc += NtUserGetSystemMetrics(peb, SM.CXFRAME) - NtUserGetSystemMetrics(peb, SM.CXDLGFRAME);
+        yinc += NtUserGetSystemMetrics(peb, SM.CYFRAME) - NtUserGetSystemMetrics(peb, SM.CYDLGFRAME);
     }
 
-    InflateRect(rc, xinc * NtIntGetSystemMetrics(peb, SM.CXBORDER), yinc * NtIntGetSystemMetrics(peb, SM.CYBORDER));
+    InflateRect(rc, xinc * NtUserGetSystemMetrics(peb, SM.CXBORDER), yinc * NtUserGetSystemMetrics(peb, SM.CYBORDER));
 
     xinc = -rc.left;
     yinc = -rc.top;
@@ -433,8 +431,8 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | 
 
     if (wnd.dwStyle & (WS.DLGFRAME | WS.BORDER)) {
         // TODO: SM_CXMINTRACK/SM_CYMINTRACK
-        minMax.ptMinTrackSize.x = NtIntGetSystemMetrics(peb, SM.CXMINTRACK);
-        minMax.ptMinTrackSize.y = NtIntGetSystemMetrics(peb, SM.CYMINTRACK);
+        minMax.ptMinTrackSize.x = NtUserGetSystemMetrics(peb, SM.CXMINTRACK);
+        minMax.ptMinTrackSize.y = NtUserGetSystemMetrics(peb, SM.CYMINTRACK);
     }
     else {
         minMax.ptMinTrackSize.x = 2 * xinc;
@@ -442,8 +440,8 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | 
     }
 
     // TODO: SM_CXMAXTRACK/SM_CYMAXTRACK
-    minMax.ptMaxTrackSize.x = NtIntGetSystemMetrics(peb, SM.CXMAXTRACK);
-    minMax.ptMaxTrackSize.y = NtIntGetSystemMetrics(peb, SM.CYMAXTRACK);
+    minMax.ptMaxTrackSize.x = NtUserGetSystemMetrics(peb, SM.CXMAXTRACK);
+    minMax.ptMaxTrackSize.y = NtUserGetSystemMetrics(peb, SM.CYMAXTRACK);
 
     minMax.ptMaxPosition.x = -xinc;
     minMax.ptMaxPosition.y = -yinc;
@@ -458,8 +456,8 @@ export async function NtWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | 
         }
     }
 
-    if (newMinMax.ptMaxSize.x == NtIntGetSystemMetrics(peb, SM.CXSCREEN) + 2 * xinc &&
-        newMinMax.ptMaxSize.y == NtIntGetSystemMetrics(peb, SM.CYSCREEN) + 2 * yinc) {
+    if (newMinMax.ptMaxSize.x == NtUserGetSystemMetrics(peb, SM.CXSCREEN) + 2 * xinc &&
+        newMinMax.ptMaxSize.y == NtUserGetSystemMetrics(peb, SM.CYSCREEN) + 2 * yinc) {
         newMinMax.ptMaxSize.x = (rcWork.right - rcWork.left) + 2 * xinc;
         newMinMax.ptMaxSize.y = (rcWork.bottom - rcWork.top) + 2 * yinc;
     }
@@ -510,7 +508,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     const mark = performance.now();
 
     const { dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam } = data;
-    const state = GetW32ProcInfo(peb);
+    const state = NtUserGetProcInfo(peb);
     if (!state) {
         return 0;
     }
@@ -632,7 +630,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     };
 
     if (!(wnd.dwStyle & (WS.CHILD | WS.POPUP)) && (wnd.dwStyle & WS.THICKFRAME)) {
-        await NtWinPosGetMinMaxInfo(peb, wnd, maxSize, maxPos, minTrackSize, maxTrackSize);
+        await NtUserWinPosGetMinMaxInfo(peb, wnd, maxSize, maxPos, minTrackSize, maxTrackSize);
         if (size.cx > maxTrackSize.cx) size.cx = maxTrackSize.cx;
         if (size.cy > maxTrackSize.cy) size.cy = maxTrackSize.cy;
         if (size.cx < minTrackSize.cx) size.cx = minTrackSize.cx;
@@ -681,7 +679,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
     await NtUserSendParentNotify(wnd, WM.CREATE);
 
     if (wnd.wndOwner === null || !(wnd.wndOwner.dwStyle & WS.VISIBLE) || (wnd.wndOwner.dwExStyle & WS.EX.TOOLWINDOW)) {
-        if (NtUserIsDesktopWindow(wnd.wndParent) && (wnd.dwStyle & WS.VISIBLE)
+        if (NtUserIsDesktopWindow(peb, wnd.wndParent) && (wnd.dwStyle & WS.VISIBLE)
             && (!(wnd.dwExStyle & WS.EX.TOOLWINDOW) || (wnd.dwExStyle & WS.EX.APPWINDOW))) {
             // TODO: notify the shell
             // co_IntShellHookNotify(HSHELL_WINDOWCREATED, (WPARAM)hWnd, 0);
@@ -739,7 +737,7 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
         return false;
     }
 
-    const state = GetW32ProcInfo(wnd.peb);
+    const state = NtUserGetProcInfo(wnd.peb);
     if (!state) {
         return false;
     }
@@ -756,7 +754,7 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
 
     if ((wnd.dwStyle & WS.VISIBLE)) {
         if ((wnd.dwStyle & WS.CHILD)) {
-            await NtUserShowWindow(hWnd, SW.HIDE);
+            await NtUserShowWindow(peb, hWnd, SW.HIDE);
         }
         else {
             await NtSetWindowPos(peb, hWnd, 0, 0, 0, 0, 0, SWP.NOMOVE | SWP.NOSIZE | SWP.NOZORDER | SWP.NOACTIVATE | SWP.HIDEWINDOW);
@@ -851,18 +849,18 @@ export function NtUserGetWindowBorders(peb: PEB, style: number, exStyle: number,
         border++; /* The other border */
     size.cx = size.cy = border;
     if ((style & WS.THICKFRAME) && !(style & WS.MINIMIZE)) /* The resize border */ {
-        size.cx += NtIntGetSystemMetrics(peb, SM.CXFRAME) - NtIntGetSystemMetrics(peb, SM.CXDLGFRAME);
-        size.cy += NtIntGetSystemMetrics(peb, SM.CYFRAME) - NtIntGetSystemMetrics(peb, SM.CYDLGFRAME);
+        size.cx += NtUserGetSystemMetrics(peb, SM.CXFRAME) - NtUserGetSystemMetrics(peb, SM.CXDLGFRAME);
+        size.cy += NtUserGetSystemMetrics(peb, SM.CYFRAME) - NtUserGetSystemMetrics(peb, SM.CYDLGFRAME);
     }
-    size.cx *= NtIntGetSystemMetrics(peb, SM.CXBORDER);
-    size.cy *= NtIntGetSystemMetrics(peb, SM.CYBORDER);
+    size.cx *= NtUserGetSystemMetrics(peb, SM.CXBORDER);
+    size.cy *= NtUserGetSystemMetrics(peb, SM.CYBORDER);
 
     return size;
 }
 
 
 export function NtFindWindow(peb: PEB, lpClassName: string, lpWindowName: string): HWND {
-    const state = GetW32ProcInfo(peb);
+    const state = NtUserGetProcInfo(peb);
     if (!state) {
         return 0;
     }
@@ -880,7 +878,6 @@ export function NtFindWindow(peb: PEB, lpClassName: string, lpWindowName: string
     return 0;
 }
 
-
 export function NtUserGetParent(wnd: WND) {
     if (wnd.dwStyle & WS.POPUP) {
         return wnd.wndOwner;
@@ -892,7 +889,7 @@ export function NtUserGetParent(wnd: WND) {
     return null;
 }
 
-export function NtUserIntGetWindow(wnd: WND, uCmd: GW): WND {
+export function NtUserGetWindow(wnd: WND, uCmd: GW): WND {
     if (!wnd) {
         return null;
     }
@@ -930,7 +927,7 @@ export function NtUserIntGetWindow(wnd: WND, uCmd: GW): WND {
     return foundWnd;
 }
 
-export function NtUserIntGetAncestor(wnd: WND, uCmd: GA): WND {
+export function NtUserGetAncestor(wnd: WND, uCmd: GA): WND {
     if (!wnd || wnd.hWnd === NtGetDesktopWindow(wnd.peb)) {
         return null;
     }
@@ -946,7 +943,7 @@ export function NtUserIntGetAncestor(wnd: WND, uCmd: GA): WND {
             let parent: WND = null;
             while (true) {
                 if (!(parent = foundWnd.wndParent)) break;
-                if (NtUserIsDesktopWindow(parent)) break;
+                if (NtUserIsDesktopWindow(wnd.peb, parent)) break;
 
                 foundWnd = parent;
             }
@@ -970,12 +967,12 @@ export function NtUserIntGetAncestor(wnd: WND, uCmd: GA): WND {
     return foundWnd;
 }
 
-export function NtUserGetWindow(hWnd: HWND, uCmd: GW): HWND {
-    return NtUserIntGetWindow(ObGetObject<WND>(hWnd), uCmd)?.hWnd || 0;
+export function UserGetWindow(hWnd: HWND, uCmd: GW): HWND {
+    return NtUserGetWindow(ObGetObject<WND>(hWnd), uCmd)?.hWnd || 0;
 }
 
-export function NtUserGetAncestor(hWnd: HWND, uCmd: GA): HWND {
-    return NtUserIntGetAncestor(ObGetObject<WND>(hWnd), uCmd)?.hWnd || 0;
+export function UserGetAncestor(hWnd: HWND, uCmd: GA): HWND {
+    return NtUserGetAncestor(ObGetObject<WND>(hWnd), uCmd)?.hWnd || 0;
 }
 
 export function NtUserIntSetStyle(pwnd: WND, set_bits: number, clear_bits: number) {
@@ -986,7 +983,7 @@ export function NtUserIntSetStyle(pwnd: WND, set_bits: number, clear_bits: numbe
     pwnd.dwStyle = styleNew;
     if ((styleOld ^ styleNew) & WS.VISIBLE) // State Change.
     {
-        let pti = GetW32ProcInfo(pwnd.peb);
+        let pti = NtUserGetProcInfo(pwnd.peb);
         if (styleOld & WS.VISIBLE) {
             pti.nVisibleWindows--;
         }

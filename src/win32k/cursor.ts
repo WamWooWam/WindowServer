@@ -1,5 +1,4 @@
-import DESKTOP from "./desktop.js";
-import { ObGetObject } from "../objects.js";
+import { NtUserGetDesktop } from "./shared.js";
 import { PEB } from "../types/types.js";
 import { POINT } from "../types/gdi32.types.js";
 
@@ -28,16 +27,16 @@ export function NtUserInitCursor() {
 }
 
 export function NtUserSetCapture(peb: PEB, hWnd: number) {
-    const desktop = ObGetObject<DESKTOP>(peb.hDesktop);
+    const desktop = NtUserGetDesktop(peb);
     desktop.hCaptureWindow = hWnd;
 }
 
 export function NtUserReleaseCapture(peb: PEB) {
-    const desktop = ObGetObject<DESKTOP>(peb.hDesktop);
+    const desktop = NtUserGetDesktop(peb);
     desktop.hCaptureWindow = 0;
 }
 
 export function NtUserGetCapture(peb: PEB) {
-    const desktop = ObGetObject<DESKTOP>(peb.hDesktop);
+    const desktop = NtUserGetDesktop(peb);
     return desktop.hCaptureWindow;
 }

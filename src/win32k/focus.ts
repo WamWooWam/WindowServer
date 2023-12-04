@@ -1,9 +1,8 @@
-import DESKTOP, { NtGetDefaultDesktop } from "./desktop.js";
 import { GA, HWND, HWND_TOP, MAKEWPARAM, SWP, WA, WM, WS } from "../types/user32.types.js";
-import { GetW32ProcInfo, W32PROCINFO } from "./shared.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
-import { NtGetDesktopWindow, NtUserIntGetAncestor, NtUserIsDesktopWindow } from "./window.js";
+import { NtGetDesktopWindow, NtUserGetAncestor, NtUserIsDesktopWindow } from "./window.js";
 import { NtSetWindowPos, NtUserActivateOtherWindowMin, NtUserSetWindowPos } from "./wndpos.js";
+import { NtUserGetDesktop, NtUserGetProcInfo, W32PROCINFO } from "./shared.js";
 
 import { IntIsWindowVisible } from "./sizemove.js";
 import { ObGetObject } from "../objects.js";
@@ -17,7 +16,7 @@ let gpqForegroundPrev: PEB = null;
 export function NtUserGetForegroundWindow(): HWND {
     if (!gpqForeground) return 0;
 
-    const pti = GetW32ProcInfo(gpqForeground);
+    const pti = NtUserGetProcInfo(gpqForeground);
     if (!pti) {
         return 0;
     }
@@ -26,22 +25,22 @@ export function NtUserGetForegroundWindow(): HWND {
 }
 
 export function NtUserIntGetFocusProcInfo(peb: PEB): W32PROCINFO {
-    let desktop = ObGetObject<DESKTOP>(peb.hDesktop);
+    const desktop = NtUserGetDesktop(peb);
     if (!desktop) {
         return null;
     }
 
-    return GetW32ProcInfo(desktop.pActiveProcess);
+    return NtUserGetProcInfo(desktop.pActiveProcess);
 }
-
 
 async function NtUserSendDeactivateMessages(hwndPrev: HWND, hWnd: HWND, clear: boolean): Promise<boolean> {
     let lParam = hWnd ?? 0;
 
     let wndPrev;
     if (hwndPrev && (wndPrev = ObGetObject<WND>(hwndPrev))) {
+        const wParam = MAKEWPARAM(WA.INACTIVE, ((wndPrev.dwStyle & WS.MINIMIZE) != 0) ? 1 : 0);
         if (await NtDispatchMessage(wndPrev.peb, [wndPrev.hWnd, WM.NCACTIVATE, 0, lParam])) {
-            await NtDispatchMessage(wndPrev.peb, [wndPrev.hWnd, WM.ACTIVATE, MAKEWPARAM(WA.INACTIVE, ((wndPrev.dwStyle & WS.MINIMIZE) != 0) ? 1 : 0), lParam]);
+            await NtDispatchMessage(wndPrev.peb, [wndPrev.hWnd, WM.ACTIVATE, wParam, lParam]);
 
             if (clear) {
                 wndPrev.dwStyle &= ~WS.ACTIVE;
@@ -61,7 +60,7 @@ async function NtUserSendDeactivateMessages(hwndPrev: HWND, hWnd: HWND, clear: b
 
 export async function NtUserActivateWindow(peb: PEB, hWnd: HWND, dwType: number): Promise<boolean> {
     let wnd = ObGetObject<WND>(hWnd);
-    let pti = GetW32ProcInfo(peb);
+    let pti = NtUserGetProcInfo(peb);
     if (!pti) {
         console.warn("NtUserActivateWindow: pti is null");
         return false;
@@ -108,7 +107,7 @@ export async function NtUserActivateWindow(peb: PEB, hWnd: HWND, dwType: number)
  * @returns 
  */
 export async function NtUserDeactivateWindow(peb: PEB): Promise<boolean> {
-    const pti = GetW32ProcInfo(peb);
+    const pti = NtUserGetProcInfo(peb);
     if (!pti) {
         console.warn("NtUserDeactivateWindow: pti is null");
         return false;
@@ -193,7 +192,7 @@ export async function NtUserDeactivateWindow(peb: PEB): Promise<boolean> {
 
 
 async function NtUserCoIntSetActiveWindow(peb: PEB, wnd: WND, bMouse: boolean, bFocus: boolean, async: boolean): Promise<boolean> {
-    let pti = GetW32ProcInfo(peb);
+    let pti = NtUserGetProcInfo(peb);
     if (!pti) {
         return false;
     }
@@ -201,7 +200,7 @@ async function NtUserCoIntSetActiveWindow(peb: PEB, wnd: WND, bMouse: boolean, b
     let pWndChg = ObGetObject<WND>(pti.hwndActive);
     let hWndPrev = pti.hwndActive;
 
-    if (!wnd || NtUserIsDesktopWindow(wnd))
+    if (!wnd || NtUserIsDesktopWindow(peb, wnd))
         return false;
 
     let hWnd = wnd.hWnd;
@@ -249,7 +248,7 @@ async function NtUserCoIntSetActiveWindow(peb: PEB, wnd: WND, bMouse: boolean, b
 
     wndPrev = ObGetObject<WND>(pti.hwndActivePrev); // keep making sure it's valid
 
-    if (pti.hwndActivePrev != pti.hwndActive || pWndChg != wndPrev || !(wnd && ObGetObject<WND>(wnd.hWnd)) || pti != GetW32ProcInfo(peb)) {
+    if (pti.hwndActivePrev != pti.hwndActive || pWndChg != wndPrev || !(wnd && ObGetObject<WND>(wnd.hWnd)) || pti != NtUserGetProcInfo(peb)) {
         return false; // something's changed, bail
     }
 
@@ -278,7 +277,7 @@ function IsFGLocked() {
 }
 
 function ToggleFGActivate(peb: PEB) {
-    let pti = GetW32ProcInfo(peb);
+    let pti = NtUserGetProcInfo(peb);
     let ret = pti.flags.bAllowForegroundActivate;
     if (ret) {
         pti.flags.bAllowForegroundActivate = false;
@@ -312,7 +311,7 @@ export async function NtUserIntSetForegroundWindow(Wnd: WND): Promise<boolean> {
 }
 
 async function IntUserSetActiveWindow(peb: PEB, wnd: WND, bMouse: boolean, bFocus: boolean, async: boolean): Promise<boolean> {
-    const pti = GetW32ProcInfo(peb);
+    const pti = NtUserGetProcInfo(peb);
     if (!pti) {
         return;
     }
@@ -365,9 +364,9 @@ async function NtUserIntSetForegroundAndFocusWindow(peb: PEB, wnd: WND, bMouse: 
     let ret = false;
 
     let prevForegroundQueue = NtUserIntGetFocusProcInfo(peb);
-    let pti = GetW32ProcInfo(peb);
+    let pti = NtUserGetProcInfo(peb);
     if (wnd && prevForegroundQueue) {
-        let wndPti = GetW32ProcInfo(wnd.peb);
+        let wndPti = NtUserGetProcInfo(wnd.peb);
         if (wndPti === prevForegroundQueue) {
             // same queue, just activate the window
             if (pti === prevForegroundQueue) {
@@ -387,10 +386,10 @@ async function NtUserIntSetForegroundAndFocusWindow(peb: PEB, wnd: WND, bMouse: 
 
     if (!wnd) return false;
 
-    if (pti === GetW32ProcInfo(wnd.peb)) {
+    if (pti === NtUserGetProcInfo(wnd.peb)) {
         ret = await IntUserSetActiveWindow(peb, wnd, bMouse, true, false);
     }
-    else if (GetW32ProcInfo(wnd.peb).hwndActive === wnd.hWnd) {
+    else if (NtUserGetProcInfo(wnd.peb).hwndActive === wnd.hWnd) {
         // do nothing
     }
     else {
@@ -413,7 +412,7 @@ function NtUserIntMakeWindowActive(wnd: WND) {
 }
 
 async function NtUserIntSendActivateMessages(peb: PEB, wndPrev: WND, wnd: WND, mouseActivate: boolean, async: boolean) {
-    const pti = GetW32ProcInfo(peb);
+    const pti = NtUserGetProcInfo(peb);
     console.log("Focusing Window %s", wnd?.lpszName);
 
     if (wnd) {
@@ -448,8 +447,8 @@ async function NtUserIntSendActivateMessages(peb: PEB, wndPrev: WND, wnd: WND, m
 
     let oldPeb = wndPrev?.peb;
     let newPeb = wnd?.peb;
-    let oldPti = GetW32ProcInfo(oldPeb);
-    let newPti = GetW32ProcInfo(newPeb);
+    let oldPti = NtUserGetProcInfo(oldPeb);
+    let newPti = NtUserGetProcInfo(newPeb);
 
     if (!(pti.flags.bInActivateAppMsg) && oldPeb != newPeb) {
         let desktop = ObGetObject<WND>(NtGetDesktopWindow(peb));
@@ -493,8 +492,7 @@ async function NtUserIntSendActivateMessages(peb: PEB, wndPrev: WND, wnd: WND, m
 }
 
 export function NtUserIntSetFocusMessageQueue(peb: PEB, newQueue: PEB) {
-    // TODO:
-    let desktop = ObGetObject<DESKTOP>(peb.hDesktop);
+    const desktop = NtUserGetDesktop(peb);
     if (!desktop) {
         return;
     }
@@ -508,7 +506,7 @@ export function NtUserIntSetFocusMessageQueue(peb: PEB, newQueue: PEB) {
         gpqForegroundPrev = old;
     }
 
-    if(newQueue) {
+    if (newQueue) {
         gpqForeground = newQueue;
     }
     else {
@@ -537,10 +535,10 @@ async function NtUserIntSetForegroundMessageQueue(peb: PEB, wnd: WND, mouseActiv
     if (gpqForegroundPrev != gpqForeground) {
         let pmqPrev = null;
         if (pebPrev) { // && not in cleanup       
-            pmqPrev = GetW32ProcInfo(pebPrev);
+            pmqPrev = NtUserGetProcInfo(pebPrev);
         }
 
-        let pmq = GetW32ProcInfo(peb);
+        let pmq = NtUserGetProcInfo(peb);
 
         if (pmqPrev) {
             if (pmq != pmqPrev) {
@@ -551,7 +549,7 @@ async function NtUserIntSetForegroundMessageQueue(peb: PEB, wnd: WND, mouseActiv
 
         let pmqChg = null;
         if (pebChg) { // && not in cleanup
-            pmqChg = GetW32ProcInfo(pebChg);
+            pmqChg = NtUserGetProcInfo(pebChg);
         }
 
         if (pmqChg) {
@@ -573,10 +571,10 @@ async function NtUserIntSetForegroundMessageQueue(peb: PEB, wnd: WND, mouseActiv
 
         pmqPrev = null;
         if (pebPrev) { // && not in cleanup
-            pmqPrev = GetW32ProcInfo(pebPrev);
+            pmqPrev = NtUserGetProcInfo(pebPrev);
         }
 
-        pmq = GetW32ProcInfo(peb);
+        pmq = NtUserGetProcInfo(peb);
 
 
         if (pmqPrev && pmq == pmqPrev) {
@@ -604,7 +602,7 @@ export async function UserSetActiveWindow(peb: PEB, Wnd: WND) {
   
        Now Handle wines Msg.c test_SetActiveWindow( 0 )...
     */
-    let ptiForegroundPrev = GetW32ProcInfo(gpqForegroundPrev);
+    let ptiForegroundPrev = NtUserGetProcInfo(gpqForegroundPrev);
     let wndActivePrev: WND;
     if (ptiForegroundPrev &&
         ptiForegroundPrev.hwndActive && (wndActivePrev = ObGetObject<WND>(ptiForegroundPrev.hwndActive)) &&
@@ -615,12 +613,12 @@ export async function UserSetActiveWindow(peb: PEB, Wnd: WND) {
         return await IntUserSetActiveWindow(peb, Wnd, false, true, false);
     }
 
-    let pti = GetW32ProcInfo(peb);
+    let pti = NtUserGetProcInfo(peb);
     // Activate anyone but the active window.
     if (pti.hwndActive &&
         (Wnd = ObGetObject<WND>(pti.hwndActive)) != null) {
         //ERR("USAW:AOWM hwnd %p\n",Wnd?Wnd.head.h:NULL);
-        if (!(await NtUserActivateOtherWindowMin(Wnd))) {
+        if (!(await NtUserActivateOtherWindowMin(peb, Wnd))) {
             // Okay, now go find someone else to play with!
             //ERR("USAW: Going to WPAOW\n");
             await NtUserIntWinPosActivateOtherWindow(peb, Wnd)
@@ -637,7 +635,7 @@ export async function NtUserIntWinPosActivateOtherWindow(peb: PEB, Wnd: WND) {
     let WndTo: WND = null;
 
     async function done() {
-        if (gpqForeground && (!GetW32ProcInfo(gpqForeground).hwndActive || Wnd.hWnd == GetW32ProcInfo(gpqForeground).hwndActive)) {
+        if (gpqForeground && (!NtUserGetProcInfo(gpqForeground).hwndActive || Wnd.hWnd == NtUserGetProcInfo(gpqForeground).hwndActive)) {
             /* ReactOS can pass WndTo = NULL to co_IntSetForegroundWindow and returns FALSE. */
             //ERR("WinPosActivateOtherWindow Set FG 0x%p hWnd %p\n",WndTo, WndTo ? WndTo.head.h : 0);
             if (await NtUserIntSetForegroundWindow(WndTo)) {
@@ -651,7 +649,7 @@ export async function NtUserIntWinPosActivateOtherWindow(peb: PEB, Wnd: WND) {
         }
     }
 
-    if (NtUserIsDesktopWindow(Wnd)) {
+    if (NtUserIsDesktopWindow(peb, Wnd)) {
         //ERR("WinPosActivateOtherWindow Set Focus Msg Q No window!\n");
         NtUserIntSetFocusMessageQueue(peb, null);
         return;
@@ -659,7 +657,7 @@ export async function NtUserIntWinPosActivateOtherWindow(peb: PEB, Wnd: WND) {
 
     /* If this is popup window, try to activate the owner first. */
     if ((Wnd.dwStyle & WS.POPUP) && (WndTo = Wnd.wndOwner)) {
-        WndTo = NtUserIntGetAncestor(WndTo, GA.ROOT);
+        WndTo = NtUserGetAncestor(WndTo, GA.ROOT);
         if (NtUserIntCanActivateWindow(WndTo)) return await done();
     }
 
@@ -676,7 +674,7 @@ export async function NtUserIntWinPosActivateOtherWindow(peb: PEB, Wnd: WND) {
        Check for previous active window to bring to top.
     */
     if (Wnd) {
-        WndTo = ObGetObject(GetW32ProcInfo(Wnd.peb).hwndActivePrev);
+        WndTo = ObGetObject(NtUserGetProcInfo(Wnd.peb).hwndActivePrev);
         if (NtUserIntCanActivateWindow(WndTo)) return await done();
     }
 

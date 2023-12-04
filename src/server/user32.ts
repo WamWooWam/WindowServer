@@ -2,7 +2,7 @@ import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, 
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
 import { NtDispatchMessage, NtGetMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
-import { NtInitSysMetrics, NtIntGetSystemMetrics } from "../win32k/metrics.js";
+import { NtInitSysMetrics, NtUserGetSystemMetrics } from "../win32k/metrics.js";
 import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow } from "../win32k/wndpos.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
 import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
@@ -122,7 +122,7 @@ async function UserCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promise<CRE
 }
 
 async function UserShowWindow(peb: PEB, data: SHOW_WINDOW): Promise<SHOW_WINDOW_REPLY> {
-    let retVal = await NtUserShowWindow(data.hWnd, data.nCmdShow);
+    let retVal = await NtUserShowWindow(peb, data.hWnd, data.nCmdShow);
 
     return { retVal };
 }
@@ -154,7 +154,7 @@ async function UserGetDC(peb: PEB, data: HWND) {
 }
 
 function UserGetSystemMetrics(peb: PEB, nIndex: number): number {
-    return NtIntGetSystemMetrics(peb, nIndex);
+    return NtUserGetSystemMetrics(peb, nIndex);
 }
 
 function UserSetWindowPos(peb: PEB, params: SET_WINDOW_POS) {
@@ -171,7 +171,9 @@ function UserGetWindowRect(peb: PEB, params: HWND): RECT {
 
 function UserScreenToClient(peb: PEB, params: SCREEN_TO_CLIENT): SCREEN_TO_CLIENT_REPLY {
     const point = { ...params.lpPoint };
-    if (NtUserScreenToClient(params.hWnd, point)) {
+    const wnd = ObGetObject<WND>(params.hWnd);
+
+    if (wnd && NtUserScreenToClient(wnd, point)) {
         return { retVal: true, lpPoint: point };
     }
     else {
