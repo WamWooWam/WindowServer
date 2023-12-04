@@ -2,7 +2,7 @@ import { GET_MESSAGE, GET_MESSAGE_REPLY, WMP, WNDPROC_PARAMS } from "../types/us
 import { GetW32ProcInfo, W32PROCINFO } from "./shared.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { HT, HWND_BROADCAST, LRESULT, MA, MAKEWPARAM, MSG, WM } from "../types/user32.types.js";
-import { NtIntMouseActivateWindow, NtUserActivateWindow } from "./focus.js";
+import { NtUserActivateWindow, NtUserIntSetForegroundWindowMouse } from "./focus.js";
 import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import DESKTOP from "./desktop.js";

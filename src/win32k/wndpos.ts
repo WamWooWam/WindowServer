@@ -1,5 +1,7 @@
+import DESKTOP, { NtGetDefaultDesktop } from "./desktop.js";
 import { GA, GW, HWND, HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST, LOWORD, SM, SW, SWP, WINDOWPLACEMENT, WM, WS } from "../types/user32.types.js";
-import { NtIntGetClientRect, NtUserGetWindow, NtUserIntGetAncestor, NtUserIntLinkHwnd, NtUserIntSetStyle, NtUserIsDesktopWindow, NtWinPosGetMinMaxInfo } from "./window.js";
+import { NtGetDesktopWindow, NtIntGetClientRect, NtUserGetWindow, NtUserIntGetAncestor, NtUserIntLinkHwnd, NtUserIntSetStyle, NtUserIsDesktopWindow, NtWinPosGetMinMaxInfo } from "./window.js";
+import { NtUserGetForegroundWindow, NtUserIntGetFocusProcInfo, NtUserIntSetFocusMessageQueue, NtUserIntSetForegroundWindow, NtUserIntWinPosActivateOtherWindow } from "./focus.js";
 import { OffsetRect, POINT, RECT, SIZE, SetRect } from "../types/gdi32.types.js";
 import { WMP, WPF } from "../types/user32.int.types.js";
 
@@ -10,7 +12,6 @@ import { NtIntGetSystemMetrics } from "./metrics.js";
 import { NtMonitorFromRect } from "./monitor.js";
 import { NtUserClientToScreen } from "./client.js";
 import { NtUserGetCursorPos } from "./cursor.js";
-import { NtUserGetForegroundWindow } from "./focus.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
@@ -292,7 +293,7 @@ async function NtUserWinPosDoNCCALCSize(wnd: WND, winPos: WINDOWPOS, windowRect:
     return wvrFlags;
 }
 
-export async function NtUserSetWindowPos(wnd: WND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, flags: SWP): Promise<boolean> {
+export async function NtUserSetWindowPos(peb: PEB, wnd: WND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, flags: SWP): Promise<boolean> {
     const params: WINDOWPOS = {
         hWnd: wnd.hWnd,
         hWndInsertAfter,
@@ -303,13 +304,13 @@ export async function NtUserSetWindowPos(wnd: WND, hWndInsertAfter: HWND, x: num
         uFlags: flags,
     };
 
-    const cursorPos = NtUserGetCursorPos(wnd.peb);
+    const cursorPos = NtUserGetCursorPos(peb);
     const isInWindow = IsPointInWindow(wnd, cursorPos.x, cursorPos.y);
 
     if (flags & SWP.ASYNCWINDOWPOS) {
         params.uFlags &= ~SWP.ASYNCWINDOWPOS;
 
-        const result = await NtDispatchMessage(wnd.peb, [wnd.hWnd, WMP.ASYNC_SETWINDOWPOS, 0, params]);
+        const result = await NtDispatchMessage(peb, [wnd.hWnd, WMP.ASYNC_SETWINDOWPOS, 0, params]);
         if (!result) {
             return false;
         }
@@ -356,10 +357,10 @@ export async function NtUserSetWindowPos(wnd: WND, hWndInsertAfter: HWND, x: num
 }
 
 export async function NtSetWindowPos(peb: PEB, hWnd: HWND, hWndInsertAfter: HWND, x: number, y: number, cx: number, cy: number, uFlags: number) {
-    return NtUserSetWindowPos(ObGetObject<WND>(hWnd), hWndInsertAfter, x, y, cx, cy, uFlags);
+    return NtUserSetWindowPos(peb, ObGetObject<WND>(hWnd), hWndInsertAfter, x, y, cx, cy, uFlags);
 }
 
-export async function NtUserWinPosShowWindow(Wnd: WND, Cmd: number) {
+export async function NtUserWinPosShowWindow(peb: PEB, Wnd: WND, Cmd: number) {
     let WasVisible: boolean;
     let Swp = 0;
     let EventMsg = 0;
@@ -367,7 +368,7 @@ export async function NtUserWinPosShowWindow(Wnd: WND, Cmd: number) {
     let ShowFlag: boolean;
     let style: number;
     let Parent: WND;
-    let pti = GetW32ProcInfo(Wnd.peb);
+    let pti = GetW32ProcInfo(peb);
     let ShowOwned = false;
     let FirstTime = false;
 
@@ -518,7 +519,7 @@ export async function NtUserWinPosShowWindow(Wnd: WND, Cmd: number) {
     ShowFlag = (Cmd != SW.HIDE);
 
     if ((ShowFlag != WasVisible || Cmd == SW.SHOWNA) && Cmd != SW.SHOWMAXIMIZED && !(Swp & SWP.STATECHANGED)) {
-        await NtDispatchMessage(Wnd.peb, [Wnd.hWnd, WM.SHOWWINDOW, ShowFlag, 0]);
+        await NtDispatchMessage(peb, [Wnd.hWnd, WM.SHOWWINDOW, ShowFlag, 0]);
         if (!ObGetObject(Wnd.hWnd)) return WasVisible;
     }
 
@@ -531,7 +532,7 @@ export async function NtUserWinPosShowWindow(Wnd: WND, Cmd: number) {
     }
 
     if (IntIsWindowVisible(Wnd)) {
-        await NtUserSetWindowPos(Wnd,
+        await NtUserSetWindowPos(peb, Wnd,
             0 != (Wnd.dwExStyle & WS.EX.TOPMOST) ? HWND_TOPMOST : HWND_TOP,
             NewPos.left,
             NewPos.top,
@@ -552,28 +553,28 @@ export async function NtUserWinPosShowWindow(Wnd: WND, Cmd: number) {
 
     // if (ShowOwned) IntShowOwnedPopups(Wnd, TRUE);
 
-    // if ((Cmd == SW.HIDE) || (Cmd == SW.MINIMIZE)) {
-    //     if (Wnd == pti.MessageQueue.wndActive && pti.MessageQueue == IntGetFocusMessageQueue()) {
-    //         if (UserIsDesktopWindow(Wnd.wndParent)) {
-    //             if (!ActivateOtherWindowMin(Wnd)) {
-    //                 co_WinPosActivateOtherWindow(Wnd);
-    //             }
-    //         }
-    //         else {
-    //             co_WinPosActivateOtherWindow(Wnd);
-    //         }
-    //     }
+    if ((Cmd == SW.HIDE) || (Cmd == SW.MINIMIZE)) {
+        if (Wnd.hWnd == pti.hwndActive && pti == NtUserIntGetFocusProcInfo(peb)) {
+            if (NtUserIsDesktopWindow(Wnd.wndParent)) {
+                if (!await NtUserActivateOtherWindowMin(Wnd)) {
+                    await NtUserIntWinPosActivateOtherWindow(peb, Wnd);
+                }
+            }
+            else {
+                await NtUserIntWinPosActivateOtherWindow(peb, Wnd);
+            }
+        }
 
-    //     /* Revert focus to parent */
-    //     if (Wnd == pti.MessageQueue.wndFocus) {
-    //         Parent = Wnd.wndParent;
-    //         if (UserIsDesktopWindow(Wnd.wndParent))
-    //             Parent = 0;
-    //         co_UserSetFocus(Parent);
-    //     }
-    //     // Hide, just return.
-    //     if (Cmd == SW.HIDE) return WasVisible;
-    // }
+        /* Revert focus to parent */
+        if (Wnd.hWnd == pti.hwndFocus) {
+            Parent = Wnd.wndParent;
+            if (NtUserIsDesktopWindow(Wnd.wndParent))
+                Parent = null;
+            // NtUserUserCoSetFocus(Parent);
+        }
+        // Hide, just return.
+        if (Cmd == SW.HIDE) return WasVisible;
+    }
 
     // /* FIXME: Check for window destruction. */
 
@@ -598,7 +599,7 @@ export async function NtUserShowWindow(hWnd: HWND, nCmdShow: number) {
         return false;
     }
 
-    return NtUserWinPosShowWindow(wnd, nCmdShow);
+    return NtUserWinPosShowWindow(wnd.peb, wnd, nCmdShow);
 }
 
 function NtUserWinPosInitSavedPos(wnd: WND, restoreRect: RECT) {
@@ -913,4 +914,93 @@ async function NtUserIntWinPosMinMaximize(wnd: WND, showFlag: number, newPos: RE
 
 async function NtUserIntShowOwnedPopups(wnd: WND, bShow: boolean) {
 
+}
+
+function NtUserIntGetLastTopMostWindow(): WND {
+    let rpDesk = ObGetObject<DESKTOP>(NtGetDefaultDesktop());
+    let pWndDesktop = ObGetObject<WND>(rpDesk.hwndDesktop);
+    let pWnd: WND;
+    if (rpDesk &&
+        (pWnd = pWndDesktop.wndChild) &&
+        pWnd.dwExStyle & WS.EX.TOPMOST) {
+        for (; ;) {
+            if (!pWnd.wndNext) break;
+            if (!(pWnd.wndNext.dwExStyle & WS.EX.TOPMOST)) break;
+            pWnd = pWnd.wndNext;
+        }
+        return pWnd;
+    }
+    return null;
+}
+
+export async function NtUserActivateOtherWindowMin(Wnd: WND) {
+    let ActivePrev, FindTopWnd;
+    let pWndTopMost: WND, pWndChild: WND, pWndSetActive: WND, pWndTemp: WND, pWndDesk: WND;
+    let pti = GetW32ProcInfo(Wnd.peb);
+
+    //ERR("AOWM 1 %p\n",Wnd.head.h);
+    ActivePrev = (pti.hwndActivePrev !== 0);
+    FindTopWnd = true;
+
+    if ((pWndTopMost = NtUserIntGetLastTopMostWindow()))
+        pWndChild = pWndTopMost.wndNext;
+    else
+        pWndChild = Wnd.wndParent.wndChild;
+
+    for (; ;) {
+        if (ActivePrev)
+            pWndSetActive = ObGetObject<WND>(pti.hwndActivePrev);
+        else
+            pWndSetActive = pWndChild;
+
+        pWndTemp = null;
+
+        while (pWndSetActive) {
+            if (ObGetObject<WND>(pWndSetActive.hWnd) &&
+                !(pWndSetActive.dwExStyle & WS.EX.NOACTIVATE) &&
+                (pWndSetActive.dwStyle & (WS.VISIBLE | WS.DISABLED)) == WS.VISIBLE &&
+                (!(pWndSetActive.dwStyle & WS.ICONIC) /* FIXME MinMax pos? */)) {
+                if (!(pWndSetActive.dwExStyle & WS.EX.TOOLWINDOW)) {
+                    // UserRefObjectCo(pWndSetActive, &Ref);
+                    //ERR("ActivateOtherWindowMin Set FG 1\n");
+                    await NtUserIntSetForegroundWindow(pWndSetActive);
+                    // UserDerefObjectCo(pWndSetActive);
+                    //ERR("AOWM 2 Exit Good %p\n",pWndSetActive.head.h);
+                    return true;
+                }
+                if (!pWndTemp) pWndTemp = pWndSetActive;
+            }
+            if (ActivePrev) {
+                ActivePrev = false;
+                pWndSetActive = pWndChild;
+            }
+            else
+                pWndSetActive = pWndSetActive.wndNext;
+        }
+
+        if (!FindTopWnd) break;
+        FindTopWnd = false;
+
+        if (pWndChild) {
+            pWndChild = pWndChild.wndParent.wndChild;
+            continue;
+        }
+
+        if (!(NtUserIsDesktopWindow(pWndDesk))) {
+            pWndChild = null;
+            continue;
+        }
+        pWndChild = pWndDesk.wndChild;
+    }
+
+    if ((pWndSetActive = pWndTemp)) {
+        //UserRefObjectCo(pWndSetActive, & Ref);
+        //ERR("ActivateOtherWindowMin Set FG 2\n");
+        await NtUserIntSetForegroundWindow(pWndSetActive);
+        //UserDerefObjectCo(pWndSetActive);
+        //ERR("AOWM 3 Exit Good %p\n",pWndSetActive.head.h);
+        return true;
+    }
+    //ERR("AOWM 4 Bad\n");
+    return false;
 }

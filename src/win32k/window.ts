@@ -321,7 +321,7 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
 
     // IntNotifyWinEvent(EVENT_OBJECT_PARENTCHANGE, wnd, OBJID_WINDOW, CHILDID_SELF, WEF_SETBYWNDPTI);
 
-    await NtUserSetWindowPos(wnd, (0 == (wnd.dwExStyle & WS.EX.TOPMOST) ? HWND_TOP : HWND_TOPMOST), pt.x, pt.y, 0, 0, flags);
+    await NtUserSetWindowPos(peb, wnd, (0 == (wnd.dwExStyle & WS.EX.TOPMOST) ? HWND_TOP : HWND_TOPMOST), pt.x, pt.y, 0, 0, flags);
 
     if (wasVisible)
         await NtUserShowWindow(wnd.hWnd, SW.SHOWNORMAL);
@@ -697,7 +697,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
             dwShowMode = SW.SHOWMINIMIZED;
         }
 
-        await NtUserWinPosShowWindow(wnd, dwShowMode);
+        await NtUserWinPosShowWindow(peb, wnd, dwShowMode);
 
         // TODO: MDI child
     }

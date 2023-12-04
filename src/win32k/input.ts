@@ -1,7 +1,7 @@
 import { HT, HWND, WM, WS } from "../types/user32.types.js";
 import { INRECT, InflateRect, OffsetRect, POINT } from "../types/gdi32.types.js";
 import { NtGetDesktopWindow, NtUserIsDesktopWindow } from "./window.js";
-import { NtIntMouseActivateWindow, NtUserActivateWindow } from "./focus.js";
+import { NtUserActivateWindow, NtUserIntSetForegroundWindowMouse } from "./focus.js";
 import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import DESKTOP from "./desktop.js";
@@ -118,7 +118,7 @@ async function OnHitWindowMouseDown(hWnd: HWND, x: number, y: number, result: HT
 
     // TODO: there's a lot wrong currently with activating windows
     if (wnd && NtUserIsDesktopWindow(wnd.wndParent))
-        await NtIntMouseActivateWindow(ObGetObject<WND>(hWnd));
+        await NtUserActivateWindow(peb, wnd.hWnd, 1)
 
     const point = { x, y };
     if (result === HT.CLIENT)

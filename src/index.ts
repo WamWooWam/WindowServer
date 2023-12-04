@@ -3,9 +3,11 @@ import { PsCreateProcess, PsRegisterProcessHooks, PsQuitProcess, PsTerminateProc
 
 import { HANDLE } from "./types/types.js";
 import { PsProcess } from "./process.js";
-import { WM } from "./types/user32.types.js";
+import { HWND, WM } from "./types/user32.types.js";
 import { ObDumpHandles, ObEnumHandles, ObGetObject, ObGetOwnedHandleCount } from "./objects.js";
 import { NtInit } from "./boot.js";
+import { NtUserGetForegroundWindow } from "./win32k/focus.js";
+import WND from "./win32k/wnd.js";
 
 (async () => {
     const procs: HANDLE[] = [];
@@ -29,20 +31,27 @@ import { NtInit } from "./boot.js";
         if (index === -1) return;
 
         for (const row of processList.getElementsByTagName("tr")) {
-            row.className = ""; 
+            row.className = "";
         }
 
         row.className = "highlighted";
     }
 
     const GetSelectedProcess = () => {
-        const row = processList.getElementsByClassName("highlighted")[0];
-        if (!row) return procs[procs.length - 1]
-
-        const proc = ObGetObject<PsProcess>(parseInt(row.id));
-        if (!proc) {
-            row.remove();
-            return;
+        let row = processList.getElementsByClassName("highlighted")[0];
+        let proc: PsProcess;
+        let hWnd: HWND;
+        if (!row && (hWnd = NtUserGetForegroundWindow())) {
+            let wnd = ObGetObject<WND>(hWnd);
+            if (!wnd) return;
+            proc = ObGetObject<PsProcess>(wnd.peb.hProcess);
+        }
+        else {
+            proc = ObGetObject<PsProcess>(parseInt(row.id));
+            if (!proc) {
+                row.remove();
+                return;
+            }
         }
 
         return proc.handle;

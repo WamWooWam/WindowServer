@@ -26,7 +26,7 @@ export default class DESKTOP {
     lpszDesktop: string;
     hCaptureWindow?: HWND;
 
-    pActiveProcess: W32PROCINFO;
+    pActiveProcess: PEB;
 }
 
 export function NtGetDefaultDesktop(): HANDLE {
@@ -62,7 +62,7 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
     desktop.dwSessionId = 0;
     desktop.hwndDesktop = hWnd;
     desktop.lpszDesktop = pDeskParams.lpszDesktop;
-    desktop.pActiveProcess = GetW32ProcInfo(peb);
+    desktop.pActiveProcess = peb;
 
     const hDesktop = ObSetObject(desktop, "DESKTOP", 0);
     peb.hDesktop = hDesktop;

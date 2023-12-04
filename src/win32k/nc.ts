@@ -1,7 +1,7 @@
 import { HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, SC, SM, WM, WMSZ, WPARAM, WS } from "../types/user32.types.js";
 import { INRECT, InflateRect, RECT } from "../types/gdi32.types.js";
 import { NtDispatchMessage, NtSendMessageTimeout } from "./msg.js";
-import { NtIntMouseActivateWindow, NtUserActivateWindow } from "./focus.js";
+import { NtUserActivateWindow, NtUserIntSetForegroundWindowMouse } from "./focus.js";
 import { NtUserGetWindowBorders, NtUserHasWindowEdge } from "./window.js";
 
 import { NtDefWindowProc } from "./def.js";
@@ -172,7 +172,7 @@ export async function NtDefNCLButtonDown(peb: PEB, hWnd: HWND, Msg: number, wPar
             break;
         case HT.CAPTION: {
             if ((wnd.dwExStyle & WS.EX.NOACTIVATE) !== WS.EX.NOACTIVATE)
-                await NtIntMouseActivateWindow(wnd);
+                await NtUserIntSetForegroundWindowMouse(wnd);
 
             await NtDispatchMessage(peb, [hWnd, WM.SYSCOMMAND, SC.MOVE + HT.CAPTION, lParam]);
             break;
