@@ -67,8 +67,6 @@ export namespace WS {
     export const POPUPWINDOW = POPUP | BORDER | SYSMENU;
     export const CHILDWINDOW = CHILD;
 
-    export const ACTIVE = 0x00000001;
-
     export namespace EX {
         export const DLGMODALFRAME = 0x00000001;
         export const NOPARENTNOTIFY = 0x00000004;

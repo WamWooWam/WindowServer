@@ -603,27 +603,27 @@ export async function NtUserShowWindow(peb: PEB, hWnd: HWND, nCmdShow: number) {
 }
 
 function NtUserWinPosInitSavedPos(peb: PEB, wnd: WND, restoreRect: RECT) {
-    let Size: SIZE = { cx: 0, cy: 0 };
-    let Rect = { ...restoreRect };
+    let size: SIZE = { cx: 0, cy: 0 };
+    let rect = { ...restoreRect };
 
     if (wnd.wndParent && !NtUserIsDesktopWindow(peb, wnd.wndParent)) {
-        OffsetRect(Rect, -wnd.wndParent.rcClient.left, -wnd.wndParent.rcClient.top);
+        OffsetRect(rect, -wnd.wndParent.rcClient.left, -wnd.wndParent.rcClient.top);
     }
 
-    Size.cx = Rect.left;
-    Size.cy = Rect.top;
+    size.cx = rect.left;
+    size.cy = rect.top;
 
     if (!wnd.savedPos.initialized) {
         // FIXME: Use check point Atom..
         wnd.savedPos.flags = 0;
         wnd.savedPos.maxPos.x = wnd.savedPos.maxPos.y = -1;
         wnd.savedPos.iconPos.x = wnd.savedPos.iconPos.y = -1;
-        wnd.savedPos.normalRect = Rect;
+        wnd.savedPos.normalRect = rect;
         wnd.savedPos.initialized = true;
     }
 
     if (wnd.dwStyle & WS.MINIMIZE) {
-        wnd.savedPos.iconPos = { x: Size.cx, y: Size.cy };
+        wnd.savedPos.iconPos = { x: size.cx, y: size.cy };
         wnd.savedPos.flags |= WPF.MININIT;
     }
     else if (wnd.dwStyle & WS.MAXIMIZE) {
@@ -636,7 +636,7 @@ function NtUserWinPosInitSavedPos(peb: PEB, wnd: WND, restoreRect: RECT) {
             }
             else {
                 let WorkArea: RECT;
-                let pmonitor = NtMonitorFromRect(Rect); // MONITOR_DEFAULTTOPRIMARY
+                let pmonitor = NtMonitorFromRect(rect); // MONITOR_DEFAULTTOPRIMARY
                 // FIXME: support DPI aware, rcWorkDPI/Real etc..
                 WorkArea = pmonitor.rcMonitor;
 
@@ -647,21 +647,21 @@ function NtUserWinPosInitSavedPos(peb: PEB, wnd: WND, restoreRect: RECT) {
                     }
                 }
 
-                wnd.savedPos.maxPos.x = Rect.left - WorkArea.left;
-                wnd.savedPos.maxPos.y = Rect.top - WorkArea.top;
+                wnd.savedPos.maxPos.x = rect.left - WorkArea.left;
+                wnd.savedPos.maxPos.y = rect.top - WorkArea.top;
 
-                /*ERR("WinPosIP 2 X %d = R.l %d - W.l %d | Y %d = R.t %d - W.t %d\n",
-                                             Wnd.savedPos.maxPos.x,
-                                             Rect.left, WorkArea.left,
-                                             Wnd.savedPos.maxPos.y,
-                                             Rect.top, WorkArea.top);*/
+                console.log("WinPosIP 2 X %d = R.l %d - W.l %d | Y %d = R.t %d - W.t %d\n",
+                                             wnd.savedPos.maxPos.x,
+                                             rect.left, WorkArea.left,
+                                             wnd.savedPos.maxPos.y,
+                                             rect.top, WorkArea.top);
             }
         }
         else
-            wnd.savedPos.maxPos = { x: Size.cx, y: Size.cy };
+            wnd.savedPos.maxPos = { x: size.cx, y: size.cy };
     }
     else {
-        wnd.savedPos.normalRect = Rect;
+        wnd.savedPos.normalRect = rect;
     }
 }
 
@@ -742,12 +742,12 @@ function NtUserIntWinPosFindIconPos(peb: PEB, wnd: WND, pos: POINT) {
     x = rectParent.left;
     y = rectParent.bottom;
 
-    xspacing = NtUserGetSystemMetrics(wnd.peb, SM.CXMINIMIZED);
-    yspacing = NtUserGetSystemMetrics(wnd.peb, SM.CYMINIMIZED);
+    xspacing = NtUserGetSystemMetrics(peb, SM.CXMINIMIZED);
+    yspacing = NtUserGetSystemMetrics(peb, SM.CYMINIMIZED);
 
     // Set to default position when minimized.
-    pos.x = x + NtUserGetSystemMetrics(wnd.peb, SM.CXBORDER);
-    pos.y = y - yspacing - NtUserGetSystemMetrics(wnd.peb, SM.CYBORDER);
+    pos.x = x + NtUserGetSystemMetrics(peb, SM.CXBORDER);
+    pos.y = y - yspacing - NtUserGetSystemMetrics(peb, SM.CYBORDER);
 
     for (pwndChild = pwndParent.wndChild; pwndChild; pwndChild = pwndChild.wndNext) {
         if (pwndChild == wnd) continue;
@@ -765,8 +765,8 @@ function NtUserIntWinPosFindIconPos(peb: PEB, wnd: WND, pos: POINT) {
             x = rectParent.left;
             y -= yspacing;
         }
-        pos.x = x + NtUserGetSystemMetrics(wnd.peb, SM.CXBORDER);
-        pos.y = y - yspacing - NtUserGetSystemMetrics(wnd.peb, SM.CYBORDER);
+        pos.x = x + NtUserGetSystemMetrics(peb, SM.CXBORDER);
+        pos.y = y - yspacing - NtUserGetSystemMetrics(peb, SM.CYBORDER);
     }
 
     wnd.savedPos.iconPos.x = pos.x;

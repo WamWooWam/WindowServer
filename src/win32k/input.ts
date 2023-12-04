@@ -17,6 +17,7 @@ export function NtInitInput() {
     window.addEventListener("pointerdown", NtOnPointerDown);
     window.addEventListener("pointermove", NtOnPointerMove);
     window.addEventListener("pointerup", NtOnPointerUp);
+    window.addEventListener("pointercancel", NtOnPointerUp);
 }
 
 async function NtOnPointerDown(e: PointerEvent) {

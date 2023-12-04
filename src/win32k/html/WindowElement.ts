@@ -70,6 +70,17 @@ export default class WindowElement extends WindowElementBase {
         }
     }
 
+    invalidateStyle() {
+        super.invalidateStyle();
+
+        if (this.wnd && !this.wnd.stateFlags.bIsActiveFrame) {
+            this.titleBar.classList.add("inactive");
+        }
+        else {
+            this.titleBar.classList.remove("inactive");
+        }
+    }
+
     applyStylesCore(style: number) {
         if ((style & WS.CAPTION) === WS.CAPTION) {
             this.titleBar.style.display = "";
@@ -100,11 +111,11 @@ export default class WindowElement extends WindowElementBase {
             this.maximizeButton.style.display = "none";
         }
 
-        if ((style & WS.ACTIVE) === WS.ACTIVE) {
-            this.titleBar.classList.remove("inactive");
+        if (this.wnd && !this.wnd.stateFlags.bIsActiveFrame) {
+            this.titleBar.classList.add("inactive");
         }
         else {
-            this.titleBar.classList.add("inactive");
+            this.titleBar.classList.remove("inactive");
         }
 
         if ((style & WS.MAXIMIZE) === WS.MAXIMIZE) {

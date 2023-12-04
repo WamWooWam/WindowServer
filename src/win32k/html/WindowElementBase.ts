@@ -71,6 +71,11 @@ export default class WindowElementBase extends HTMLElement {
 
     }
 
+    invalidateStyle(): void {
+        this.applyStyles(this.dwStyle);
+        this.applyExStyles(this.dwExStyle);
+    }
+
     applyStyles(dwNewStyle: string): void {
         if (dwNewStyle === null) return;
 

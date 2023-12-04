@@ -19,6 +19,7 @@ type SUBSYSTEM = {
 }
 
 type PEB = {
+    id: string;
     hProcess: HANDLE;
     hThread: HANDLE;
     dwProcessId: number;

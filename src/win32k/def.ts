@@ -12,6 +12,7 @@ import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
+import WindowElementBase from "./html/WindowElementBase.js";
 
 export function HasThickFrame(dwStyle: number) {
     return (dwStyle & WS.THICKFRAME) === WS.THICKFRAME && !((dwStyle & (WS.DLGFRAME | WS.BORDER)) === WS.DLGFRAME);
@@ -62,7 +63,7 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
             case WM.QUERYOPEN:
                 return true;
             case WM.NCACTIVATE:
-                return true;
+                return NtDefNcActivate(hWnd, wParam, lParam);
             case WM.ACTIVATE:
                 if (LOWORD(wParam) != WA.INACTIVE && !(wnd.dwStyle & WS.MINIMIZE)) {
                     // await NtUserSetFocus(wnd);
@@ -85,6 +86,26 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
     }
 
     return 0; // TODO
+}
+
+export function NtDefNcActivate(hWnd: HWND, wParam: WPARAM, lParam: LPARAM): LRESULT {
+    const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return -1;
+    }
+
+    if (wParam) {
+        wnd.stateFlags.bIsActiveFrame = true;
+    }
+    else {
+        wnd.stateFlags.bIsActiveFrame = false;
+    }
+
+    // update styles
+    const pRootElement = wnd.pRootElement as WindowElementBase;
+    pRootElement.invalidateStyle();
+
+    return true;
 }
 
 export function NtDefAddChild(hWnd: HWND, hWndChild: HWND): LRESULT {

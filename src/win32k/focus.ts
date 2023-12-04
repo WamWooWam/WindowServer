@@ -43,7 +43,7 @@ async function NtUserSendDeactivateMessages(hwndPrev: HWND, hWnd: HWND, clear: b
             await NtDispatchMessage(wndPrev.peb, [wndPrev.hWnd, WM.ACTIVATE, wParam, lParam]);
 
             if (clear) {
-                wndPrev.dwStyle &= ~WS.ACTIVE;
+                wndPrev.stateFlags.bIsActiveFrame = false;
             }
 
             return true;
@@ -384,6 +384,13 @@ async function NtUserIntSetForegroundAndFocusWindow(peb: PEB, wnd: WND, bMouse: 
         }
     }
 
+    if (true) {
+        ToggleFGActivate(peb);
+        NtUserIntSetForegroundMessageQueue(peb, wnd, bMouse, 0); 
+        // we currently fall through to the next block, but reactos returns here
+    }
+
+
     if (!wnd) return false;
 
     if (pti === NtUserGetProcInfo(wnd.peb)) {
@@ -525,11 +532,11 @@ async function NtUserIntSetForegroundMessageQueue(peb: PEB, wnd: WND, mouseActiv
     if (wnd) {
         pebChg = wnd.peb;
         NtUserIntSetFocusMessageQueue(peb, wnd.peb);
-        gpqForeground = wnd.peb;
+        // gpqForeground = wnd.peb;
     }
     else {
         NtUserIntSetFocusMessageQueue(peb, null);
-        gpqForeground = null;
+        // gpqForeground = null;
     }
 
     if (gpqForegroundPrev != gpqForeground) {

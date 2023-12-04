@@ -53,7 +53,8 @@ export default class WND {
         bHasHadInitialPaint: false,
         bMaximizesToMonitor: false,
         bIsBeingActivated: false,
-        bIsDestroyed: false
+        bIsDestroyed: false,
+        bIsActiveFrame: false,
     }
 
     public savedPos: {
