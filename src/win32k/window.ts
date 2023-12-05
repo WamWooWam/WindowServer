@@ -74,11 +74,7 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
         NtUserWndSetNext(wnd.wndPrev, wnd);
 
         // if the parent element is going to be the same, then we don't need to remove the element
-        if (wnd?.wndParent.pRootElement.contains(wnd.pRootElement)) {
-            // so just fix the z-order
-            wnd.wndParent?.FixZOrder();
-        }
-        else {
+        if (!wnd.wndParent?.pRootElement.contains(wnd.pRootElement)) {
             // TODO: i don't know if this is where this should be done
             if (wInsertAfter) {
                 wInsertAfter.pRootElement.insertAdjacentElement("afterend", wnd.pRootElement);
@@ -87,6 +83,8 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
                 wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
             }
         }
+
+        wnd.wndParent?.FixZOrder();
     }
     else {
         console.assert(wnd != wnd.wndParent?.wndChild);
@@ -101,11 +99,7 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
         NtUserWndSetChild(wnd.wndParent, wnd);
 
         // if the parent element is going to be the same, then we don't need to remove the element
-        if (wnd?.wndParent.pRootElement.contains(wnd.pRootElement)) {
-            // so just fix the z-order
-            wnd.wndParent?.FixZOrder();
-        }
-        else {
+        if (!wnd.wndParent?.pRootElement.contains(wnd.pRootElement)) {
             // TODO: i dont know if this is where this should be done        
             if (wInsertAfter) {
                 wInsertAfter.pRootElement.insertAdjacentElement("afterbegin", wnd.pRootElement);
@@ -114,6 +108,8 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
                 wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
             }
         }
+
+        wnd.wndParent?.FixZOrder();
     }
 }
 
