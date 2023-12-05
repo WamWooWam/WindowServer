@@ -19,12 +19,22 @@ import {
     ShowWindow,
     TranslateMessage,
     PeekMessage,
-    PM
+    PM,
+    PostMessage
 } from "../client/user32.js";
+
+let hText: HWND;
+let iCnt: number = 0;
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
         case WM.CREATE: {
+            hText = await CreateWindowEx(
+                0, "STATIC", "0",
+                WS.CHILD | WS.VISIBLE,
+                10, 10, 100, 20,
+                hwnd, 0, 0, null
+            );
             break;
         }
 
@@ -89,6 +99,10 @@ async function main() {
             await TranslateMessage(msg);
             await DispatchMessage(msg);
         }
+
+        iCnt++;
+
+        await PostMessage(hText, WM.SETTEXT, 0, iCnt.toString());
     }
 }
 

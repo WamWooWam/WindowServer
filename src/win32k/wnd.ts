@@ -16,12 +16,12 @@ import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { HDC, POINT, RECT } from "../types/gdi32.types.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
+import { NtUserIntSetStyle, NtUserUnlinkWindow } from "./window.js";
 import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetObject } from "../objects.js";
 import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
-import { NtUserIntSetStyle } from "./window.js";
 
 export default class WND {
     private _hWnd: HWND;
@@ -72,82 +72,82 @@ export default class WND {
     public wndLastActive: WND;
 
     // windows uses a doubly linked list to keep track of windows and their z-order :D
-    private _wndNext: WND = null;
-    private _wndPrev: WND = null;
-    private _wndChild: WND = null;
-    private _wndParent: WND = null;
-    private _wndOwner: WND = null;
+    #wndNext: WND = null;
+    #wndPrev: WND = null;
+    #wndChild: WND = null;
+    #wndParent: WND = null;
+    #wndOwner: WND = null;
 
     public get wndNext(): WND {
-        return this._wndNext;
+        return this.#wndNext;
     }
 
     public set wndNext(value: WND) {
-        if (this._wndNext) {
-            ObCloseHandle(this._wndNext.hWnd);
+        if (this.#wndNext) {
+            ObCloseHandle(this.#wndNext.hWnd);
         }
 
-        this._wndNext = value;
+        this.#wndNext = value;
         if (value) {
             ObDuplicateHandle(value.hWnd);
         }
     }
 
     public get wndPrev(): WND {
-        return this._wndPrev;
+        return this.#wndPrev;
     }
 
     public set wndPrev(value: WND) {
-        if (this._wndPrev) {
-            ObCloseHandle(this._wndPrev.hWnd);
+        if (this.#wndPrev) {
+            ObCloseHandle(this.#wndPrev.hWnd);
         }
 
-        this._wndPrev = value;
+        this.#wndPrev = value;
         if (value) {
             ObDuplicateHandle(value.hWnd);
         }
     }
 
     public get wndChild(): WND {
-        return this._wndChild;
+        return this.#wndChild;
     }
 
     public set wndChild(value: WND) {
-        if (this._wndChild) {
-            ObCloseHandle(this._wndChild.hWnd);
+        if (this.#wndChild) {
+            ObCloseHandle(this.#wndChild.hWnd);
         }
 
-        this._wndChild = value;
+        this.#wndChild = value;
         if (value) {
             ObDuplicateHandle(value.hWnd);
         }
     }
 
     public get wndParent(): WND {
-        return this._wndParent;
+        return this.#wndParent;
     }
 
     public set wndParent(value: WND) {
-        if (this._wndParent) {
-            ObCloseHandle(this._wndParent.hWnd);
+        if (this.#wndParent) {
+            ObCloseHandle(this.#wndParent.hWnd);
         }
 
-        this._wndParent = value;
+        this.#wndParent = value;
         if (value) {
             ObDuplicateHandle(value.hWnd);
         }
     }
 
     public get wndOwner(): WND {
-        return this._wndOwner;
+        return this.#wndOwner;
     }
 
     public set wndOwner(value: WND) {
-        if (this._wndOwner) {
-            ObCloseHandle(this._wndOwner.hWnd);
+        if (this.#wndOwner) {
+            ObCloseHandle(this.#wndOwner.hWnd);
         }
 
-        this._wndOwner = value;
+        this.#wndOwner = value;
         if (value) {
             ObDuplicateHandle(value.hWnd);
         }
@@ -218,11 +218,13 @@ export default class WND {
                 (this.dwStyle & (WS.CHILD | WS.POPUP))))
                 this._dwExStyle |= WS.EX.WINDOWEDGE;
         }
-        else
+        else {
             this._dwExStyle &= ~WS.EX.WINDOWEDGE;
+        }
 
-        if (!(this.dwStyle & (WS.CHILD | WS.POPUP)))
+        if (!(this.dwStyle & (WS.CHILD | WS.POPUP))) {
             this.stateFlags.bSendSizeMoveMsgs = true;
+        }
 
         this.FixWindowCoordinates();
 
@@ -315,20 +317,14 @@ export default class WND {
     }
 
     public get zIndex(): number {
-        return this._zIndex;
-    }
-
-    public set zIndex(value: number) {
-        this._zIndex = value;
-        if (this.pRootElement)
-            this.pRootElement.style.zIndex = `${value}`;
+        return this.CalculateZIndex();
     }
 
     public get lpClass(): W32CLASSINFO {
         return this._pClsInfo;
     }
 
-    public async WndProc(msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    public async CallWndProc(msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
         return await this._lpfnWndProc(this._hWnd, msg, wParam, lParam);
     }
 
@@ -368,8 +364,8 @@ export default class WND {
             this.pRootElement.style.transform = `translate(${this.rcWindow.left}px, ${this.rcWindow.top}px)`;
             this.pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
             this.pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
+            this.pRootElement.style.zIndex = `${this.zIndex}`;
         }
-
 
         if (this.stateFlags.bSendSizeMoveMsgs) {
             await NtDispatchMessage(this._peb, [this._hWnd, WM.SIZE, 0, { cx: newCX, cy: newCY }]);
@@ -416,6 +412,17 @@ export default class WND {
 
         if (this._hRootElement)
             ObCloseHandle(this._hRootElement);
+
+        NtUserUnlinkWindow(this);
+    }
+
+    public FixZOrder(): void {
+        for (let child = this.wndChild; child; child = child.wndNext) {
+            child.FixZOrder();
+        }
+
+        if (this.pRootElement)
+            this.pRootElement.style.zIndex = `${this.zIndex}`;
     }
 
     private FixWindowCoordinates(): void {
@@ -518,5 +525,16 @@ export default class WND {
             yield child.hWnd;
             child = child.wndNext;
         }
+    }
+
+    private CalculateZIndex(): number {
+        let zIndex = 0;
+        let prev = this.#wndNext;
+        while (prev) {
+            zIndex++;
+            prev = prev.wndNext;
+        }
+
+        return zIndex;
     }
 }
