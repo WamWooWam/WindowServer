@@ -4,6 +4,7 @@ import { ObGetObject, ObSetObject } from "../objects.js";
 
 import ConsoleFile from "./confile.js";
 import FsFile from "./fsfile.js";
+import { KeBugCheckEx } from "../bugcheck.js";
 import NtFile from "./ntfile.js";
 import { PsProcess } from "../process.js";
 
@@ -34,6 +35,10 @@ export function NtGetFileSystemGlobal(): NT_FILESYSTEM_GLOBAL {
 
 export function NtRootPath(hOwner: HANDLE, lpFileName: string) {
     const process = ObGetObject<PsProcess>(hOwner);
+    if (!process) {
+        throw KeBugCheckEx(0x69, "NtRootPath: process not found");
+    }
+
     const cwd = process.cwd;
 
     if (lpFileName.startsWith('\\\\')) {

@@ -6,9 +6,12 @@ import { PsProcess } from "./process.js";
 
 export type HCALLBACK = number;
 
-export function NtDoCallbackAsync(peb: PEB, subsys: SubsystemId, callback: HCALLBACK, data: any[]): Promise<any> {
+export async function NtDoCallbackAsync(peb: PEB, subsys: SubsystemId, callback: HCALLBACK, data: any[]): Promise<any> {
     const process = ObGetObject<PsProcess>(peb.hProcess);
-    
+    if (!process) {
+        return undefined;
+    }
+
     const msg = {
         lpSubsystem: subsys,
         nType: CALLBACK_MESSAGE_TYPE,
@@ -16,5 +19,5 @@ export function NtDoCallbackAsync(peb: PEB, subsys: SubsystemId, callback: HCALL
         data,
     };
 
-    return process.SendMessage(msg);
+    return await process.SendMessage(msg);
 }

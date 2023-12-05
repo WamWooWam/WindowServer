@@ -9,6 +9,11 @@ import WND from "../../win32k/wnd.js";
 
 export async function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     let wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        console.error("StaticWndProc: Invalid window handle");
+        return -1;
+    }
+
     let element = wnd.pRootElement as StaticElement;
 
     switch (uMsg) {
@@ -50,7 +55,7 @@ export async function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lP
                     rcItem: { left: 0, top: 0, right: 0, bottom: 0 },
                     itemData: 0
                 };
-                
+
                 await NtDispatchMessage(null, [wnd.hParent, WM.DRAWITEM, wnd.hWnd, 0]);
             }
         }

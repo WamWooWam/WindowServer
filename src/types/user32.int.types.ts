@@ -34,8 +34,8 @@ export interface WNDCLASS_WIRE {
     hIcon: HICON;
     hCursor: HCURSOR;
     hbrBackground: HBRUSH;
-    lpszMenuName: number | string;
-    lpszClassName: number | string;
+    lpszMenuName: number | string | null;
+    lpszClassName: number | string | null;
     hIconSm?: HICON;
 }
 
@@ -122,8 +122,8 @@ export interface SCREEN_TO_CLIENT_REPLY {
 }
 
 export interface FIND_WINDOW {
-    lpClassName: string;
-    lpWindowName: string;
+    lpClassName: string | null;
+    lpWindowName: string | null;
 }
 
 export interface GET_CLIENT_RECT {

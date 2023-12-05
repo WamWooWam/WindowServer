@@ -21,7 +21,7 @@ export class PsProcess {
     env: { [key: string]: string; };
 
     peb: PEB;
-    
+
     handle: HANDLE;
 
     hIn: HANDLE;
@@ -35,7 +35,7 @@ export class PsProcess {
     onTerminating?: () => void;
     onTerminate?: (exitCode: number) => void;
 
-    private worker: Worker;
+    private worker: Worker | null;
     private exec: Executable;
 
     private hSharedMemory: HANDLE;
@@ -46,7 +46,7 @@ export class PsProcess {
     private state: 'running' | 'terminating' | 'terminated' = 'running';
 
     constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
-        this.handle = ObSetObject<PsProcess>(this, "PROC", null, this.Quit.bind(this));
+        this.handle = ObSetObject<PsProcess>(this, "PROC", 0, this.Quit.bind(this));
         this.id = this.handle;
         this.name = exec.name;
         this.version = exec.version;
@@ -83,7 +83,7 @@ export class PsProcess {
             lpCommandLine: this.args,
             lpCurrentDirectory: this.cwd,
             lpEnvironment: this.env,
-            lpSharedMemory: ObGetObject<SharedArrayBuffer>(this.hSharedMemory),
+            lpSharedMemory: ObGetObject<SharedArrayBuffer>(this.hSharedMemory)!,
         }
 
         this.PostMessage({
@@ -97,7 +97,7 @@ export class PsProcess {
      * Semi-gracefully terminates the process by calling exit handlers and then terminating the worker.
      */
     async Quit(uExitCode: number = 0, error: any = null) {
-        if (this.state === 'terminating' || this.state === 'terminated') {
+        if (!this.worker || this.state === 'terminating' || this.state === 'terminated') {
             return;
         }
 
@@ -127,7 +127,7 @@ export class PsProcess {
      * @internal
      */
     Terminate(uExitCode: number = 0, error: any = null) {
-        if (this.state === 'terminated') {
+        if (this.state === 'terminated' || this.worker === null) {
             return;
         }
 
@@ -201,10 +201,10 @@ export class PsProcess {
     }
 
     private async HandleMessage(msg: Message) {
-        const callback = this.callbackMap.get(msg.nChannel);
+        const callback = this.callbackMap.get(msg.nChannel!);
         if (callback) {
             callback(msg);
-            this.callbackMap.delete(msg.nChannel);
+            this.callbackMap.delete(msg.nChannel!);
         }
         else {
             await this.HandleSyscall(msg);
@@ -233,7 +233,7 @@ export class PsProcess {
     }
 
 
-    async CreateSubsystem(subsystem: SUBSYSTEM_DEF, sharedMemory: SharedArrayBuffer = null) {
+    async CreateSubsystem(subsystem: SUBSYSTEM_DEF, sharedMemory: SharedArrayBuffer | null = null) {
         if (!this.peb.lpSubsystems.has(subsystem.lpszName)) {
             const data: SUBSYSTEM = {
                 lpSubsystem: subsystem.lpszName,

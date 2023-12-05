@@ -32,30 +32,30 @@ import { HANDLE } from "../../types/types.js";
 const STOCK_HANDLE_BASE = 0x80000000;
 
 const STOCK_OBJECTS = {
-    [STOCK_HANDLE_BASE + WHITE_BRUSH]: null as BRUSH,
-    [STOCK_HANDLE_BASE + LTGRAY_BRUSH]: null as BRUSH,
-    [STOCK_HANDLE_BASE + GRAY_BRUSH]: null as BRUSH,
-    [STOCK_HANDLE_BASE + DKGRAY_BRUSH]: null as BRUSH,
-    [STOCK_HANDLE_BASE + BLACK_BRUSH]: null as BRUSH,
-    [STOCK_HANDLE_BASE + NULL_BRUSH]: null as BRUSH,
-    [STOCK_HANDLE_BASE + WHITE_PEN]: null as PEN,
-    [STOCK_HANDLE_BASE + BLACK_PEN]: null as PEN,
-    [STOCK_HANDLE_BASE + NULL_PEN]: null as PEN,
-    [STOCK_HANDLE_BASE + OEM_FIXED_FONT]: null as FONT,
-    [STOCK_HANDLE_BASE + ANSI_FIXED_FONT]: null as FONT,
-    [STOCK_HANDLE_BASE + ANSI_VAR_FONT]: null as FONT,
-    [STOCK_HANDLE_BASE + SYSTEM_FONT]: null as FONT,
-    [STOCK_HANDLE_BASE + DEVICE_DEFAULT_FONT]: null as FONT,
-    [STOCK_HANDLE_BASE + DEFAULT_PALETTE]: null as GDIOBJ,
-    [STOCK_HANDLE_BASE + SYSTEM_FIXED_FONT]: null as FONT,
-    [STOCK_HANDLE_BASE + DEFAULT_GUI_FONT]: null as FONT,
-    [STOCK_HANDLE_BASE + DC_BRUSH]: null as BRUSH,
-    [STOCK_HANDLE_BASE + DC_PEN]: null as PEN,
+    [STOCK_HANDLE_BASE + WHITE_BRUSH]: null as unknown as BRUSH,
+    [STOCK_HANDLE_BASE + LTGRAY_BRUSH]: null as unknown as BRUSH,
+    [STOCK_HANDLE_BASE + GRAY_BRUSH]: null as unknown as BRUSH,
+    [STOCK_HANDLE_BASE + DKGRAY_BRUSH]: null as unknown as BRUSH,
+    [STOCK_HANDLE_BASE + BLACK_BRUSH]: null as unknown as BRUSH,
+    [STOCK_HANDLE_BASE + NULL_BRUSH]: null as unknown as BRUSH,
+    [STOCK_HANDLE_BASE + WHITE_PEN]: null as unknown as PEN,
+    [STOCK_HANDLE_BASE + BLACK_PEN]: null as unknown as PEN,
+    [STOCK_HANDLE_BASE + NULL_PEN]: null as unknown as PEN,
+    [STOCK_HANDLE_BASE + OEM_FIXED_FONT]: null as unknown as FONT,
+    [STOCK_HANDLE_BASE + ANSI_FIXED_FONT]: null as unknown as FONT,
+    [STOCK_HANDLE_BASE + ANSI_VAR_FONT]: null as unknown as FONT,
+    [STOCK_HANDLE_BASE + SYSTEM_FONT]: null as unknown as FONT,
+    [STOCK_HANDLE_BASE + DEVICE_DEFAULT_FONT]: null as unknown as FONT,
+    [STOCK_HANDLE_BASE + DEFAULT_PALETTE]: null as unknown as GDIOBJ,
+    [STOCK_HANDLE_BASE + SYSTEM_FIXED_FONT]: null as unknown as FONT,
+    [STOCK_HANDLE_BASE + DEFAULT_GUI_FONT]: null as unknown as FONT,
+    [STOCK_HANDLE_BASE + DC_BRUSH]: null as unknown as BRUSH,
+    [STOCK_HANDLE_BASE + DC_PEN]: null as unknown as PEN,
 }
 
 export function GreInitStockObjects() {
-    function SetStockObject<T extends GDIOBJ>(i: number, obj: T) {
-        STOCK_OBJECTS[(i + STOCK_HANDLE_BASE) as keyof typeof STOCK_OBJECTS] = obj;
+    function SetStockObject<T extends GDIOBJ>(i: number, obj: T | null) {
+        STOCK_OBJECTS[(i + STOCK_HANDLE_BASE) as keyof typeof STOCK_OBJECTS] = obj!;
     }
 
     SetStockObject(WHITE_BRUSH, GreCreateSolidBrush(0xffffff));
@@ -84,10 +84,10 @@ export function GreInitStockObjects() {
 
 
 export function GreGetStockObject<T>(nIndex: number): T {
-    return GreGetObj<T>(0x80000000 + nIndex);
+    return GreGetObj<T>(0x80000000 + nIndex)!;
 }
 
-export function GreGetObj<T>(hObj: HANDLE): T {
+export function GreGetObj<T>(hObj: HANDLE): T | null {
     if (hObj in STOCK_OBJECTS) {
         return STOCK_OBJECTS[hObj as keyof typeof STOCK_OBJECTS] as T;
     }

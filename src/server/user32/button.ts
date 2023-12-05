@@ -11,6 +11,11 @@ import WND from "../../win32k/wnd.js";
 
 export async function ButtonWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        console.error("ButtonWndProc: Invalid window handle");
+        return -1;
+    }
+    
     const element = wnd.pRootElement as ButtonElement;
     switch (uMsg) {
         case WMP.CREATEELEMENT:

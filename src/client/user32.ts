@@ -331,6 +331,10 @@ export function GetSystemMetrics(nIndex: number): number {
         throw new Error(`GetSystemMetrics: Invalid index ${nIndex}`);
     }
 
+    if (!User32.memory) {
+        throw new Error(`GetSystemMetrics: User32 memory not initialized`); 
+    }
+
     const SysMetricsSharedBufferView = new Int32Array(User32.memory.slice(16, 16 + SM.CMETRICS * 4));
     return SysMetricsSharedBufferView[nIndex];
 }
@@ -420,7 +424,7 @@ export async function ScreenToClient(hWnd: HANDLE, lpPoint: POINT): Promise<bool
  * @returns If the function succeeds, the return value is a handle to the window that has the specified class name and window name.
  * @category User32
  */
-export async function FindWindow(lpClassName: string, lpWindowName: string): Promise<HANDLE> {
+export async function FindWindow(lpClassName: string | null, lpWindowName: string | null): Promise<HANDLE> {
     const msg = await User32.SendMessage<FIND_WINDOW, HANDLE>({
         nType: USER32.FindWindow,
         data: { lpClassName, lpWindowName }

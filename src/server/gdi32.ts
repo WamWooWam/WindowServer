@@ -22,6 +22,9 @@ function GdiCombineRgn(peb: PEB, params: { hrgnDest: HRGN, hrgnSrc1: HRGN, hrgnS
     const rgnSrc1 = ObGetObject<REGION>(hrgnSrc1);
     const rgnSrc2 = ObGetObject<REGION>(hrgnSrc2);
 
+    if (!rgnDest || !rgnSrc1 || !rgnSrc2) return 0;
+
+
     return GreCombineRgn(rgnDest, rgnSrc1, rgnSrc2, fnCombineMode);
 }
 
@@ -30,6 +33,8 @@ function GdiFillRegion(peb: PEB, params: { hDC: number, hrgn: number }): boolean
 
     const dc = ObGetObject<DC>(hDC);
     const rgn = ObGetObject<REGION>(hrgn);
+
+    if (!dc || !rgn) return false;
 
     GreFillRegion(dc, rgn);
 

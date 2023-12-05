@@ -42,15 +42,15 @@ class SubsystemClass {
     public readonly name: string;
 
     private handler: (msg: Omit<Message, "lpSubsystem">) => void;
-    private sharedMemory: SharedArrayBuffer;
+    private sharedMemory: SharedArrayBuffer | null;
     private callbackMap = new Map<number, (msg: Message) => any | Promise<any>>();
     private callbackId = 0x4000;
 
-    public get memory(): SharedArrayBuffer {
+    public get memory(): SharedArrayBuffer | null {
         return this.sharedMemory;
     }
 
-    constructor(name: string, handler: (msg: Omit<Message, "lpSubsystem">) => void, sharedMemory?: SharedArrayBuffer) {
+    constructor(name: string, handler: (msg: Omit<Message, "lpSubsystem">) => void, sharedMemory: SharedArrayBuffer | null = null) {
         this.name = name;
         this.handler = handler;
         this.sharedMemory = sharedMemory;
@@ -110,7 +110,7 @@ class SubsystemClass {
 
         // console.log(`${this.name}:client recieved message %s:%d -> %d, %O`, msg.lpSubsystem, msg.nType, msg.nChannel, msg);
 
-        const callback = this.callbackMap.get(msg.nChannel);
+        const callback = msg.nChannel && this.callbackMap.get(msg.nChannel);
         if (callback) {
             let ret = await callback(msg);
             if (ret !== undefined && msg.nReplyChannel) {
@@ -198,7 +198,7 @@ async function LdrLoadDll(lpLibFileName: string, pPC: PROCESS_CREATE) {
         await LdrLoadDll(lpDependency, pPC);
     }
 
-    if (module[exec.entryPoint]) {
+    if (exec.entryPoint && module[exec.entryPoint]) {
         let retVal = await module[exec.entryPoint]();
     }
 }
@@ -206,16 +206,18 @@ async function LdrLoadDll(lpLibFileName: string, pPC: PROCESS_CREATE) {
 async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
     const exec = pPC.lpExecutable;
     const module = await import("/" + exec.file);
-    if (module[exec.entryPoint]) {
-        let retVal = await module[exec.entryPoint]();
+    let retVal = 0;
 
-        await Ntdll.SendMessage<PROCESS_EXIT>({
-            nType: NTDLL.ProcessExit,
-            data: {
-                uExitCode: retVal ?? 0,
-            }
-        });
+    if (exec.entryPoint && module[exec.entryPoint]) {
+        retVal = await module[exec.entryPoint]();
     }
+
+    await Ntdll.SendMessage<PROCESS_EXIT>({
+        nType: NTDLL.ProcessExit,
+        data: {
+            uExitCode: retVal
+        }
+    });
 }
 
 function NTDLL_HandleMessage(msg: Message) {

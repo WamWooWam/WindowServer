@@ -4,8 +4,7 @@ import NtFile from "./ntfile.js";
 export default class ConsoleFile extends NtFile {
 
     constructor(private type: 'in' | 'out' | 'err', hOwner: HANDLE) {
-        super(hOwner, null, null, null, null, null);
-
+        super(hOwner, "", 0, 0, 0, 0);
     }
 
     async open() { }

@@ -14,7 +14,9 @@ export type MONITOR = {
     lpfnHooks: Function[];
 }
 
-let defaultMonitor: MONITOR = null;
+export type LPMONITOR = MONITOR | null;
+
+let defaultMonitor: LPMONITOR = null;
 export function NtGetPrimaryMonitor(): MONITOR {
     if (defaultMonitor === null) {
         defaultMonitor = {
@@ -37,8 +39,10 @@ export function NtGetPrimaryMonitor(): MONITOR {
         };
 
         defaultMonitor.hMonitor = ObSetObject(defaultMonitor, "MONITOR", 0);
-    
+
         document.body.onresize = () => {
+            if (!defaultMonitor) return;
+
             defaultMonitor.rcMonitor.right = window.innerWidth;
             defaultMonitor.rcMonitor.bottom = window.innerHeight;
             defaultMonitor.rcWork.right = window.innerWidth;

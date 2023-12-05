@@ -15,7 +15,7 @@ import { NtUserScreenToClient } from "./client.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
 
-export function NtGetDesktopWindow(peb: PEB): HWND {
+export function NtGetDesktopWindow(peb: PEB | null): HWND {
     const desktop = NtUserGetDesktop(peb);
     return desktop?.hwndDesktop ?? 0;
 }
@@ -882,7 +882,7 @@ export function NtUserGetWindowBorders(peb: PEB, style: number, exStyle: number,
 }
 
 
-export function NtFindWindow(peb: PEB, lpClassName: string, lpWindowName: string): HWND {
+export function NtFindWindow(peb: PEB, lpClassName: string | null, lpWindowName: string | null): HWND {
     const state = NtUserGetProcInfo(peb);
     if (!state) {
         return 0;

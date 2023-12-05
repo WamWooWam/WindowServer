@@ -181,7 +181,7 @@
 
 x-window {
     opacity: 0;
-    will-change: transform top left;
+    will-change: transform;
     box-sizing: content-box;
 }
 

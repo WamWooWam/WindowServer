@@ -69,7 +69,7 @@ export default class WND {
 
     public data: any;
 
-    public wndLastActive: WND;
+    public wndLastActive: PWND;
 
     // windows uses a doubly linked list to keep track of windows and their z-order :D
     #wndNext: PWND = null;

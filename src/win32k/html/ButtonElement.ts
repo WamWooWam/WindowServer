@@ -14,7 +14,7 @@ export class ButtonElement extends WindowElementBase {
     maxCheckState: number;
 
     get checkState(): number {
-        return parseInt(this.getAttribute("check-state"));
+        return parseInt(this.getAttribute("check-state") ?? "0");
     }
 
     set checkState(value: number) {
@@ -106,7 +106,7 @@ export class ButtonElement extends WindowElementBase {
             return BS[style as keyof typeof BS];
         }
 
-        return null;
+        return 0;
     }
 
     applyStylesCore(dwStyle: number): void {

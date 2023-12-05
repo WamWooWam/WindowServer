@@ -14,7 +14,7 @@ function Kernel32_HandleMessage(msg: Message) {
 }
 
 const Kernel32 = await NtRegisterSubsystem(SUBSYS_KERNEL32, Kernel32_HandleMessage, 4096);
-const K32Memory = new Uint32Array(Kernel32.memory);
+const K32Memory = new Uint32Array(Kernel32.memory!);
 
 /**
  * Retrieves a module handle for the specified module. The module must have been loaded by the calling process.

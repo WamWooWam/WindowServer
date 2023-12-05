@@ -7,7 +7,12 @@ import { SUBSYS_USER32 } from "../types/subsystems.js";
 export function NtInitSysMetrics(peb: PEB) {
     const monitor = NtGetPrimaryMonitor();
 
-    const memory = peb.lpSubsystems.get(SUBSYS_USER32).lpSharedMemory;
+    const memory = peb.lpSubsystems.get(SUBSYS_USER32)?.lpSharedMemory;
+    if (!memory || !(memory instanceof SharedArrayBuffer)) {
+        console.warn("NtInitSysMetrics: shared memory not initialized");
+        return;
+    }
+
     const view = new Int32Array(memory);
 
     // TODO: there are many more metrics to set here
@@ -47,7 +52,11 @@ export function NtUserGetSystemMetrics(peb: PEB, nIndex: number): number {
         return 0;
     }
 
-    const memory = peb.lpSubsystems.get(SUBSYS_USER32).lpSharedMemory;
+    const memory = peb.lpSubsystems.get(SUBSYS_USER32)?.lpSharedMemory;
+    if (!memory || !(memory instanceof SharedArrayBuffer)) {
+        throw new Error("NtUserGetSystemMetrics: shared memory not initialized");
+    }
+
     const view = new Int32Array(memory);
 
     return view[nIndex];

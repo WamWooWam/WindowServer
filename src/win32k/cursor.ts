@@ -28,15 +28,21 @@ export function NtUserInitCursor() {
 
 export function NtUserSetCapture(peb: PEB, hWnd: number) {
     const desktop = NtUserGetDesktop(peb);
+    if (!desktop) return;
+
     desktop.hCaptureWindow = hWnd;
 }
 
 export function NtUserReleaseCapture(peb: PEB) {
     const desktop = NtUserGetDesktop(peb);
+    if (!desktop) return;
+
     desktop.hCaptureWindow = 0;
 }
 
 export function NtUserGetCapture(peb: PEB) {
     const desktop = NtUserGetDesktop(peb);
+    if (!desktop) return;
+
     return desktop.hCaptureWindow;
 }

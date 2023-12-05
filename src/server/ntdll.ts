@@ -17,6 +17,10 @@ const ValidSubsystems = [SUBSYS_NTDLL, SUBSYS_KERNEL32, SUBSYS_USER32, SUBSYS_GD
 
 async function SubsystemLoaded(peb: PEB, data: LOAD_SUBSYSTEM) {
     const process = ObGetObject<PsProcess>(peb.hProcess);
+    if (!process) {
+        return KeBugCheckEx(0x69, "SubsystemLoaded: process not found");
+    }
+
     const subsys = data.lpSubsystem as SubsystemId;
     if (subsys == SUBSYS_NTDLL) return; // NTDLL is already loaded
 
@@ -42,11 +46,19 @@ async function SubsystemLoaded(peb: PEB, data: LOAD_SUBSYSTEM) {
 
 async function ProcessExit(peb: PEB, data: PROCESS_EXIT) {
     const process = ObGetObject<PsProcess>(peb.hProcess);
+    if (!process) {
+        KeBugCheckEx(0x69, "ProcessExit: process not found");
+        return;
+    }
     await process.Quit();
 }
 
 function ProcessCrash(peb: PEB, data: PROCESS_CRASH) {
     const process = ObGetObject<PsProcess>(peb.hProcess);
+    if (!process) {
+        KeBugCheckEx(0x69, "ProcessCrash: process not found");
+        return;
+    }
     process.Terminate(data.uExitCode, data.error);
 }
 

@@ -59,12 +59,16 @@ export function NtUserFillRect(hDC: HDC, prc: RECT, hbr: HBRUSH) {
     const brush = GreGetObj<BRUSH>(hbr);
     const pen = GreGetStockObject<PEN>(NULL_PEN);
 
+    if (!dc || !brush || !pen) return false;
+
     const previousBrush = GreSelectObject(dc, brush);
     const previousPen = GreSelectObject(dc, pen);
     GreRectangle(dc, prc);
 
-    GreSelectObject(dc, previousBrush);
-    GreSelectObject(dc, previousPen);
+    if (previousBrush)
+        GreSelectObject(dc, previousBrush);
+    if (previousPen)
+        GreSelectObject(dc, previousPen);
 }
 
 export function NtUserDrawFrameControl(hdc: HDC, rc: RECT, uType: number, uState: number) {
@@ -317,7 +321,7 @@ export function NtUserDrawRectEdge(hdc: HDC, rc: RECT, uType: EDGE, uFlags: BF) 
         NtUserFillRect(hdc, innerRect, IntGetSysColorBrush(uFlags & BF.MONO ? COLOR.WINDOW : COLOR.BTNFACE));
     }
 
-    const savePoint = NtGdiMoveTo(hdc, 0, 0);
+    const savePoint = NtGdiMoveTo(hdc, 0, 0)!;
     /* Draw the outer edge */
     NtGdiSelectObject(hdc, ltOuterPen);
     // NtGdiSetDCPenColor(hdc, IntGetSysColor(ltOuterI));
@@ -400,8 +404,8 @@ export function NtUserDrawCaption(
     let hasIcon = false;
 
     if (!hIcon && pWnd != null) {
-        hasIcon = (uFlags & DCF.ICON) && !(uFlags * DCF.SMALLCAP) &&
-            (pWnd.dwStyle & WS.SYSMENU) && !(pWnd.dwExStyle & WS.EX.TOOLWINDOW);
+        hasIcon = !!((uFlags & DCF.ICON) && !(uFlags * DCF.SMALLCAP) &&
+            (pWnd.dwStyle & WS.SYSMENU) && !(pWnd.dwExStyle & WS.EX.TOOLWINDOW))
     }
     else {
         hasIcon = hIcon != null;
@@ -553,8 +557,8 @@ function UserDrawCaptionText(
     rect: RECT,
     uFlags: number,
     hFont: HFONT) {
-    let hOldFont: HFONT = null;
-    let OldTextColor: number = 0;
+    let hOldFont: HFONT = 0;
+    let nOldTextColor: number = 0;
     let nclm: NONCLIENTMETRICS = {} as NONCLIENTMETRICS;
     let status: number;
     let bDeleteFont = false;
@@ -582,9 +586,9 @@ function UserDrawCaptionText(
     hOldFont = NtGdiSelectObject(hDC, hFont);
 
     if (uFlags & DCF.INBUTTON)
-        OldTextColor = NtGdiSetTextColor(hDC, IntGetSysColor(COLOR.BTNTEXT));
+        nOldTextColor = NtGdiSetTextColor(hDC, IntGetSysColor(COLOR.BTNTEXT));
     else
-        OldTextColor = NtGdiSetTextColor(hDC,
+        nOldTextColor = NtGdiSetTextColor(hDC,
             IntGetSysColor(uFlags & DCF.ACTIVE ? COLOR.CAPTIONTEXT : COLOR.INACTIVECAPTIONTEXT));
 
     // Adjust for system menu.
@@ -621,7 +625,7 @@ function UserDrawCaptionText(
     // }
 
     NtGdiTextOut(hDC, r.left, r.top + (r.bottom - r.top - size.cy) / 2, lpTitle);
-    NtGdiSetTextColor(hDC, OldTextColor);
+    NtGdiSetTextColor(hDC, nOldTextColor);
 
     if (hOldFont)
         NtGdiSelectObject(hDC, hOldFont);

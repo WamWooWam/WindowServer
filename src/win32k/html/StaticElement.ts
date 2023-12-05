@@ -39,7 +39,7 @@ export class StaticElement extends WindowElementBase {
             return SS[style as keyof typeof SS];
         }
 
-        return null;
+        return 0;
     }
 
     applyStylesCore(dwStyle: number): void {

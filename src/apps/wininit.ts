@@ -16,7 +16,7 @@ async function main() {
     const window = await FindWindow(<string><any>0x8001, null);
     if (window) return;
 
-    await CreateDesktop("PrimaryDesktop", null, null, 0, 0, null);
+    await CreateDesktop("PrimaryDesktop", '', null, 0, 0, null);
 
     let msg: MSG = {} as MSG;
     while (await GetMessage(msg, 0, 0, 0)) {

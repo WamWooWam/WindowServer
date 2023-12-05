@@ -30,7 +30,7 @@ import { SUBSYS_KERNEL32 } from "../types/subsystems.js";
 function NtK32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
     console.debug("KERNEL32 initialized");
 
-    const memory = new Uint32Array(lpSubsystem.lpSharedMemory);
+    const memory = new Uint32Array(lpSubsystem.lpSharedMemory!);
     Atomics.store(memory, IDX_PID, peb.dwProcessId);
     Atomics.store(memory, IDX_HMODULE, peb.hProcess);
     Atomics.store(memory, IDX_LAST_ERROR, 0);
@@ -48,6 +48,8 @@ function GetProcessInfo(peb: PEB, data: GET_PROCESS_INFO): GET_PROCESS_INFO_REPL
     if (hProcess == -1) hProcess = peb.hProcess;
 
     const process = ObGetObject<PsProcess>(hProcess);
+    if (!process) return { id: -1 };
+
     return {
         id: process.id
     };

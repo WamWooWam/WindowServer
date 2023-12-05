@@ -6,10 +6,10 @@ const BUGCHECK_CODES = {
 
 export function KeBugCheckEx(
     bugcheckCode: number,
-    bugcheckParameter1: any,
-    bugcheckParameter2: any,
-    bugcheckParameter3: any,
-    bugcheckParameter4: any) {
+    bugcheckParameter1: any = 0,
+    bugcheckParameter2: any = 0,
+    bugcheckParameter3: any = 0,
+    bugcheckParameter4: any = 0): never {
 
     let error = new Error("KeBugCheckEx");
     let code = BUGCHECK_CODES[bugcheckCode as keyof typeof BUGCHECK_CODES];
@@ -30,7 +30,7 @@ export function KeBugCheckEx(
         bugcheckParameter4 = 0;
     }
 
-    const stack = error.stack;
+    const stack = error.stack ?? '';
     // attempt to destroy all handles 
     for (const handle of ObEnumHandles()) {
         try {
@@ -60,7 +60,7 @@ export function KeBugCheckEx(
 
     document.body.appendChild(canvas);
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d')!;
     ctx.fillStyle = '#000080'
     ctx.fillRect(0, 0, 640, 480);
 
@@ -107,4 +107,5 @@ export function KeBugCheckEx(
         ctx.fillText(lines[i], 0, 364 + ((i - 1) * 14));
     }
 
+    throw null;
 }

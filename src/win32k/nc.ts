@@ -13,13 +13,15 @@ import WindowElement from "./html/WindowElement.js";
 
 export function NtDefCalcNCSizing(peb: PEB, hWnd: number, Msg: WM, wParam: WPARAM, lParam: LPARAM): LRESULT {
     const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) return 0;
+
     let style = wnd.dwStyle;
     let exStyle = wnd.dwExStyle;
     let rect = lParam as RECT;
     let origRect: RECT;
 
     if (rect == null) {
-        return null;
+        return 0;
     }
 
     origRect = { ...rect };

@@ -52,7 +52,7 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
     const hWnd = await NtCreateWindowEx(peb, cs);
     if (!hWnd) {
         console.error("NtCreateWindowEx failed");
-        return null;
+        return 0;
     }
 
     await NtUserShowWindow(peb, hWnd, SW.SHOWDEFAULT)
@@ -72,6 +72,11 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
 
 export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: number, lParam: number): Promise<number> {
     const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        console.error("NtUserDesktopWndProc: wnd not found");
+        return 0;
+    }
+
     const peb = wnd.peb;
     switch (msg) {
         case WMP.CREATEELEMENT: {

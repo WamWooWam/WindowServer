@@ -11,7 +11,7 @@ export default interface BRUSH extends GDIOBJ {
     lbStyle: BS;
     lbColor: number;
     lbHatch?: HS;
-    pValue: string | CanvasPattern | CanvasGradient;
+    pValue: string | CanvasPattern | CanvasGradient | null;
     pData?: any;
 }
 
@@ -65,7 +65,7 @@ export function GreRealiseBrush(dc: DC, br: BRUSH): void {
                 const canvas = document.createElement("canvas");
                 canvas.width = 8;
                 canvas.height = 8;
-                const ctx = canvas.getContext("2d");
+                const ctx = canvas.getContext("2d")!;
 
                 if (dc.dwBkMode === TRANSPARENT) {
                     ctx.clearRect(0, 0, 8, 8);
@@ -128,5 +128,5 @@ export function GreRealiseBrush(dc: DC, br: BRUSH): void {
             throw new Error(`GreRealiseBrush: unknown brush style ${br.lbStyle}`);
     }
 
-    dc.pCtx.fillStyle = br.pValue;
+    dc.pCtx.fillStyle = br.pValue!;
 }

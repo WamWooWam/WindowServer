@@ -19,7 +19,7 @@ export function PsCreateProcess(
     const mark = performance.mark("PsCreateProcess");
 
     // get filename from path
-    const procName = lpApplicationName.split('\\').pop().split('/').pop();
+    const procName = lpApplicationName.split('\\').pop()!.split('/').pop();
 
     // TODO: this should be loaded from the executable file
     const exec: Executable = {
@@ -30,7 +30,7 @@ export function PsCreateProcess(
         entryPoint: "main",
         dependencies: ["ntdll.js", "kernel32.js"],
 
-        name: procName,
+        name: procName!,
         version: [1, 0, 0, 0],
         rsrc: {}
     }
@@ -55,6 +55,7 @@ export function PsCreateProcess(
 
 export function PsProcessMarkCritical(hProcess: HANDLE, bCritical: boolean): boolean {
     const proc = ObGetObject<PsProcess>(hProcess);
+    if (!proc) return false;
     proc.isCritical = bCritical;
     return true;
 }
@@ -65,18 +66,22 @@ export function PsListProcesses(): HANDLE[] {
 
 export function PsQuitProcess(hProcess: HANDLE, uExitCode: number): boolean {
     const proc = ObGetObject<PsProcess>(hProcess);
+    if (!proc) return false;
+
     proc.Quit();
     return true;
 }
 
 export function PsTerminateProcess(hProcess: HANDLE): boolean {
     const proc = ObGetObject<PsProcess>(hProcess);
+    if (!proc) return false;
     proc.Terminate();
     return true;
 }
 
 export function PsGetProcessId(hProcess: HANDLE): number {
     const proc = ObGetObject<PsProcess>(hProcess);
+    if (!proc) return -1;
     return proc.id;
 }
 

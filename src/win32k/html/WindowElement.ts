@@ -29,17 +29,17 @@ export default class WindowElement extends WindowElementBase {
         const shadowRoot = this.attachShadow({ mode: 'open' });
         shadowRoot.appendChild(templateContent.cloneNode(true));
 
-        this.titleBar = shadowRoot.querySelector(".title-bar");
-        this.titleBarText = shadowRoot.querySelector(".title-bar-text");
-        this.titleBarControls = shadowRoot.querySelector(".title-bar-controls");
+        this.titleBar = shadowRoot.querySelector(".title-bar")!;
+        this.titleBarText = shadowRoot.querySelector(".title-bar-text")!;
+        this.titleBarControls = shadowRoot.querySelector(".title-bar-controls")!;
 
-        this.icon = shadowRoot.querySelector(".title-bar-icon");
+        this.icon = shadowRoot.querySelector(".title-bar-icon")!;
 
-        this.closeButton = shadowRoot.querySelector(".close-button");
-        this.minimizeButton = shadowRoot.querySelector(".minimize-button");
-        this.maximizeButton = shadowRoot.querySelector(".maximize-button");
+        this.closeButton = shadowRoot.querySelector(".close-button")!;
+        this.minimizeButton = shadowRoot.querySelector(".minimize-button")!;
+        this.maximizeButton = shadowRoot.querySelector(".maximize-button")!;
 
-        this.windowBody = shadowRoot.querySelector(".window-body");
+        this.windowBody = shadowRoot.querySelector(".window-body")!;
 
         this.titleBar.style.display = "none";
         this.titleBarText.style.display = "none";

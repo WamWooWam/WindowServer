@@ -1,3 +1,4 @@
+import { PWND } from "../../types/user32.int.types.js";
 import WND from "../wnd.js";
 import { WS } from "../../types/user32.types.js";
 
@@ -11,7 +12,7 @@ export default class WindowElementBase extends HTMLElement {
     }
 
     get title(): string {
-        return this.getAttribute("window-title");
+        return this.getAttribute("window-title") ?? "";
     }
 
     set title(value: string) {
@@ -19,7 +20,7 @@ export default class WindowElementBase extends HTMLElement {
     }
 
     get dwStyle(): string {
-        return this.getAttribute("window-style");
+        return this.getAttribute("window-style") ?? "";
     }
 
     set dwStyle(value: string) {
@@ -27,7 +28,7 @@ export default class WindowElementBase extends HTMLElement {
     }
 
     get dwExStyle(): string {
-        return this.getAttribute("window-ex-style");
+        return this.getAttribute("window-ex-style") ?? "";
     }
 
     set dwExStyle(value: string) {
@@ -38,7 +39,7 @@ export default class WindowElementBase extends HTMLElement {
         return this._wnd;
     }
 
-    constructor(wnd: WND = null) {
+    constructor(wnd: PWND = null) {
         super();
 
         if (wnd) {

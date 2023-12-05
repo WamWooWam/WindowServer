@@ -1,4 +1,4 @@
-import { BLACK_PEN, HDC, POINT, RECT, TRANSPARENT, WHITE_BRUSH } from "../../types/gdi32.types.js";
+import { BLACK_PEN, HDC, POINT, RECT, SYSTEM_FONT, TRANSPARENT, WHITE_BRUSH } from "../../types/gdi32.types.js";
 import { COLOR, HWND, SPI } from "../../types/user32.types.js";
 import FONT, { GreCreateFontIndirect } from "./font.js";
 import { HANDLE, PEB } from "../../types/types.js";
@@ -23,7 +23,7 @@ interface DC {
     pbrLine: PEN;
     pfntText: FONT;
 
-    pdcParent: DC;
+    pdcParent: DC | null;
     pcClip: CLIP;
     pmTransform: MATRIX;
 }
@@ -36,7 +36,7 @@ class DC implements DC {
     pbrLine: PEN;
     pfntText: FONT;
 
-    pdcParent: DC;
+    pdcParent: DC | null;
     prBounds: RECT;
     pcClip: CLIP;
     pmTransform: MATRIX;
@@ -46,19 +46,19 @@ class DC implements DC {
     dwBkMode: number;
 
     constructor(hOwner: HANDLE, params: Partial<DC>) {
-        this.hDC = ObSetObject(this, "DC", hOwner || params.pdcParent.hDC, (val) => GreCleanupDC(val));
+        this.hDC = ObSetObject(this, "DC", hOwner || params.pdcParent?.hDC || -1, (val) => GreCleanupDC(val));
 
         const metrics = {};
         NtUserSystemParametersInfo(SPI.GETNONCLIENTMETRICS, metrics)
 
-        this.pSurface = params.pSurface;
-        this.pCtx = params.pCtx;
+        this.pSurface = params.pSurface || null!;
+        this.pCtx = params.pCtx || null!;
         this.pbrFill = params.pbrFill || GreGetStockObject(WHITE_BRUSH);
         this.pbrLine = params.pbrLine || GreGetStockObject(BLACK_PEN);
-        this.pfntText = params.pfntText;
+        this.pfntText = params.pfntText || GreGetStockObject(SYSTEM_FONT);
         this.pdcParent = params.pdcParent || null;
-        this.pcClip = params.pcClip || null;
-        this.pmTransform = params.pmTransform || null;
+        this.pcClip = params.pcClip || {};
+        this.pmTransform = params.pmTransform || {} as MATRIX; // currently unused
         this.prBounds = params.prBounds || { left: 0, top: 0, right: 1, bottom: 1 };
         this.ptCurrent = { x: 0, y: 0 };
 
@@ -88,18 +88,18 @@ class DC implements DC {
     }
 }
 
-let hDCMonitor: HDC = null;
+let hDCMonitor: HDC = 0;
 export function GreAllocDCForMonitor(hMonitor: HANDLE): DC {
     if (hDCMonitor) {
         ObDuplicateHandle(hDCMonitor);
-        return ObGetObject<DC>(hDCMonitor);
+        return ObGetObject<DC>(hDCMonitor)!;
     }
 
-    const pCanvas = document.getElementById("canvas") as HTMLCanvasElement;
+    const pCanvas = document.getElementById("canvas")! as HTMLCanvasElement;
     pCanvas.width = window.innerWidth;
     pCanvas.height = window.innerHeight;
 
-    const pCtx = pCanvas.getContext("2d");
+    const pCtx = pCanvas.getContext("2d")!;
     pCtx.translate(0.5, 0.5);
 
     const dc = new DC(hMonitor, {
@@ -123,13 +123,16 @@ export function GreAllocDCForMonitor(hMonitor: HANDLE): DC {
 
 export function GreAllocDCForWindow(peb: PEB, hWnd: HWND): HDC {
     const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return -1;
+    }
 
-    const pCanvas = document.createElement("canvas");
+    const pCanvas = document.createElement("canvas")!;
     pCanvas.width = wnd.rcClient.right - wnd.rcClient.left;
     pCanvas.height = wnd.rcClient.bottom - wnd.rcClient.top;
 
-    const pCtx = pCanvas.getContext("2d");
-    wnd.pRootElement.appendChild(pCanvas);
+    const pCtx = pCanvas.getContext("2d")!;
+    wnd.pRootElement?.appendChild(pCanvas);
 
     return new DC(hWnd, {
         pSurface: pCanvas,
@@ -143,6 +146,10 @@ export function GreReleaseDC(hDC: HDC) {
 
 export function GreResizeDC(hDC: HDC, prBounds: RECT) {
     const dc = ObGetObject<DC>(hDC);
+    if (!dc) {
+        return;
+    }
+
     dc.Resize(prBounds);
 }
 
@@ -150,7 +157,7 @@ function GreCleanupDC(dc: DC) {
 
 }
 
-export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ {
+export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ | null {
     if (!h) {
         return null;
     }

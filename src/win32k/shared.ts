@@ -43,7 +43,7 @@ export interface W32CLASSINFO {
     hModule: HINSTANCE;
 }
 
-export function NtUserGetProcInfo(peb: PEB): W32PROCINFO | null {
+export function NtUserGetProcInfo(peb: PEB | null): W32PROCINFO | null {
     if (!peb) return null;
 
     let info = peb.lpSubsystems.get(SUBSYS_USER32);
@@ -54,8 +54,8 @@ export function NtUserGetProcInfo(peb: PEB): W32PROCINFO | null {
     return info?.lpParams as W32PROCINFO;
 }
 
-export function NtUserGetDesktop(peb: PEB): DESKTOP | null {
-    const state = NtUserGetProcInfo(peb);
+export function NtUserGetDesktop(peb: PEB | null): DESKTOP | null {
+    const state = peb && NtUserGetProcInfo(peb);
     if (!state) {
         console.warn("User32 not initialized");
         return null;

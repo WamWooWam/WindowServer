@@ -11,7 +11,7 @@ type SubsystemHandlers = {
 
 type SUBSYSTEM = {
     lpSubsystem: SubsystemId;
-    lpSharedMemory: SharedArrayBuffer;
+    lpSharedMemory: SharedArrayBuffer | null;
     lpExports: SubsystemHandlers;
     lpfnInit?: (peb: PEB, lpSubsystem: SUBSYSTEM) => void | Promise<void>;
     lpfnExit?: (peb: PEB, lpSubsystem: SUBSYSTEM) => void | Promise<void>;

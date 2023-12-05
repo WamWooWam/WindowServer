@@ -19,7 +19,7 @@ export function GreCreateRgn(): REGION {
         rects: []
     };
 
-    rgn._hObj = ObSetObject(rgn, "REGION", 0, null);
+    rgn._hObj = ObSetObject(rgn, "REGION", 0, () => { });
 
     return rgn;
 }
@@ -107,8 +107,8 @@ export function GreRegOp(
     reg1: REGION,
     reg2: REGION,
     overlapProc: OverlapProc,
-    nonOverlapProc: NonOverlapProc,
-    nonOverlapProc2: NonOverlapProc
+    nonOverlapProc: NonOverlapProc | null,
+    nonOverlapProc2: NonOverlapProc | null
 ): boolean {
     let ybot: number;
     let ytop: number;
