@@ -12,6 +12,8 @@ import WND from "./wnd.js";
 
 let gCaptureElement: HTMLElement;
 let gLastMouseMove = 0;
+let gHitEatCount = 0;
+
 
 export function NtInitInput() {
     window.addEventListener("pointerdown", NtOnPointerDown);
@@ -98,13 +100,11 @@ async function NtOnPointerUp(e: PointerEvent) {
     }
 }
 
-let hitEatCount = 0;
-
 function OnHitWindowMouseUp(x: number, y: number, result: HT, hWnd: HWND, wmc: WM, wmnc: WM) {
     const wnd = ObGetObject<WND>(hWnd);
 
-    // if (result === HT.CLIENT && hitEatCount > 0) {
-    //     hitEatCount--;
+    // if (result === HT.CLIENT && gHitEatCount > 0) {
+    //     gHitEatCount--;
     //     return;
     // }
 
@@ -141,8 +141,8 @@ async function OnHitWindowMouseDown(hWnd: HWND, x: number, y: number, result: HT
         // }
     }
 
-    // if (result === HT.CLIENT && hitEatCount > 0) {
-    //     hitEatCount--;
+    // if (result === HT.CLIENT && gHitEatCount > 0) {
+    //     gHitEatCount--;
     //     return;
     // }
 
