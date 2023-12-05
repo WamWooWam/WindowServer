@@ -1,11 +1,11 @@
 import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, PEEK_MESSAGE, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
+import { LPRECT, OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
 import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
 import { NtDispatchMessage, NtGetMessage, NtPeekMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
 import { NtInitSysMetrics, NtUserGetSystemMetrics } from "../win32k/metrics.js";
 import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow } from "../win32k/wndpos.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
-import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
 import USER32, { HWND, LRESULT, MSG, WNDCLASSEX, WS, } from "../types/user32.types.js";
 
 import { ButtonWndProc } from "./user32/button.js";
@@ -71,11 +71,11 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
         procInfo = {
             classes: [],
             hWnds: [],
-            lpMsgQueue: null,
-            hwndFocus: null,
-            hwndActive: null,
-            hwndActivePrev: null,
-            hwndCapture: null,
+            lpMsgQueue: null!,
+            hwndFocus: 0,
+            hwndActive: 0,
+            hwndActivePrev: 0,
+            hwndCapture: 0,
             nVisibleWindows: 0,
             flags: {
                 bInActivateAppMsg: false,
@@ -164,7 +164,7 @@ async function UserCreateDesktop(peb: PEB, params: CREATE_DESKTOP): Promise<HAND
     return await NtUserCreateDesktop(peb, params);
 }
 
-function UserGetWindowRect(peb: PEB, params: HWND): RECT {
+function UserGetWindowRect(peb: PEB, params: HWND): LPRECT {
     return NtUserGetWindowRect(peb, params);
 }
 
@@ -186,6 +186,8 @@ function UserFindWindow(peb: PEB, params: FIND_WINDOW): HWND {
 
 function UserGetClientRect(peb: PEB, { hWnd }: GET_CLIENT_RECT): GET_CLIENT_RECT_REPLY {
     const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) return { retVal: false, lpRect: null };
+
     const rect = { ...wnd.rcClient };
 
     // ensure the rect is relative to the client area

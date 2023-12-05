@@ -20,15 +20,21 @@ export type RECT = {
     bottom: number;
 }
 
+export type LPRECT = RECT | null;
+
 export type POINT = {
     x: number;
     y: number;
 }
 
+export type LPPOINT = POINT | null;
+
 export type SIZE = {
     cx: number;
     cy: number;
 }
+
+export type LPSIZE = SIZE | null;
 
 export type HDC = HANDLE;
 export type HFONT = HANDLE;

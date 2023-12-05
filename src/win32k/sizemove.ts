@@ -12,6 +12,7 @@ import { NtUserGetProcInfo } from "./shared.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
+import { PWND } from "../types/user32.int.types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
 
@@ -71,7 +72,10 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
     let unmodRect = { ...sizingRect };
 
     if (style & WS.CHILD) {
-        let pWndParent = ObGetObject<WND>(wnd.hParent);
+        let pWndParent = wnd.wndParent;
+        console.assert(pWndParent);
+        if (!pWndParent) return;
+
         mouseRect = NtUserGetClientRect(peb, pWndParent.hWnd);
         let clientPoints = [{ x: mouseRect.left, y: mouseRect.top }, { x: mouseRect.right, y: mouseRect.bottom }];
         let sizingPoints = [{ x: sizingRect.left, y: sizingRect.top }, { x: sizingRect.right, y: sizingRect.bottom }];
@@ -133,7 +137,7 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
 
         // look at me. i am the message loop now.
         let msg = await state.lpMsgQueue.GetMessage(wnd.hWnd, 0, 0);
-        if (msg.message === WM.QUIT) break;
+        if (!msg || msg.message === WM.QUIT) break;
 
         // console.log("NtDefWndDoSizeMove: got message", msg);
         if (msg.message === WM.KEYDOWN && (msg.wParam == VK.RETURN || msg.wParam == VK.ESCAPE))
@@ -231,7 +235,7 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
             }
 
             // if (!isIconic) {
-            await NtSetWindowPos(peb, wnd.hWnd, null, newRect.left, newRect.top, newRect.right - newRect.left,
+            await NtSetWindowPos(peb, wnd.hWnd, 0, newRect.left, newRect.top, newRect.right - newRect.left,
                 newRect.bottom - newRect.top, SWP.NOACTIVATE | ((hitTest == HT.CAPTION) ? SWP.NOSIZE : 0) | SWP.NOZORDER);
             // }
             sizingRect = newRect;
@@ -245,7 +249,7 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
     return 0;
 }
 
-export function IntIsWindowVisible(wnd: WND) {
+export function IntIsWindowVisible(wnd: PWND) {
     let temp = wnd;
     for (; ;) {
         if (!temp) return true;
@@ -289,12 +293,12 @@ export async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt
             }
 
             let msg = await state.lpMsgQueue.GetMessage(wnd.hWnd, 0, 0);
-            if (msg.message === WM.QUIT) return 0;
+            if (!msg || msg.message === WM.QUIT) return 0;
 
             switch (msg.message) {
                 case WM.MOUSEMOVE: {
-                    pt.x = Math.min(Math.max(msg.pt.x, rectWindow.left), rectWindow.right - 1);
-                    pt.y = Math.min(Math.max(msg.pt.y, rectWindow.top), rectWindow.bottom - 1);
+                    pt.x = Math.min(Math.max(msg.pt!.x, rectWindow.left), rectWindow.right - 1);
+                    pt.y = Math.min(Math.max(msg.pt!.y, rectWindow.top), rectWindow.bottom - 1);
                     hitTest = await NtUserDoNCHitTest(wnd, pt.x, pt.y);
                     if ((hitTest < HT.LEFT) || (hitTest > HT.BOTTOMRIGHT))
                         hitTest = 0;
@@ -336,4 +340,6 @@ export async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt
             }
         }
     }
+
+    return hitTest;
 }

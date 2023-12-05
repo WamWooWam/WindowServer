@@ -14,16 +14,18 @@ import WND from "./win32k/wnd.js";
     const processTableEntries = new Map<HANDLE, HTMLTableRowElement>();
     let processCount = 0;
 
-    const taskmgr = document.getElementById("task-manager");
+    const taskmgr = document.getElementById("task-manager")!;
     taskmgr.onpointerdown = (e) => e.stopPropagation();
     taskmgr.onpointermove = (e) => e.stopPropagation();
     taskmgr.onpointerup = (e) => e.stopPropagation();
 
-    const launchSelect = document.getElementById("launch-select") as HTMLSelectElement;
+    const launchSelect = document.getElementById("launch-select")! as HTMLSelectElement;
 
-    const processList = document.getElementById("processes");
+    const processList = document.getElementById("processes")!;
     processList.onclick = (e) => {
         const row = (e.target as HTMLElement).closest("tr");
+        if (!row) return;
+
         const proc = ObGetObject<PsProcess>(parseInt(row.id));
         if (!proc) return;
 
@@ -39,7 +41,7 @@ import WND from "./win32k/wnd.js";
 
     const GetSelectedProcess = () => {
         let row = processList.getElementsByClassName("highlighted")[0];
-        let proc: PsProcess;
+        let proc: PsProcess | null = null;
         let hWnd: HWND;
         if (!row && (hWnd = NtUserGetForegroundWindow())) {
             let wnd = ObGetObject<WND>(hWnd);
@@ -70,7 +72,7 @@ import WND from "./win32k/wnd.js";
                 }
             }
 
-            document.getElementById("handles").innerText = [...ObEnumHandles()].length.toString();
+            document.getElementById("handles")!.innerText = [...ObEnumHandles()].length.toString();
         } catch (error) {
 
         }
@@ -78,12 +80,12 @@ import WND from "./win32k/wnd.js";
 
     const UpdateButtons = () => {
         if (procs.length === 0) {
-            document.getElementById("quit").setAttribute("disabled", "disabled");
-            document.getElementById("kill").setAttribute("disabled", "disabled");
+            document.getElementById("quit")!.setAttribute("disabled", "disabled");
+            document.getElementById("kill")!.setAttribute("disabled", "disabled");
         }
         else {
-            document.getElementById("quit").removeAttribute("disabled");
-            document.getElementById("kill").removeAttribute("disabled");
+            document.getElementById("quit")!.removeAttribute("disabled");
+            document.getElementById("kill")!.removeAttribute("disabled");
         }
     }
 
@@ -94,15 +96,23 @@ import WND from "./win32k/wnd.js";
 
     const KillProc = async () => {
         const proc = GetSelectedProcess();
+        if (!proc) {
+            console.warn("No process selected");
+            return;
+        }
         PsTerminateProcess(proc);
         UpdateButtons();
     }
 
     const QuitProc = async () => {
         const proc = GetSelectedProcess();
+        if (!proc) {
+            console.warn("No process selected");
+            return;
+        }
 
         try {
-            NtPostProcessMessage(proc, { hWnd: null, message: WM.QUIT, wParam: 0, lParam: 0 });
+            NtPostProcessMessage(proc, { hWnd: 0, message: WM.QUIT, wParam: 0, lParam: 0 });
         }
         catch (e) {
             console.warn("Failed to send quit message, was User32 initialized?")
@@ -114,7 +124,7 @@ import WND from "./win32k/wnd.js";
 
     const ProcessCreated = (proc: PsProcess) => {
         processCount++;
-        document.getElementById("count").innerText = processCount.toString();
+        document.getElementById("count")!.innerText = processCount.toString();
 
         procs.push(proc.handle);
 
@@ -136,12 +146,13 @@ import WND from "./win32k/wnd.js";
 
     const ProcessDestroyed = (proc: PsProcess) => {
         processCount--;
-        document.getElementById("count").innerText = processCount.toString();
+        document.getElementById("count")!.innerText = processCount.toString();
 
         if (procs.includes(proc.handle))
             procs.splice(procs.indexOf(proc.handle), 1);
 
         const row = processTableEntries.get(proc.handle);
+        if (!row) return;
         processTableEntries.delete(proc.handle);
         processList.removeChild(row);
 
@@ -149,9 +160,9 @@ import WND from "./win32k/wnd.js";
         ObDumpHandles();
     };
 
-    document.getElementById("spawn").addEventListener("click", SpawnProc);
-    document.getElementById("quit").addEventListener("click", QuitProc);
-    document.getElementById("kill").addEventListener("click", KillProc);
+    document.getElementById("spawn")!.addEventListener("click", SpawnProc);
+    document.getElementById("quit")!.addEventListener("click", QuitProc);
+    document.getElementById("kill")!.addEventListener("click", KillProc);
 
     PsRegisterProcessHooks(ProcessCreated, ProcessDestroyed);
 

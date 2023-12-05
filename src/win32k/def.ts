@@ -1,6 +1,5 @@
 import { HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, MA, MSG, SC, SW, VK, WA, WM, WPARAM, WS } from "../types/user32.types.js";
 import { NtDefNCLButtonDown, NtDefNCLButtonUp, NtUserDefNCHitTest } from "./nc.js";
-import { WMP, WND_DATA } from "../types/user32.int.types.js";
 
 import { NtDefCalcNCSizing } from "./nc.js";
 import { NtDefWndDoSizeMove } from "./sizemove.js";
@@ -10,6 +9,7 @@ import { NtUserGetProcInfo } from "./shared.js";
 import { NtUserShowWindow } from "./wndpos.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
+import { WMP } from "../types/user32.int.types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
 import WindowElementBase from "./html/WindowElementBase.js";
@@ -115,7 +115,7 @@ export function NtDefAddChild(hWnd: HWND, hWndChild: HWND): LRESULT {
         return -1;
     }
 
-    if (wnd.pRootElement) {
+    if (wnd.pRootElement && childWnd.pRootElement) {
         wnd.pRootElement.appendChild(childWnd.pRootElement);
     }
 
@@ -129,7 +129,7 @@ export function NtDefRemoveChild(hWnd: HWND, hWndChild: HWND): LRESULT {
         return -1;
     }
 
-    if (wnd.pRootElement) {
+    if (wnd.pRootElement && childWnd.pRootElement) {
         wnd.pRootElement.removeChild(childWnd.pRootElement);
     }
 
@@ -144,18 +144,7 @@ function NtDefCreateElement(peb: PEB, hWnd: HWND, uMsg: number, wParam: WPARAM, 
     }
 
     const wnd = ObGetObject<WND>(hWnd);
-
-    let data = wnd.data as WND_DATA;
-    if (!data) {
-        data = wnd.data = {
-            pTitleBar: null,
-            pTitleBarText: null,
-            pTitleBarControls: null,
-            pCloseButton: null,
-            pMinimizeButton: null,
-            pMaximizeButton: null
-        };
-    }
+    if (!wnd) return 0;
 
     const pRootElement = new WindowElement(wnd);
     pRootElement.title = wnd.lpszName;

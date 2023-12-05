@@ -26,7 +26,7 @@ const K32Memory = new Uint32Array(Kernel32.memory);
  * @returns If the function succeeds, the return value is a handle to the specified module. If the function fails, the
  * return value is NULL. To get extended error information, call GetLastError.
  */
-export async function GetModuleHandle(lpModuleName: string): Promise<HANDLE> {
+export async function GetModuleHandle(lpModuleName: string | null): Promise<HANDLE> {
     const msg = await Kernel32.SendMessage<GET_MODULE_HANDLE, GET_MODULE_HANDLE_REPLY>({
         nType: KERNEL32.GetModuleHandle,
         data: { lpModuleName }
@@ -164,7 +164,7 @@ export async function ReadFile(
         data: { hFile, lpBuffer, nNumberOfBytesToRead }
     });
 
-    if (msg.data.retVal) {
+    if (msg.data.retVal && msg.data.lpBuffer) {
         lpBuffer.set(msg.data.lpBuffer);
     }
 

@@ -7,8 +7,8 @@ import { SUBSYS_USER32 } from "../types/subsystems.js";
 
 export interface MSG_QUEUE {
     EnqueueMessage(msg: MSG, callback?: (result: LRESULT) => void | Promise<void>): void;
-    GetMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number): Promise<MSG>;
-    PeekMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number, wRemoveMsg: number): Promise<MSG>;
+    GetMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number): Promise<MSG | null>;
+    PeekMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number, wRemoveMsg: number): Promise<MSG | null>;
     TranslateMessage(lpMsg: MSG): Promise<boolean>;
     DispatchMessage(lpMsg: MSG): Promise<LRESULT>;
 }
@@ -54,14 +54,14 @@ export function NtUserGetProcInfo(peb: PEB): W32PROCINFO | null {
     return info?.lpParams as W32PROCINFO;
 }
 
-export function NtUserGetDesktop(peb: PEB): DESKTOP {
+export function NtUserGetDesktop(peb: PEB): DESKTOP | null {
     const state = NtUserGetProcInfo(peb);
     if (!state) {
         console.warn("User32 not initialized");
         return null;
     }
 
-   const desktop = ObGetObject<DESKTOP>(peb.hDesktop);
+    const desktop = ObGetObject<DESKTOP>(peb.hDesktop);
 
-   return desktop;   
+    return desktop;
 }

@@ -1,4 +1,4 @@
-import { CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
+import { CREATE_WINDOW_EX, PWND, WMP } from "../types/user32.int.types.js";
 import { GA, GW, HWND, HWND_BOTTOM, HWND_TOP, HWND_TOPMOST, MAKEWPARAM, MINMAXINFO, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
 import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
@@ -17,41 +17,41 @@ import WND from "./wnd.js";
 
 export function NtGetDesktopWindow(peb: PEB): HWND {
     const desktop = NtUserGetDesktop(peb);
-    return desktop?.hwndDesktop ?? null;
+    return desktop?.hwndDesktop ?? 0;
 }
 
-export function NtUserIsDesktopWindow(peb: PEB, wnd: WND) {
+export function NtUserIsDesktopWindow(peb: PEB, wnd: PWND) {
     return wnd && wnd.hWnd == NtGetDesktopWindow(peb);
 }
 
-function NtUserWndSetParent(wnd: WND, wParent: WND) {
+function NtUserWndSetParent(wnd: WND, wParent: PWND) {
     wnd.wndParent = wParent;
 }
 
-function NtUserWndSetOwner(wnd: WND, wOwner: WND) {
+function NtUserWndSetOwner(wnd: WND, wOwner: PWND) {
     wnd.wndOwner = wOwner;
 }
 
-function NtUserWndSetPrev(wnd: WND, wPrev: WND) {
+function NtUserWndSetPrev(wnd: WND, wPrev: PWND) {
     wnd.wndPrev = wPrev;
 }
 
-function NtUserWndSetNext(wnd: WND, wNext: WND) {
+function NtUserWndSetNext(wnd: WND, wNext: PWND) {
     wnd.wndNext = wNext;
 }
 
-function NtUserWndSetChild(wnd: WND, wChild: WND) {
+function NtUserWndSetChild(wnd: WND, wChild: PWND) {
     wnd.wndChild = wChild;
 }
 
-export function NtUserIntGetNonChildAncestor(pWnd: WND): WND {
+export function NtUserIntGetNonChildAncestor(pWnd: PWND): PWND {
     while (pWnd && (pWnd.dwStyle & (WS.CHILD | WS.POPUP)) === WS.CHILD)
         pWnd = pWnd.wndParent;
     return pWnd;
 }
 
 
-export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
+export function NtUserLinkWindow(wnd: WND, wInsertAfter: PWND) {
     if (wnd === wInsertAfter) {
         return;
     }
@@ -61,10 +61,10 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
 
     NtUserWndSetPrev(wnd, wInsertAfter);
     if (wnd.wndPrev) {
-        console.assert(wnd != wInsertAfter.wndNext);
+        console.assert(wnd != wInsertAfter?.wndNext);
 
         let oldParent = wnd.wndParent;
-        NtUserWndSetNext(wnd, wInsertAfter.wndNext);
+        NtUserWndSetNext(wnd, wInsertAfter?.wndNext || null);
 
         if (wnd.wndNext) {
             NtUserWndSetPrev(wnd.wndNext, wnd);
@@ -74,13 +74,13 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
         NtUserWndSetNext(wnd.wndPrev, wnd);
 
         // if the parent element is going to be the same, then we don't need to remove the element
-        if (!wnd.wndParent?.pRootElement.contains(wnd.pRootElement)) {
+        if (wnd.pRootElement && !wnd.wndParent?.pRootElement?.contains(wnd.pRootElement)) {
             // TODO: i don't know if this is where this should be done
             if (wInsertAfter) {
-                wInsertAfter.pRootElement.insertAdjacentElement("afterend", wnd.pRootElement);
+                wInsertAfter.pRootElement?.insertAdjacentElement("afterend", wnd.pRootElement);
             }
             else {
-                wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
+                wnd.wndParent?.pRootElement?.appendChild(wnd.pRootElement);
             }
         }
 
@@ -90,22 +90,23 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
         console.assert(wnd != wnd.wndParent?.wndChild);
         const oldParent = wnd.wndParent;
 
-        NtUserWndSetNext(wnd, wnd.wndParent?.wndChild);
+        NtUserWndSetNext(wnd, wnd.wndParent?.wndChild || null);
 
         if (wnd.wndNext) {
             NtUserWndSetPrev(wnd.wndNext, wnd);
         }
 
-        NtUserWndSetChild(wnd.wndParent, wnd);
+        // NULLABLE: wndParent may be null?
+        NtUserWndSetChild(wnd.wndParent!, wnd);
 
         // if the parent element is going to be the same, then we don't need to remove the element
-        if (!wnd.wndParent?.pRootElement.contains(wnd.pRootElement)) {
+        if (wnd.pRootElement && !wnd.wndParent?.pRootElement?.contains(wnd.pRootElement)) {
             // TODO: i dont know if this is where this should be done        
             if (wInsertAfter) {
-                wInsertAfter.pRootElement.insertAdjacentElement("afterbegin", wnd.pRootElement);
+                wInsertAfter.pRootElement?.insertAdjacentElement("afterbegin", wnd.pRootElement);
             }
             else {
-                wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
+                wnd.wndParent?.pRootElement?.appendChild(wnd.pRootElement);
             }
         }
 
@@ -130,8 +131,8 @@ export function NtUserUnlinkWindow(wnd: WND) {
     NtUserWndSetPrev(wnd, null);
 }
 
-export function NtIntIsChildWindow(wnd: WND, baseWindow: WND) {
-    let window = baseWindow;
+export function NtIntIsChildWindow(wnd: WND, baseWindow: PWND) {
+    let window: PWND = baseWindow;
     do {
         if (window === null || (wnd.dwStyle & (WS.POPUP | WS.CHILD)) !== WS.CHILD) {
             return false;
@@ -154,9 +155,9 @@ export function NtUserIntLinkHwnd(wnd: WND, hWndPrev: HWND) {
     NtUserUnlinkWindow(wnd); // remove from current list
 
     if (hWndPrev === HWND_BOTTOM) {
-        let wndInsertAfter: WND;
+        let wndInsertAfter: PWND;
 
-        wndInsertAfter = wnd.wndParent?.wndChild;
+        wndInsertAfter = wnd.wndParent?.wndChild || null;
         while (wndInsertAfter && wndInsertAfter.wndNext) {
             wndInsertAfter = wndInsertAfter.wndNext;
         }
@@ -216,7 +217,7 @@ export function NtUserIntLinkHwnd(wnd: WND, hWndPrev: HWND) {
 }
 
 // ensures that when parenting windows from different processes, the input queues are attached
-function NtUserHandleOwnerSwap(wnd: WND, wndNewOwner: WND, wndOldOwner: WND) {
+function NtUserHandleOwnerSwap(wnd: WND, wndNewOwner: PWND, wndOldOwner: PWND) {
     if (wndOldOwner) {
         if (wnd.peb != wndOldOwner.peb) {
             if (!wndNewOwner || wnd.peb === wndNewOwner.peb || wndOldOwner.peb !== wndNewOwner.peb) {
@@ -257,7 +258,7 @@ export function NtUserIntSetOwner(peb: PEB, hWnd: HWND, hWndOwner: HWND) {
     return ret;
 }
 
-export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND): Promise<WND> {
+export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: PWND): Promise<PWND> {
     let flags = SWP.NOSIZE | SWP.NOZORDER;
 
     if (NtIntIsChildWindow(wnd, wndNewParent)) {
@@ -265,7 +266,7 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
         return null; // don't set a child window as a parent
     }
 
-    let wndExam = wndNewParent;
+    let wndExam: PWND = wndNewParent;
     while (wndExam) {
         if (wnd === wndExam) {
             NtSetLastError(peb, 0x00000057); // ERROR_INVALID_PARAMETER
@@ -290,7 +291,8 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
 
     pt.y = wnd.rcWindow.top;
 
-    NtUserScreenToClient(wndOldParent, pt);
+    if (wndOldParent)
+        NtUserScreenToClient(wndOldParent, pt);
 
     if (wndNewParent != wndOldParent) {
         NtUserUnlinkWindow(wnd);
@@ -305,19 +307,19 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
         NtUserIntLinkHwnd(wnd, ((0 == (wnd.dwExStyle & WS.EX.TOPMOST) && NtUserIsDesktopWindow(peb, wndNewParent)) ? HWND_TOP : HWND_TOPMOST));
     }
 
-    if (wndNewParent.hWnd === NtGetDesktopWindow(peb) && !(wnd.dwStyle & WS.CLIPSIBLINGS)) {
+    if (wndNewParent?.hWnd === NtGetDesktopWindow(peb) && !(wnd.dwStyle & WS.CLIPSIBLINGS)) {
         wnd.dwStyle |= WS.CLIPSIBLINGS; // TODO: make this flag do something
     }
 
     if ((wnd.dwStyle & (WS.CHILD | WS.POPUP)) == WS.CHILD) {
-        if (wnd.wndParent.hWnd != NtGetDesktopWindow(peb)) {
+        if (wnd.wndParent?.hWnd != NtGetDesktopWindow(peb)) {
             if (wndOldParent && (wnd.peb != wndOldParent.peb)) {
                 // TOOD: AttachThreadInput
                 // NtUserAttachThreadInput(wnd.peb, wndOldParent.peb, false);
             }
         }
-        if (wndNewParent.hWnd != NtGetDesktopWindow(peb)) {
-            if (wnd.peb != wndNewParent.peb) {
+        if (wndNewParent?.hWnd != NtGetDesktopWindow(peb)) {
+            if (wnd.peb != wndNewParent?.peb) {
                 // TOOD: AttachThreadInput
                 // NtUserAttachThreadInput(wnd.peb, wndNewParent.peb, true);
             }
@@ -340,14 +342,14 @@ export async function NtUserIntSetParent(peb: PEB, wnd: WND, wndNewParent: WND):
 
 export async function NtUserSetParent(peb: PEB, hWnd: HWND, hWndParent: HWND): Promise<HWND> {
     let wnd = ObGetObject<WND>(hWnd);
-    if (!wnd) return null;
+    if (!wnd) return 0;
 
     let wndOldParent = await NtUserIntSetParent(peb, wnd, ObGetObject<WND>(hWndParent));
     if (wndOldParent) {
         return wndOldParent.hWnd;
     }
     else {
-        return null;
+        return 0;
     }
 }
 
@@ -360,26 +362,32 @@ export async function NtUserSendParentNotify(wnd: WND, msg: number) {
 }
 
 export function NtUserGetClientRect(peb: PEB, hWnd: HWND): RECT {
-    const wnd = ObGetObject<WND>(hWnd);
+    return NtUserIntGetClientRect(ObGetObject<WND>(hWnd));
+}
+
+export function NtUserIntGetClientRect(wnd: PWND): RECT {
+    if (!wnd) {
+        return { left: 0, top: 0, right: 0, bottom: 0 };
+    }
+
     if (wnd.dwStyle & WS.ICONIC) {
         return {
             top: 0,
             left: 0,
-            right: NtUserGetSystemMetrics(peb, SM.CXMINIMIZED),
-            bottom: NtUserGetSystemMetrics(peb, SM.CYMINIMIZED)
+            right: NtUserGetSystemMetrics(wnd.peb, SM.CXMINIMIZED),
+            bottom: NtUserGetSystemMetrics(wnd.peb, SM.CYMINIMIZED)
         }
     }
 
     // TODO: if desktop window return screen size
-    if (wnd) {
-        return {
-            top: 0,
-            left: 0,
-            right: wnd.rcClient.right - wnd.rcClient.left,
-            bottom: wnd.rcClient.bottom - wnd.rcClient.top
-        }
+    return {
+        top: 0,
+        left: 0,
+        right: wnd.rcClient.right - wnd.rcClient.left,
+        bottom: wnd.rcClient.bottom - wnd.rcClient.top
     }
 }
+
 export function NtUserIntGetWindowBorders(dwStyle: number, dwExStyle: number) {
     let adjust = 0;
 
@@ -398,7 +406,7 @@ export function NtUserIntGetWindowBorders(dwStyle: number, dwExStyle: number) {
 }
 
 // TODO: this is a stub
-export async function NtUserWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | POINT, maxPos: POINT, minTrackSize: SIZE, maxTrackSize: SIZE) {
+export async function NtUserWinPosGetMinMaxInfo(peb: PEB, wnd: WND, maxSize: SIZE | POINT | null, maxPos: POINT | null, minTrackSize: SIZE | null, maxTrackSize: SIZE | null) {
     let rc = wnd.rcWindow;
     const minMax: MINMAXINFO = {
         ptReserved: { x: rc.left, y: rc.top },
@@ -546,10 +554,10 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
 
     let _hwndParent = NtGetDesktopWindow(peb);
     if (_hwndParent && ObGetObject<WND>(_hwndParent) === null) {
-        _hwndParent = null;
+        _hwndParent = 0;
     }
 
-    let _hwndOwner = null;
+    let _hwndOwner = 0;
 
     if (hWndParent) {
         // if we're not a child window, then we're a popup window
@@ -567,8 +575,8 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         return 0;
     }
 
-    let parentWnd = ObGetObject<WND>(_hwndParent);
-    let ownerWnd = ObGetObject<WND>(_hwndOwner);
+    let parentWnd = (_hwndParent && ObGetObject<WND>(_hwndParent)) || null;
+    let ownerWnd = (_hwndOwner && ObGetObject<WND>(_hwndOwner)) || null;
 
     if ((_hwndParent && parentWnd == null) || (_hwndOwner && ownerWnd == null)) {
         NtSetLastError(peb, 0x00000057); // ERROR_INVALID_PARAMETER
@@ -586,7 +594,7 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         }
         else {
             // find the top-level owner
-            while ((ownerWnd.dwStyle & (WS.POPUP | WS.CHILD)) == WS.CHILD && ownerWnd.hParent !== null) {
+            while (ownerWnd && (ownerWnd.dwStyle & (WS.POPUP | WS.CHILD)) == WS.CHILD && ownerWnd.hParent !== null) {
                 ownerWnd = ObGetObject<WND>(ownerWnd.hParent);
             }
         }
@@ -732,7 +740,7 @@ async function NtSendParentNotify(peb: PEB, pWnd: WND, msg: number) {
     }
 }
 
-export function NtUserGetWindowRect(peb: PEB, hWnd: HWND): RECT {
+export function NtUserGetWindowRect(peb: PEB, hWnd: HWND): RECT | null {
     const wnd = ObGetObject<WND>(hWnd);
     if (!wnd) {
         return null;
@@ -800,6 +808,10 @@ export function NtUserGetDC(peb: PEB, hWnd: HWND): HDC {
     }
 
     const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return 0;
+    }
+
     return ObDuplicateHandle(wnd.hDC);
 }
 
@@ -812,7 +824,7 @@ export function NtUserIsWindowEnabled(hWnd: HWND): boolean {
     return !(wnd.dwStyle & WS.DISABLED) && (wnd.hParent === null || NtUserIsWindowEnabled(wnd.hParent));
 }
 
-export function NtUserMapWindowPoints(fromWnd: WND, toWnd: WND, lpPoints: POINT[]) {
+export function NtUserMapWindowPoints(fromWnd: PWND, toWnd: PWND, lpPoints: POINT[]) {
     let delta = { cx: 0, cy: 0 };
 
     if (fromWnd && fromWnd.hParent !== null) {
@@ -889,7 +901,7 @@ export function NtFindWindow(peb: PEB, lpClassName: string, lpWindowName: string
     return 0;
 }
 
-export function NtUserGetParent(wnd: WND) {
+export function NtUserGetParent(wnd: WND): PWND {
     if (wnd.dwStyle & WS.POPUP) {
         return wnd.wndOwner;
     }
@@ -900,12 +912,12 @@ export function NtUserGetParent(wnd: WND) {
     return null;
 }
 
-export function NtUserGetWindow(wnd: WND, uCmd: GW): WND {
+export function NtUserGetWindow(wnd: PWND, uCmd: GW): PWND {
     if (!wnd) {
         return null;
     }
 
-    let foundWnd: WND = null;
+    let foundWnd: PWND = null;
     switch (uCmd) {
         case GW.HWNDNEXT:
             foundWnd = wnd.wndNext;
@@ -914,8 +926,8 @@ export function NtUserGetWindow(wnd: WND, uCmd: GW): WND {
             foundWnd = wnd.wndPrev;
             break;
         case GW.HWNDLAST:
-            foundWnd = wnd.wndParent.wndChild;
-            while (foundWnd.wndNext) {
+            foundWnd = wnd.wndParent?.wndChild || null;
+            while (foundWnd && foundWnd.wndNext) {
                 foundWnd = foundWnd.wndNext;
             }
             break;
@@ -938,12 +950,12 @@ export function NtUserGetWindow(wnd: WND, uCmd: GW): WND {
     return foundWnd;
 }
 
-export function NtUserGetAncestor(wnd: WND, uCmd: GA): WND {
+export function NtUserGetAncestor(wnd: PWND, uCmd: GA): PWND {
     if (!wnd || wnd.hWnd === NtGetDesktopWindow(wnd.peb)) {
         return null;
     }
 
-    let foundWnd: WND = null;
+    let foundWnd: PWND = null;
     switch (uCmd) {
         case GA.PARENT: {
             foundWnd = wnd.wndParent;
@@ -951,7 +963,7 @@ export function NtUserGetAncestor(wnd: WND, uCmd: GA): WND {
         }
         case GA.ROOT: {
             foundWnd = wnd;
-            let parent: WND = null;
+            let parent: PWND = null;
             while (true) {
                 if (!(parent = foundWnd.wndParent)) break;
                 if (NtUserIsDesktopWindow(wnd.peb, parent)) break;
@@ -962,7 +974,7 @@ export function NtUserGetAncestor(wnd: WND, uCmd: GA): WND {
         }
         case GA.ROOTOWNER: {
             foundWnd = wnd;
-            let parent: WND = null;
+            let parent: PWND = null;
             while (true) {
                 parent = NtUserGetParent(foundWnd);
                 if (!parent) break;
@@ -995,11 +1007,13 @@ export function NtUserIntSetStyle(pwnd: WND, set_bits: number, clear_bits: numbe
     if ((styleOld ^ styleNew) & WS.VISIBLE) // State Change.
     {
         let pti = NtUserGetProcInfo(pwnd.peb);
-        if (styleOld & WS.VISIBLE) {
-            pti.nVisibleWindows--;
-        }
-        if (styleNew & WS.VISIBLE) {
-            pti.nVisibleWindows++;
+        if (pti) {
+            if (styleOld & WS.VISIBLE) {
+                pti.nVisibleWindows--;
+            }
+            if (styleNew & WS.VISIBLE) {
+                pti.nVisibleWindows++;
+            }
         }
     }
     return styleOld;

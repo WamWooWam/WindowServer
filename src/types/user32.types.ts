@@ -950,8 +950,8 @@ export interface WNDCLASS {
     hIcon: HICON;
     hCursor: HCURSOR;
     hbrBackground: HBRUSH;
-    lpszMenuName: number | string;
-    lpszClassName: number | string;
+    lpszMenuName: number | string | null;
+    lpszClassName: number | string | null;
 }
 
 export interface WNDCLASSEX extends WNDCLASS {

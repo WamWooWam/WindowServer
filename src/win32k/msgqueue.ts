@@ -63,7 +63,7 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
         }
     }
 
-    async PeekMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number, wRemoveMsg: number): Promise<MSG> {
+    async PeekMessage(hWnd: HWND, wMsgFilterMin: number, wMsgFilterMax: number, wRemoveMsg: number): Promise<MSG | null> {
         // throw new Error("Method not implemented.");
 
         // this is kind of horrible
@@ -77,6 +77,10 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
                 this._messageCount--;
 
                 const msg = read.value;
+                if (!msg) {
+                    return null;
+                }
+
                 if (this.FilterMessage(msg, hWnd, wMsgFilterMin, wMsgFilterMax)) {
                     if (!wRemoveMsg)
                         messages.push(msg);
@@ -91,7 +95,7 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
         finally {
             messages.reverse().forEach(msg => this.EnqueueMessage(msg));
         }
-        
+
         return null;
     }
 

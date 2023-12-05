@@ -1,7 +1,8 @@
 import { ATOM, HCURSOR, HICON, HINSTANCE, HMENU, HWND, LPARAM, MSG, WNDCLASS, WPARAM } from "./user32.types.js";
-import { HBRUSH, POINT, RECT } from "./gdi32.types.js";
+import { HBRUSH, LPPOINT, LPRECT, POINT, RECT } from "./gdi32.types.js";
 
 import { HANDLE } from "./types.js";
+import WND from "../win32k/wnd.js";
 
 // internal window messages
 export enum WMP {
@@ -21,15 +22,6 @@ export enum WPF {
     ASYNCWINDOWPLACEMENT = 0x0004,
     MININIT = 0x0008,
     MAXINIT = 0x0010
-}
-
-export interface WND_DATA {
-    pTitleBar: HTMLElement;
-    pTitleBarText: HTMLElement;
-    pTitleBarControls: HTMLElement;
-    pMinimizeButton: HTMLElement;
-    pMaximizeButton: HTMLElement;
-    pCloseButton: HTMLElement;
 }
 
 export interface WNDCLASS_WIRE {
@@ -94,13 +86,12 @@ export interface GET_MESSAGE {
 
 export interface GET_MESSAGE_REPLY {
     retVal: boolean;
-    lpMsg: MSG;
+    lpMsg: MSG | null;
 }
 
 export interface PEEK_MESSAGE extends GET_MESSAGE {
     wRemoveMsg: number;
 }
-
 
 export interface SET_WINDOW_POS {
     hWnd: HWND;
@@ -127,7 +118,7 @@ export interface SCREEN_TO_CLIENT {
 }
 
 export interface SCREEN_TO_CLIENT_REPLY {
-    retVal: boolean, lpPoint: POINT;
+    retVal: boolean, lpPoint: LPPOINT;
 }
 
 export interface FIND_WINDOW {
@@ -137,10 +128,12 @@ export interface FIND_WINDOW {
 
 export interface GET_CLIENT_RECT {
     hWnd: HWND;
-    lpRect: RECT;
+    lpRect: LPRECT;
 }
 
 export interface GET_CLIENT_RECT_REPLY {
     retVal: boolean;
-    lpRect: RECT;
+    lpRect: LPRECT;
 }
+
+export type PWND = WND | null;

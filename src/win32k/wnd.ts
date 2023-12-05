@@ -1,4 +1,4 @@
-import { CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
+import { CREATE_WINDOW_EX, PWND, WMP } from "../types/user32.int.types.js";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -72,17 +72,17 @@ export default class WND {
     public wndLastActive: WND;
 
     // windows uses a doubly linked list to keep track of windows and their z-order :D
-    #wndNext: WND = null;
-    #wndPrev: WND = null;
-    #wndChild: WND = null;
-    #wndParent: WND = null;
-    #wndOwner: WND = null;
+    #wndNext: PWND = null;
+    #wndPrev: PWND = null;
+    #wndChild: PWND = null;
+    #wndParent: PWND = null;
+    #wndOwner: PWND = null;
 
-    public get wndNext(): WND {
+    public get wndNext(): PWND {
         return this.#wndNext;
     }
 
-    public set wndNext(value: WND) {
+    public set wndNext(value: PWND) {
         if (this.#wndNext) {
             ObCloseHandle(this.#wndNext.hWnd);
         }
@@ -93,11 +93,11 @@ export default class WND {
         }
     }
 
-    public get wndPrev(): WND {
+    public get wndPrev(): PWND {
         return this.#wndPrev;
     }
 
-    public set wndPrev(value: WND) {
+    public set wndPrev(value: PWND) {
         if (this.#wndPrev) {
             ObCloseHandle(this.#wndPrev.hWnd);
         }
@@ -108,11 +108,11 @@ export default class WND {
         }
     }
 
-    public get wndChild(): WND {
+    public get wndChild(): PWND {
         return this.#wndChild;
     }
 
-    public set wndChild(value: WND) {
+    public set wndChild(value: PWND) {
         if (this.#wndChild) {
             ObCloseHandle(this.#wndChild.hWnd);
         }
@@ -123,11 +123,11 @@ export default class WND {
         }
     }
 
-    public get wndParent(): WND {
+    public get wndParent(): PWND {
         return this.#wndParent;
     }
 
-    public set wndParent(value: WND) {
+    public set wndParent(value: PWND) {
         if (this.#wndParent) {
             ObCloseHandle(this.#wndParent.hWnd);
         }
@@ -138,11 +138,11 @@ export default class WND {
         }
     }
 
-    public get wndOwner(): WND {
+    public get wndOwner(): PWND {
         return this.#wndOwner;
     }
 
-    public set wndOwner(value: WND) {
+    public set wndOwner(value: PWND) {
         if (this.#wndOwner) {
             ObCloseHandle(this.#wndOwner.hWnd);
         }
@@ -159,8 +159,8 @@ export default class WND {
         cs: CREATE_WINDOW_EX,
         lpszName: string,
         lpClass: W32CLASSINFO,
-        wndParent: WND,
-        wndOwner: WND,
+        wndParent: PWND,
+        wndOwner: PWND,
     ) {
         // Automatically add WS.EX.WINDOWEDGE if we have a thick frame
         if ((cs.dwExStyle & WS.EX.DLGMODALFRAME) ||
@@ -300,7 +300,7 @@ export default class WND {
         return this._hDC;
     }
 
-    public get pRootElement() {
+    public get pRootElement(): HTMLElement | null {
         return ObGetObject<HTMLElement>(this._hRootElement);
     }
 
@@ -488,12 +488,17 @@ export default class WND {
         }
 
         // for now, dont do a dirty flag, just set the style
-        this.pRootElement.style.transform = `translate(${this.rcWindow.left}px, ${this.rcWindow.top}px)`;
-        this.pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
-        this.pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
-        this.pRootElement.style.position = "absolute";
-        this.pRootElement.style.zIndex = `${this.zIndex}`;
-
+        if (this.pRootElement) {
+            this.pRootElement.style.transform = `translate(${this.rcWindow.left}px, ${this.rcWindow.top}px)`;
+            this.pRootElement.style.width = `${this.rcWindow.right - this.rcWindow.left}px`;
+            this.pRootElement.style.height = `${this.rcWindow.bottom - this.rcWindow.top}px`;
+            this.pRootElement.style.position = "absolute";
+            this.pRootElement.style.zIndex = `${this.zIndex}`;
+        }
+        else {
+            console.warn("Root element was not created!!")
+        }
+        
         // if we're a top level window, allocate a DC
         if (!(this.dwStyle & WS.CHILD)) {
             this._hDC = GreAllocDCForWindow(this._peb, this._hWnd);

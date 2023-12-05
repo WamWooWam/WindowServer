@@ -9,7 +9,7 @@ export interface GET_PROCESS_INFO_REPLY {
 }
 
 export interface GET_MODULE_HANDLE {
-    lpModuleName: string;
+    lpModuleName: string | null;
 }
 
 export interface GET_MODULE_HANDLE_REPLY {

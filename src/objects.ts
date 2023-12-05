@@ -21,7 +21,7 @@ function GenHandle(): HANDLE {
     return handleBase + (handleCounter * 4);
 }
 
-export function ObGetObject<T>(handle: HANDLE): T {
+export function ObGetObject<T>(handle: HANDLE): T | null {
     const tag = handleTable.get(handle);
     if (!tag) {
         return null;
@@ -51,7 +51,7 @@ export function ObSetObject<T>(value: T, type: string, owner: HANDLE, dtor?: (va
     return handle;
 }
 
-export function ObGetHandleType(handle: HANDLE): string {
+export function ObGetHandleType(handle: HANDLE): string | null {
     const tag = handleTable.get(handle);
     if (!tag) {
         return null;

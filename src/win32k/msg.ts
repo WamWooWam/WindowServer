@@ -14,12 +14,12 @@ export async function NtGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MES
         return { retVal: false, lpMsg: null };
     }
 
-    let msg: MSG = null;
+    let msg: MSG | null = null;
     let retVal = false;
 
     msg = await state.lpMsgQueue.GetMessage(data.hWnd, data.wMsgFilterMin, data.wMsgFilterMax);
 
-    retVal = msg.message !== WM.QUIT;
+    retVal = !msg || msg.message !== WM.QUIT;
 
     return {
         retVal: retVal,
@@ -41,7 +41,7 @@ export async function NtPeekMessage(peb: PEB, data: PEEK_MESSAGE): Promise<GET_M
     };
 }
 
-export async function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
+export async function NtPostMessage(peb: PEB | null, msg: MSG | WNDPROC_PARAMS) {
     let _msg: MSG = msg as MSG;
     if (msg instanceof Array) { // WNDPROC_PARAMS
         _msg = { hWnd: msg[0], message: msg[1], wParam: msg[2], lParam: msg[3] };
@@ -67,13 +67,13 @@ export async function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
 
     const wnd = ObGetObject<WND>(_msg.hWnd);
     const _peb = wnd ? wnd.peb : peb;
-    const state = NtUserGetProcInfo(_peb);
+    const state = NtUserGetProcInfo(_peb!);
     if (!state) return; // this process doesn't have a message queue
 
     state.lpMsgQueue.EnqueueMessage(_msg);
 }
 
-export async function NtDispatchMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Promise<LRESULT> {
+export async function NtDispatchMessage(peb: PEB | null, msg: MSG | WNDPROC_PARAMS): Promise<LRESULT> {
     let _msg: MSG = msg as MSG;
     if (msg instanceof Array) { // WNDPROC_PARAMS
         _msg = { hWnd: msg[0], message: msg[1], wParam: msg[2], lParam: msg[3] };
@@ -81,7 +81,7 @@ export async function NtDispatchMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Pr
 
     const wnd = ObGetObject<WND>(_msg.hWnd);
     const _peb = wnd ? wnd.peb : peb;
-    const state = NtUserGetProcInfo(_peb);
+    const state = NtUserGetProcInfo(_peb!);
     if (!state) return; // this process doesn't have a message queue
 
     return await state.lpMsgQueue.DispatchMessage(_msg);
@@ -121,7 +121,7 @@ export async function NtPostQuitMessage(peb: PEB, nExitCode: number) {
     if (!state) return false; // this process doesn't have a message queue
 
     const msg: MSG = {
-        hWnd: null,
+        hWnd: 0,
         message: WM.QUIT,
         wParam: nExitCode,
         lParam: 0
@@ -133,5 +133,6 @@ export async function NtPostQuitMessage(peb: PEB, nExitCode: number) {
 
 export async function NtPostProcessMessage(hProcess: HANDLE, lpMsg: MSG) {
     const process = ObGetObject<PsProcess>(hProcess);
+    if (!process) return; // TODO: is process running?
     NtPostMessage(process.peb, lpMsg);
 }

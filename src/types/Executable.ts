@@ -9,7 +9,7 @@ export default interface Executable {
     type: "executable" | "dll";
     subsystem: "console" | "windows";
     arch: "js" | "wasm"; // not 100% sure how we're gonna handle WASM yet
-    entryPoint: string; // much like in an actual OS, this will probably end up not being user code.
+    entryPoint: string | null; // much like in an actual OS, this will probably end up not being user code.
     dependencies: string[]; // list of other executables that this executable depends on
 
     name: string;

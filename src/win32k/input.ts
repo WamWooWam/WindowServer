@@ -8,6 +8,7 @@ import { NtPostMessage } from "./msg.js";
 import { NtUserDoNCHitTest } from "./nc.js";
 import { NtUserIsDesktopWindow } from "./window.js";
 import { NtUserScreenToClient } from "./client.js";
+import { PWND } from "../types/user32.int.types.js";
 import WND from "./wnd.js";
 
 let gCaptureElement: HTMLElement;
@@ -101,6 +102,9 @@ async function NtOnPointerUp(e: PointerEvent) {
 
 function OnHitWindowMouseUp(x: number, y: number, result: HT, hWnd: HWND, wmc: WM, wmnc: WM) {
     const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) {
+        return;
+    }
 
     // if (result === HT.CLIENT && gHitEatCount > 0) {
     //     gHitEatCount--;
@@ -122,14 +126,17 @@ function OnHitWindowMouseUp(x: number, y: number, result: HT, hWnd: HWND, wmc: W
 
 async function OnHitWindowMouseDown(hWnd: HWND, x: number, y: number, result: HT, wmc: WM, wmnc: WM) {
     const wnd = ObGetObject<WND>(hWnd);
-    const peb = wnd?.peb;
+    const peb = wnd?.peb || null;
+    if (!wnd || !peb) {
+        return;
+    }
 
     // TODO: there's a lot wrong currently with activating windows
 
     // if (wnd && NtUserIsDesktopWindow(peb, wnd.wndParent))
     //     await NtUserIntSetForegroundWindowMouse(wnd)
 
-    let topLevel = wnd;
+    let topLevel: PWND = wnd;
     while (topLevel && !NtUserIsDesktopWindow(peb, topLevel.wndParent))
         topLevel = topLevel.wndParent;
 
@@ -160,6 +167,7 @@ async function OnHitWindowMouseDown(hWnd: HWND, x: number, y: number, result: HT
 
 function OnHitWindowMouseMove(result: HT, x: number, y: number, hWnd: HWND) {
     const wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) return;
 
     switch (result) {
         case HT.TOP:
