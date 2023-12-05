@@ -1,7 +1,7 @@
-import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
+import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, PEEK_MESSAGE, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
-import { NtDispatchMessage, NtGetMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
+import { NtDispatchMessage, NtGetMessage, NtPeekMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
 import { NtInitSysMetrics, NtUserGetSystemMetrics } from "../win32k/metrics.js";
 import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow } from "../win32k/wndpos.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
@@ -128,12 +128,11 @@ async function UserShowWindow(peb: PEB, data: SHOW_WINDOW): Promise<SHOW_WINDOW_
 }
 
 async function UserGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    const msg = await NtGetMessage(peb, data);
-    return msg;
+    return await NtGetMessage(peb, data);
 }
 
-async function UserPeekMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    return { retVal: false, lpMsg: data.lpMsg };
+async function UserPeekMessage(peb: PEB, data: PEEK_MESSAGE): Promise<GET_MESSAGE_REPLY> {
+    return await NtPeekMessage(peb, data);
 }
 
 async function UserTranslateMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {

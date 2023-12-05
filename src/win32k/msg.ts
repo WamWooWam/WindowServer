@@ -1,4 +1,4 @@
-import { GET_MESSAGE, GET_MESSAGE_REPLY, WMP, WNDPROC_PARAMS } from "../types/user32.int.types.js";
+import { GET_MESSAGE, GET_MESSAGE_REPLY, PEEK_MESSAGE, WMP, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { HWND_BROADCAST, LRESULT, MSG, WM } from "../types/user32.types.js";
 import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
@@ -23,6 +23,20 @@ export async function NtGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MES
 
     return {
         retVal: retVal,
+        lpMsg: msg
+    };
+}
+
+export async function NtPeekMessage(peb: PEB, data: PEEK_MESSAGE): Promise<GET_MESSAGE_REPLY> {
+    const state = NtUserGetProcInfo(peb);
+    if (!state) {
+        console.warn("User32 not initialized");
+        return { retVal: false, lpMsg: null };
+    }
+
+    let msg = await state.lpMsgQueue.PeekMessage(data.hWnd, data.wMsgFilterMin, data.wMsgFilterMax, data.wRemoveMsg);
+    return {
+        retVal: msg !== null,
         lpMsg: msg
     };
 }

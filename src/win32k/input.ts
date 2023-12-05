@@ -14,8 +14,7 @@ let gCaptureElement: HTMLElement;
 let gLastMouseMove = 0;
 let gHitEatCount = 0;
 
-
-export function NtInitInput() {
+export function NtUserInitInput() {
     window.addEventListener("pointerdown", NtOnPointerDown);
     window.addEventListener("pointermove", NtOnPointerMove);
     window.addEventListener("pointerup", NtOnPointerUp);
@@ -28,8 +27,8 @@ async function NtOnPointerDown(e: PointerEvent) {
     gCaptureElement = e.target as HTMLElement;
     gCaptureElement.setPointerCapture(e.pointerId);
 
-    const x = e.clientX;
-    const y = e.clientY;
+    const x = Math.floor(e.clientX);
+    const y = Math.floor(e.clientY);
 
     let wmc = WM.LBUTTONDOWN;
     let wmnc = WM.NCLBUTTONDOWN;
@@ -54,8 +53,8 @@ async function NtOnPointerDown(e: PointerEvent) {
 async function NtOnPointerMove(e: PointerEvent) {
     e.preventDefault();
 
-    const x = e.clientX;
-    const y = e.clientY;
+    const x = Math.floor(e.clientX);
+    const y = Math.floor(e.clientY);
     const now = performance.now();
     if (now - gLastMouseMove < 8)
         return;
@@ -77,8 +76,8 @@ async function NtOnPointerUp(e: PointerEvent) {
     if (gCaptureElement)
         gCaptureElement.releasePointerCapture(e.pointerId);
 
-    const x = e.clientX;
-    const y = e.clientY;
+    const x = Math.floor(e.clientX);
+    const y = Math.floor(e.clientY);
 
     let wmc = WM.LBUTTONUP;
     let wmnc = WM.NCLBUTTONUP;
@@ -221,7 +220,7 @@ async function NtUserHitTestWindowRecursive(lpPoint: POINT, hWnd: HWND, callback
         return -1;
 
     const rcWindow = pWnd.rcWindow;
-    for (let pParent = ObGetObject<WND>(pWnd.hParent); pParent; pParent = ObGetObject<WND>(pParent.hParent)) {
+    for (let pParent = pWnd.wndParent; pParent; pParent = pParent.wndParent) {
         if ((pParent.dwStyle & WS.VISIBLE) !== WS.VISIBLE ||
             (pParent.dwStyle & WS.DISABLED) === WS.DISABLED)
             break;

@@ -97,6 +97,11 @@ export interface GET_MESSAGE_REPLY {
     lpMsg: MSG;
 }
 
+export interface PEEK_MESSAGE extends GET_MESSAGE {
+    wRemoveMsg: number;
+}
+
+
 export interface SET_WINDOW_POS {
     hWnd: HWND;
     hWndInsertAfter: HWND;

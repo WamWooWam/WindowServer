@@ -891,6 +891,12 @@ export enum MA {
     NOACTIVATEANDEAT = 4,
 }
 
+export enum PM {
+    NOREMOVE = 0,
+    REMOVE = 1,
+    NOYIELD = 2,
+}
+
 export type HWND = HANDLE;
 export type HINSTANCE = HANDLE;
 export type HICON = HANDLE;

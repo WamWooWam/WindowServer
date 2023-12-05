@@ -1,4 +1,4 @@
-import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
+import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, PEEK_MESSAGE, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HDC, POINT, RECT } from "../types/gdi32.types.js";
 import USER32, { ATOM, HINSTANCE, LPARAM, LRESULT, MSG, SM, WNDCLASS, WPARAM } from "../types/user32.types.js";
 
@@ -223,10 +223,10 @@ export async function GetMessage(lpMsg: MSG, hWnd: HANDLE, wMsgFilterMin: number
  * @category User32
  * @see https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-peekmessagea
  */
-export async function PeekMessage(lpMsg: MSG, hWnd: HANDLE, wMsgFilterMin: number, wMsgFilterMax: number): Promise<boolean> {
-    const msg = await User32.SendMessage<GET_MESSAGE, GET_MESSAGE_REPLY>({
+export async function PeekMessage(lpMsg: MSG, hWnd: HANDLE, wMsgFilterMin: number, wMsgFilterMax: number, wRemoveMsg: number): Promise<boolean> {
+    const msg = await User32.SendMessage<PEEK_MESSAGE, GET_MESSAGE_REPLY>({
         nType: USER32.PeekMessage,
-        data: { lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax }
+        data: { lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg }
     });
 
     Object.assign(lpMsg, msg.data.lpMsg);
