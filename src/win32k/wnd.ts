@@ -328,7 +328,7 @@ export default class WND {
         return this._pClsInfo;
     }
 
-    public async WndProc(msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    public async CallWndProc(msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
         return await this._lpfnWndProc(this._hWnd, msg, wParam, lParam);
     }
 

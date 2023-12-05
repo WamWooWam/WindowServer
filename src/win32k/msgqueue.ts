@@ -77,8 +77,6 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
                 this._messageCount--;
 
                 const msg = read.value;
-                console.log(msg);
-
                 if (this.FilterMessage(msg, hWnd, wMsgFilterMin, wMsgFilterMax)) {
                     if (!wRemoveMsg)
                         messages.push(msg);
@@ -106,7 +104,7 @@ export default class W32MSG_QUEUE implements MSG_QUEUE {
         if (hWnd) {
             const wnd = ObGetObject<WND>(hWnd);
             if (wnd) {
-                return await wnd.WndProc(lpMsg.message, lpMsg.wParam, lpMsg.lParam);
+                return await wnd.CallWndProc(lpMsg.message, lpMsg.wParam, lpMsg.lParam);
             }
         }
 

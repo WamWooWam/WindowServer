@@ -46,10 +46,12 @@ import WND from "./win32k/wnd.js";
             if (!wnd) return;
             proc = ObGetObject<PsProcess>(wnd.peb.hProcess);
         }
-        else {
+
+
+        if (!proc) {
             proc = ObGetObject<PsProcess>(parseInt(row.id));
             if (!proc) {
-                row.remove();
+                row?.remove();
                 return;
             }
         }
