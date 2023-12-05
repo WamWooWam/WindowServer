@@ -107,12 +107,12 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
             await CreateButton("BS_DEFPUSHBUTTON", 10, 50, 100, 30, hwnd, 1, BS.DEFPUSHBUTTON);
             await CreateButton("WS_DISABLED", 10, 90, 100, 30, hwnd, 2, BS.PUSHBUTTON | WS.DISABLED);
 
-            await CreateButton("BS_CHECKBOX", 10, 130, 100, 30, hwnd, 3, BS.CHECKBOX);
-            await CreateButton("BS_AUTOCHECKBOX", 10, 150, 100, 30, hwnd, 4, BS.AUTOCHECKBOX);
-            await CreateButton("BS_RADIOBUTTON", 10, 170, 100, 30, hwnd, 5, BS.RADIOBUTTON);
-            await CreateButton("BS_AUTORADIOBUTTON", 10, 190, 100, 30, hwnd, 6, BS.AUTORADIOBUTTON);
-            await CreateButton("BS_3STATE", 10, 210, 100, 30, hwnd, 7, BS.THREESTATE);
-            await CreateButton("BS_AUTO3STATE", 10, 230, 100, 30, hwnd, 8, BS.AUTO3STATE);
+            await CreateButton("BS_CHECKBOX", 10, 130, 100, 12, hwnd, 3, BS.CHECKBOX);
+            await CreateButton("BS_AUTOCHECKBOX", 10, 150, 100, 12, hwnd, 4, BS.AUTOCHECKBOX);
+            await CreateButton("BS_RADIOBUTTON", 10, 170, 100, 12, hwnd, 5, BS.RADIOBUTTON);
+            await CreateButton("BS_AUTORADIOBUTTON", 10, 190, 100, 12, hwnd, 6, BS.AUTORADIOBUTTON);
+            await CreateButton("BS_3STATE", 10, 210, 100, 12, hwnd, 7, BS.THREESTATE);
+            await CreateButton("BS_AUTO3STATE", 10, 230, 100, 12, hwnd, 8, BS.AUTO3STATE);
             await CreateButton("BS_GROUPBOX", 160, 10, 200, 200, hwnd, 9, BS.GROUPBOX);
 
             // static control to show which button was clicked

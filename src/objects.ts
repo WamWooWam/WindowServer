@@ -184,13 +184,13 @@ export function ObGetOwnedHandleCount(handle: HANDLE): number {
     return tag.ownedHandles.length + tag.ownedHandles.reduce((acc, h) => acc + ObGetOwnedHandleCount(h), 0);
 }
 
-export function* ObEnumObjects() {
+export function* ObEnumHandles() {
     for (const [handle, tag] of handleTable.entries()) {
         yield handle;
     }
 }
 
-export function* ObEnumObjectsByType(type: string) {
+export function* ObEnumHandlesByType(type: string) {
     for (const [handle, tag] of handleTable.entries()) {
         if (tag.type === type) {
             yield handle;

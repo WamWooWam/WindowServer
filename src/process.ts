@@ -59,6 +59,7 @@ export class PsProcess {
         this.hSharedMemory = NtAllocSharedMemory(16 * 1024, this.handle)
 
         this.peb = {
+            id: `PEB:${this.name}:${this.id}`,
             hProcess: this.handle,
             hThread: 0,
             dwProcessId: this.id,

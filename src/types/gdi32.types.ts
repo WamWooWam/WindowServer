@@ -9,7 +9,7 @@ export const GDI32 = {
     CreateSolidBrush: 0x00000006,
     CreatePen: 0x00000007,
     TextOut: 0x00000008,
-    SetTextColor: 0x00000009, 
+    SetTextColor: 0x00000009,
     Rectangle: 0x0000000A,
 }
 
@@ -130,4 +130,8 @@ export function OffsetRect(rect: RECT, x: number, y: number) {
 
 export function INRECT(x: number, y: number, rect: RECT): boolean {
     return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+export function SetRect(rect: RECT, left: number, top: number, right: number, bottom: number) {
+    Object.assign(rect, { top, left, right, bottom });
 }

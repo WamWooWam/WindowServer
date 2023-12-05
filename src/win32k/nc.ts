@@ -4,8 +4,8 @@ import { NtDispatchMessage, NtSendMessageTimeout } from "./msg.js";
 import { NtUserGetWindowBorders, NtUserHasWindowEdge } from "./window.js";
 
 import { NtDefWindowProc } from "./def.js";
-import { NtIntGetSystemMetrics } from "./metrics.js";
-import { NtUserSetActiveWindow } from "./desktop.js";
+import { NtUserGetSystemMetrics } from "./metrics.js";
+import { NtUserIntSetForegroundWindowMouse } from "./focus.js";
 import { ObGetObject } from "../objects.js";
 import { PEB } from "../types/types.js";
 import WND from "./wnd.js";
@@ -49,10 +49,10 @@ export function NtDefCalcNCSizing(peb: PEB, hWnd: number, Msg: WM, wParam: WPARA
         if ((wnd.dwStyle & WS.CAPTION) == WS.CAPTION) {
             // wnd.state |= WNDS_HASCAPTION;
             if (wnd.dwExStyle & WS.EX.TOOLWINDOW)
-                rect.top += NtIntGetSystemMetrics(peb, SM.CYSMCAPTION);
+                rect.top += NtUserGetSystemMetrics(peb, SM.CYSMCAPTION);
 
             else
-                rect.top += NtIntGetSystemMetrics(peb, SM.CYCAPTION);
+                rect.top += NtUserGetSystemMetrics(peb, SM.CYCAPTION);
         }
 
         // TODO: HMENUS
@@ -73,28 +73,28 @@ export function NtDefCalcNCSizing(peb: PEB, hWnd: number, Msg: WM, wParam: WPARA
         //     }
         // }
         if (wnd.dwExStyle & WS.EX.CLIENTEDGE) {
-            InflateRect(rect, -2 * NtIntGetSystemMetrics(peb, SM.CXBORDER), -2 * NtIntGetSystemMetrics(peb, SM.CYBORDER));
+            InflateRect(rect, -2 * NtUserGetSystemMetrics(peb, SM.CXBORDER), -2 * NtUserGetSystemMetrics(peb, SM.CYBORDER));
         }
 
         if (style & WS.VSCROLL) {
-            if (rect.right - rect.left >= NtIntGetSystemMetrics(peb, SM.CXVSCROLL)) {
+            if (rect.right - rect.left >= NtUserGetSystemMetrics(peb, SM.CXVSCROLL)) {
                 // wnd.state |= WNDS_HASVERTICALSCROOLLBAR;
                 /* rectangle is in screen coords when wparam is false */
                 if (!wParam && (exStyle & WS.EX.LAYOUTRTL))
                     exStyle ^= WS.EX.LEFTSCROLLBAR;
 
                 if ((exStyle & WS.EX.LEFTSCROLLBAR) != 0)
-                    rect.left += NtIntGetSystemMetrics(peb, SM.CXVSCROLL);
+                    rect.left += NtUserGetSystemMetrics(peb, SM.CXVSCROLL);
 
                 else
-                    rect.right -= NtIntGetSystemMetrics(peb, SM.CXVSCROLL);
+                    rect.right -= NtUserGetSystemMetrics(peb, SM.CXVSCROLL);
             }
         }
 
         if (style & WS.HSCROLL) {
-            if (rect.bottom - rect.top > NtIntGetSystemMetrics(peb, SM.CYHSCROLL)) {
+            if (rect.bottom - rect.top > NtUserGetSystemMetrics(peb, SM.CYHSCROLL)) {
                 // wnd.state |= WNDS_HASHORIZONTALSCROLLBAR;
-                rect.bottom -= NtIntGetSystemMetrics(peb, SM.CYHSCROLL);
+                rect.bottom -= NtUserGetSystemMetrics(peb, SM.CYHSCROLL);
             }
         }
 
@@ -172,7 +172,7 @@ export async function NtDefNCLButtonDown(peb: PEB, hWnd: HWND, Msg: number, wPar
             break;
         case HT.CAPTION: {
             if ((wnd.dwExStyle & WS.EX.NOACTIVATE) !== WS.EX.NOACTIVATE)
-                NtUserSetActiveWindow(peb, wnd.hWnd);
+                await NtUserIntSetForegroundWindowMouse(wnd);
 
             await NtDispatchMessage(peb, [hWnd, WM.SYSCOMMAND, SC.MOVE + HT.CAPTION, lParam]);
             break;
@@ -203,7 +203,7 @@ export async function NtDefNCLButtonDown(peb: PEB, hWnd: HWND, Msg: number, wPar
 }
 
 
-export function NtDefNCHitTest(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARAM, lParam: LPARAM) {
+export function NtUserDefNCHitTest(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARAM, lParam: LPARAM) {
     const x = LOWORD(lParam);
     const y = HIWORD(lParam);
     const wnd = ObGetObject<WND>(hWnd);
@@ -307,8 +307,8 @@ export function NtDefNCHitTest(peb: PEB, hWnd: HWND, Msg: number, wParam: WPARAM
     return HT.CLIENT;
 }
 
-export async function NtDoNCHitTest(wnd: WND, x: number, y: number) {
-    if (!wnd.stateFlags.overrides_NCHITTEST) {
+export async function NtUserDoNCHitTest(wnd: WND, x: number, y: number) {
+    if (!wnd.stateFlags.bOverridesNCHITTEST) {
         return await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
     }
 

@@ -2,9 +2,10 @@ import { PsCreateProcess, PsProcessMarkCritical } from "./loader.js";
 
 import { NtInitFileSystem } from "./fs/file.js";
 import { NtUserInit } from "./win32k/init.js";
+import { NtUserInitInput } from "./win32k/input.js";
 
 export async function NtPhase1Initialization() {
-    
+
 }
 
 export async function NtInit() {

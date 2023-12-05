@@ -1,4 +1,4 @@
-import { ObEnumObjectsByType, ObGetObject } from "./objects.js";
+import { ObEnumHandlesByType, ObGetObject } from "./objects.js";
 
 import Executable from "./types/Executable.js";
 import { HANDLE } from "./types/types.js";
@@ -60,7 +60,7 @@ export function PsProcessMarkCritical(hProcess: HANDLE, bCritical: boolean): boo
 }
 
 export function PsListProcesses(): HANDLE[] {
-    return [...ObEnumObjectsByType("PROC")];
+    return [...ObEnumHandlesByType("PROC")];
 }
 
 export function PsQuitProcess(hProcess: HANDLE, uExitCode: number): boolean {

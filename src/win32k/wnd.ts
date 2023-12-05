@@ -14,13 +14,14 @@ import {
 } from "../types/user32.types.js";
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
-import { HDC, RECT } from "../types/gdi32.types.js";
-import { HWNDS, W32CLASSINFO, W32PROCINFO } from "./shared.js";
+import { HDC, POINT, RECT } from "../types/gdi32.types.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetObject } from "../objects.js";
+import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtGetPrimaryMonitor } from "./monitor.js";
-import { NtIntGetSystemMetrics } from "./metrics.js";
+import { NtUserGetSystemMetrics } from "./metrics.js";
+import { NtUserIntSetStyle } from "./window.js";
 
 export default class WND {
     private _hWnd: HWND;
@@ -33,10 +34,6 @@ export default class WND {
     private _pClsInfo: W32CLASSINFO;
     private _lpszName: string;
 
-    private _hParent: HWND; // parent window (if this is a WS.CHILD like a control)
-    private _hOwner: HWND; // owner window (if this is a WS.POPUP like a dialog)
-    private _phwndChildren: HWND[];
-
     private _hMenu: HMENU;
     private _lpParam: any;
 
@@ -46,18 +43,115 @@ export default class WND {
     private _zIndex: number;
 
     public stateFlags = {
-        sendSizeMoveMsgs: false,
+        bIsLinked: false,
+        bSendSizeMoveMsgs: false,
         /**
          * Set if DefWindowProc is called for WM_NCHITTEST, so we can skip a user<->kernel space transition
          * and just return the result of the kernel call
          */
-        overrides_NCHITTEST: true,
-        hasHadInitialPaint: false
+        bOverridesNCHITTEST: true,
+        bHasHadInitialPaint: false,
+        bMaximizesToMonitor: false,
+        bIsBeingActivated: false,
+        bIsDestroyed: false,
+        bIsActiveFrame: false,
     }
+
+    public savedPos: {
+        normalRect: RECT,
+        iconPos: POINT,
+        maxPos: POINT,
+        flags: number,
+        initialized: boolean
+    };
 
     private _hRootElement: HANDLE;
 
     public data: any;
+
+    public wndLastActive: WND;
+
+    // windows uses a doubly linked list to keep track of windows and their z-order :D
+    private _wndNext: WND = null;
+    private _wndPrev: WND = null;
+    private _wndChild: WND = null;
+    private _wndParent: WND = null;
+    private _wndOwner: WND = null;
+
+    public get wndNext(): WND {
+        return this._wndNext;
+    }
+
+    public set wndNext(value: WND) {
+        if (this._wndNext) {
+            ObCloseHandle(this._wndNext.hWnd);
+        }
+
+        this._wndNext = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
+
+    public get wndPrev(): WND {
+        return this._wndPrev;
+    }
+
+    public set wndPrev(value: WND) {
+        if (this._wndPrev) {
+            ObCloseHandle(this._wndPrev.hWnd);
+        }
+
+        this._wndPrev = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
+
+    public get wndChild(): WND {
+        return this._wndChild;
+    }
+
+    public set wndChild(value: WND) {
+        if (this._wndChild) {
+            ObCloseHandle(this._wndChild.hWnd);
+        }
+
+        this._wndChild = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
+
+    public get wndParent(): WND {
+        return this._wndParent;
+    }
+
+    public set wndParent(value: WND) {
+        if (this._wndParent) {
+            ObCloseHandle(this._wndParent.hWnd);
+        }
+
+        this._wndParent = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
+
+    public get wndOwner(): WND {
+        return this._wndOwner;
+    }
+
+    public set wndOwner(value: WND) {
+        if (this._wndOwner) {
+            ObCloseHandle(this._wndOwner.hWnd);
+        }
+
+        this._wndOwner = value;
+        if (value) {
+            ObDuplicateHandle(value.hWnd);
+        }
+    }
 
     constructor(
         peb: PEB,
@@ -65,8 +159,8 @@ export default class WND {
         cs: CREATE_WINDOW_EX,
         lpszName: string,
         lpClass: W32CLASSINFO,
-        hParent: HWND,
-        hOwner: HWND,
+        wndParent: WND,
+        wndOwner: WND,
     ) {
         // Automatically add WS.EX.WINDOWEDGE if we have a thick frame
         if ((cs.dwExStyle & WS.EX.DLGMODALFRAME) ||
@@ -82,13 +176,14 @@ export default class WND {
         this._dwExStyle = cs.dwExStyle;
         this._lpfnWndProc = lpClass.lpfnWndProc;
         this._pClsInfo = lpClass;
-        this._hParent = hParent;
-        this._hOwner = hOwner;
         this._hMenu = cs.hMenu;
         this._lpParam = cs.lpParam;
         this._lpszName = lpszName;
         this._peb = peb;
-        this._phwndChildren = [];
+
+        this.wndParent = wndParent;
+        this.wndOwner = wndOwner;
+        this.wndLastActive = this;
 
         this._rcClient = {
             left: cs.x,
@@ -127,14 +222,19 @@ export default class WND {
             this._dwExStyle &= ~WS.EX.WINDOWEDGE;
 
         if (!(this.dwStyle & (WS.CHILD | WS.POPUP)))
-            this.stateFlags.sendSizeMoveMsgs = true;
+            this.stateFlags.bSendSizeMoveMsgs = true;
 
         this.FixWindowCoordinates();
 
-        pti.hWnds.push(this._hWnd);
+        this.savedPos = {
+            flags: 0,
+            iconPos: { x: 0, y: 0 },
+            maxPos: { x: 0, y: 0 },
+            normalRect: { left: 0, top: 0, right: 0, bottom: 0 },
+            initialized: false
+        }
 
-        // TODO: hacky asf 
-        HWNDS.push(this._hWnd);
+        pti.hWnds.push(this._hWnd);
     }
 
     public get peb(): PEB {
@@ -146,11 +246,11 @@ export default class WND {
     }
 
     public get hParent(): HWND {
-        return this._hParent;
+        return this.wndParent?.hWnd ?? 0;
     }
 
     public get hOwner(): HWND {
-        return this._hOwner;
+        return this.wndOwner?.hWnd ?? 0;
     }
 
     public get dwStyle(): number {
@@ -165,6 +265,13 @@ export default class WND {
 
     public get dwExStyle(): number {
         return this._dwExStyle;
+    }
+
+    public set dwExStyle(value: number) {
+        let oldStyle = this._dwExStyle;
+        this._dwExStyle = value;
+        // TODO: update window style
+        // this.UpdateWindowStyle(oldStyle, value);
     }
 
     public get hInstance(): HINSTANCE {
@@ -191,12 +298,12 @@ export default class WND {
         return this._hDC;
     }
 
-    public get pChildren(): HWND[] {
-        return [...this._phwndChildren];
-    }
-
     public get pRootElement() {
         return ObGetObject<HTMLElement>(this._hRootElement);
+    }
+
+    public get pChildren(): HWND[] {
+        return [...this.GetChildren()];
     }
 
     public set pRootElement(value: HTMLElement) {
@@ -221,51 +328,22 @@ export default class WND {
         return this._pClsInfo;
     }
 
-    public AddChild(hWnd: HWND): void {
-        this._phwndChildren.splice(0, 0, hWnd);
-        this.FixZOrder();
-    }
-
-    public RemoveChild(hWnd: HWND): void {
-        if (!this._phwndChildren)
-            return;
-
-        const index = this._phwndChildren.findIndex(h => h === hWnd);
-        if (index !== -1)
-            this._phwndChildren.splice(index, 1);
-
-        this.FixZOrder();
-    }
-
-    public MoveChild(hWnd: HWND, idx: number): void {
-        if (!this._phwndChildren)
-            return;
-
-        const index = this._phwndChildren.findIndex(h => h === hWnd);
-        if (index !== -1)
-            this._phwndChildren.splice(index, 1);
-
-        this._phwndChildren.splice(idx, 0, hWnd);
-
-        this.FixZOrder();
-    }
-
     public async WndProc(msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
         return await this._lpfnWndProc(this._hWnd, msg, wParam, lParam);
     }
 
     public Show(): void {
-        this.dwStyle = this.dwStyle | WS.VISIBLE;
+        NtUserIntSetStyle(this, 0, WS.VISIBLE);
     }
 
     public Hide(): void {
-        this.dwStyle = this.dwStyle & ~WS.VISIBLE;
+        NtUserIntSetStyle(this, WS.VISIBLE, 0);
     }
 
     public async MoveWindow(x: number, y: number, cx: number, cy: number, bRepaint: boolean): Promise<void> {
         if ((this.dwStyle & (WS.POPUP | WS.CHILD)) === 0) {
-            cx = Math.max(cx, NtIntGetSystemMetrics(this.peb, SM.CXMINTRACK));
-            cy = Math.max(cy, NtIntGetSystemMetrics(this.peb, SM.CYMINTRACK));
+            cx = Math.max(cx, NtUserGetSystemMetrics(this.peb, SM.CXMINTRACK));
+            cy = Math.max(cy, NtUserGetSystemMetrics(this.peb, SM.CYMINTRACK));
         }
 
         let previousWindow = { ...this.rcWindow };
@@ -293,13 +371,13 @@ export default class WND {
         }
 
 
-        if (this.stateFlags.sendSizeMoveMsgs) {
+        if (this.stateFlags.bSendSizeMoveMsgs) {
             await NtDispatchMessage(this._peb, [this._hWnd, WM.SIZE, 0, { cx: newCX, cy: newCY }]);
             await NtDispatchMessage(this._peb, [this._hWnd, WM.MOVE, 0, { x: this.rcWindow.left, y: this.rcWindow.top }]);
         }
 
-        if (bRepaint && ((oldCX !== newCX || oldCY !== newCY) || !this.stateFlags.hasHadInitialPaint)) {
-            this.stateFlags.hasHadInitialPaint = true;
+        if (bRepaint && ((oldCX !== newCX || oldCY !== newCY) || !this.stateFlags.bHasHadInitialPaint)) {
+            this.stateFlags.bHasHadInitialPaint = true;
 
             if (this._hDC && !(this.dwStyle & WS.CHILD)) {
                 GreResizeDC(this._hDC, this.rcClient);
@@ -321,38 +399,14 @@ export default class WND {
         }
     }
 
-    public FixZOrder(): void {
-        let deadWindows = [];
-        for (let i = 0; i < this._phwndChildren.length; i++) {
-            const hWnd = this._phwndChildren[i];
-            const wnd = ObGetObject<WND>(hWnd);
-            if (!wnd) {
-                deadWindows.push(hWnd);
-                continue;
-            }
-
-            wnd.zIndex = this._phwndChildren.length - i;
-        }
-
-        for (let i = 0; i < deadWindows.length; i++) {
-            this.RemoveChild(deadWindows[i]);
-        }
-    }
-
     public Dispose(): void {
         this.Hide();
 
-        if (this._hParent) {
-            const parent = ObGetObject<WND>(this._hParent);
-            if (parent) {
-                parent.RemoveChild(this._hWnd);
-            }
+        if (this.wndParent)
+            ObCloseHandle(this.wndParent.hWnd);
 
-            ObCloseHandle(this._hParent);
-        }
-
-        if (this._hOwner)
-            ObCloseHandle(this._hOwner);
+        if (this.wndOwner)
+            ObCloseHandle(this.wndOwner.hWnd);
 
         if (this._hDC)
             ObCloseHandle(this._hDC);
@@ -381,8 +435,8 @@ export default class WND {
                 if (false) {
 
                 } else {
-                    x = monitor.cWndStack * NtIntGetSystemMetrics(this.peb, SM.CXSIZE) + NtIntGetSystemMetrics(this.peb, SM.CXFRAME);
-                    y = monitor.cWndStack * NtIntGetSystemMetrics(this.peb, SM.CXSIZE) + NtIntGetSystemMetrics(this.peb, SM.CXFRAME);
+                    x = monitor.cWndStack * NtUserGetSystemMetrics(this.peb, SM.CXSIZE) + NtUserGetSystemMetrics(this.peb, SM.CXFRAME);
+                    y = monitor.cWndStack * NtUserGetSystemMetrics(this.peb, SM.CXSIZE) + NtUserGetSystemMetrics(this.peb, SM.CXFRAME);
 
                     if (x > ((monitor.rcWork.right - monitor.rcWork.left) / 4) ||
                         y > ((monitor.rcWork.bottom - monitor.rcWork.top) / 4)) {
@@ -424,14 +478,6 @@ export default class WND {
     async CreateElement() {
         if (!this.pRootElement) {
             await NtDispatchMessage(this._peb, [this._hWnd, WMP.CREATEELEMENT, 0, 0])
-
-            if (this._hParent) {
-                await NtDispatchMessage(this._peb, [this._hParent, WMP.ADDCHILD, this._hWnd, 0]);
-            }
-            else {
-                // for now, just add it to the body
-                document.body.appendChild(this.pRootElement);
-            }
         }
 
         // for now, dont do a dirty flag, just set the style
@@ -447,8 +493,7 @@ export default class WND {
         }
         else {
             // use the parent's DC, with an additional transform
-            const parent = ObGetObject<WND>(this._hParent);
-            this._hDC = ObDuplicateHandle(parent._hDC);
+            this._hDC = ObDuplicateHandle(this.wndParent?.hDC ?? 0);
         }
 
         if (!this._hDC)
@@ -465,5 +510,13 @@ export default class WND {
 
         NtPostMessage(this._peb, [this._hWnd, WMP.UPDATEWINDOWSTYLE, dwNewStyle, dwOldStyle]);
         NtPostMessage(this._peb, [this._hWnd, WM.STYLECHANGED, -16, { oldStyle: dwOldStyle, newStyle: dwNewStyle }]);
+    }
+
+    public *GetChildren(): IterableIterator<HWND> {
+        let child = this.wndChild;
+        while (child) {
+            yield child.hWnd;
+            child = child.wndNext;
+        }
     }
 }

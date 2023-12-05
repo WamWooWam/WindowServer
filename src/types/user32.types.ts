@@ -67,9 +67,6 @@ export namespace WS {
     export const POPUPWINDOW = POPUP | BORDER | SYSMENU;
     export const CHILDWINDOW = CHILD;
 
-    export const ACTIVE = 0x00000001;
-    export const MAXIMIZED = 0x00000002;
-
     export namespace EX {
         export const DLGMODALFRAME = 0x00000001;
         export const NOPARENTNOTIFY = 0x00000004;
@@ -349,6 +346,8 @@ export enum WM {
     
     COMMAND = 0x0111,
 
+    PARENTNOTIFY = 0x0210,
+
     USER = 0x0400,
 }
 
@@ -390,6 +389,11 @@ export enum SWP {
     NOREPOSITION = NOOWNERZORDER,
     DEFERERASE = 0x2000,
     ASYNCWINDOWPOS = 0x4000,
+
+    // undocumented!
+    NOCLIENTSIZE = 0x0800,
+    NOCLIENTMOVE = 0x1000,
+    STATECHANGED = 0x8000,
 }
 
 export enum BS {
@@ -858,6 +862,41 @@ export enum ODS {
     NOFOCUSRECT = 0x0200,
 }
 
+export enum WA {
+    INACTIVE = 0,
+    ACTIVE = 1,
+    CLICKACTIVE = 2,
+}
+
+export enum GA {
+    PARENT = 1,
+    ROOT = 2,
+    ROOTOWNER = 3,
+}
+
+export enum GW {
+    HWNDFIRST = 0,
+    HWNDLAST = 1,
+    HWNDNEXT = 2,
+    HWNDPREV = 3,
+    OWNER = 4,
+    CHILD = 5,
+    ENABLEDPOPUP = 6,
+}
+
+export enum MA {
+    ACTIVATE = 1,
+    ACTIVATEANDEAT = 2,
+    NOACTIVATE = 3,
+    NOACTIVATEANDEAT = 4,
+}
+
+export enum PM {
+    NOREMOVE = 0,
+    REMOVE = 1,
+    NOYIELD = 2,
+}
+
 export type HWND = HANDLE;
 export type HINSTANCE = HANDLE;
 export type HICON = HANDLE;
@@ -976,4 +1015,11 @@ export interface DRAWITEMSTRUCT {
     itemData: number;
 }
 
+export interface WINDOWPLACEMENT {
+    flags: number;
+    showCmd: number;
+    ptMinPosition: POINT;
+    ptMaxPosition: POINT;
+    rcNormalPosition: RECT;
+}
 export default USER32;

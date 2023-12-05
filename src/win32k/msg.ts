@@ -1,15 +1,14 @@
-import DESKTOP, { NtUserSetActiveWindow } from "./desktop.js";
-import { GET_MESSAGE, GET_MESSAGE_REPLY, WMP, WNDPROC_PARAMS } from "../types/user32.int.types.js";
-import { GetW32ProcInfo, HWNDS } from "./shared.js";
+import { GET_MESSAGE, GET_MESSAGE_REPLY, PEEK_MESSAGE, WMP, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { HWND_BROADCAST, LRESULT, MSG, WM } from "../types/user32.types.js";
-import { ObEnumObjectsByType, ObGetObject } from "../objects.js";
+import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
+import { NtUserGetProcInfo, } from "./shared.js";
 import { PsProcess } from "../process.js";
 import WND from "./wnd.js";
 
 export async function NtGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    const state = GetW32ProcInfo(peb);
+    const state = NtUserGetProcInfo(peb);
     if (!state) {
         console.warn("User32 not initialized");
         return { retVal: false, lpMsg: null };
@@ -28,7 +27,21 @@ export async function NtGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MES
     };
 }
 
-export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
+export async function NtPeekMessage(peb: PEB, data: PEEK_MESSAGE): Promise<GET_MESSAGE_REPLY> {
+    const state = NtUserGetProcInfo(peb);
+    if (!state) {
+        console.warn("User32 not initialized");
+        return { retVal: false, lpMsg: null };
+    }
+
+    let msg = await state.lpMsgQueue.PeekMessage(data.hWnd, data.wMsgFilterMin, data.wMsgFilterMax, data.wRemoveMsg);
+    return {
+        retVal: msg !== null,
+        lpMsg: msg
+    };
+}
+
+export async function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
     let _msg: MSG = msg as MSG;
     if (msg instanceof Array) { // WNDPROC_PARAMS
         _msg = { hWnd: msg[0], message: msg[1], wParam: msg[2], lParam: msg[3] };
@@ -39,11 +52,11 @@ export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
         if (_msg.message > WM.USER && _msg.message < WMP.CREATEELEMENT)
             return;
 
-        for (const hWnd of ObEnumObjectsByType("WND")) {
+        for (const hWnd of ObEnumHandlesByType("WND")) {
             const wnd = ObGetObject<WND>(hWnd);
             if (!wnd) continue;
 
-            const state = GetW32ProcInfo(wnd.peb);
+            const state = NtUserGetProcInfo(wnd.peb);
             if (!state) continue;
 
             state.lpMsgQueue.EnqueueMessage({ ..._msg, hWnd });
@@ -54,7 +67,7 @@ export function NtPostMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS) {
 
     const wnd = ObGetObject<WND>(_msg.hWnd);
     const _peb = wnd ? wnd.peb : peb;
-    const state = GetW32ProcInfo(_peb);
+    const state = NtUserGetProcInfo(_peb);
     if (!state) return; // this process doesn't have a message queue
 
     state.lpMsgQueue.EnqueueMessage(_msg);
@@ -66,14 +79,9 @@ export async function NtDispatchMessage(peb: PEB, msg: MSG | WNDPROC_PARAMS): Pr
         _msg = { hWnd: msg[0], message: msg[1], wParam: msg[2], lParam: msg[3] };
     }
 
-    if (_msg.hWnd && _msg.message === WM.LBUTTONDOWN || _msg.message === WM.MBUTTONDOWN || _msg.message === WM.RBUTTONDOWN) {
-        NtUserSetActiveWindow(peb, _msg.hWnd);
-        NtPostMessage(peb, [_msg.hWnd, WM.ACTIVATE, _msg.hWnd, 0]);
-    }
-
     const wnd = ObGetObject<WND>(_msg.hWnd);
     const _peb = wnd ? wnd.peb : peb;
-    const state = GetW32ProcInfo(_peb);
+    const state = NtUserGetProcInfo(_peb);
     if (!state) return; // this process doesn't have a message queue
 
     return await state.lpMsgQueue.DispatchMessage(_msg);
@@ -109,7 +117,7 @@ export async function NtSendMessageTimeout(peb: PEB, msg: MSG | WNDPROC_PARAMS, 
  * @returns true if the message was posted, false if the process doesn't have a message queue
  */
 export async function NtPostQuitMessage(peb: PEB, nExitCode: number) {
-    const state = GetW32ProcInfo(peb);
+    const state = NtUserGetProcInfo(peb);
     if (!state) return false; // this process doesn't have a message queue
 
     const msg: MSG = {

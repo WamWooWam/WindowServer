@@ -3,9 +3,11 @@ import { PsCreateProcess, PsRegisterProcessHooks, PsQuitProcess, PsTerminateProc
 
 import { HANDLE } from "./types/types.js";
 import { PsProcess } from "./process.js";
-import { WM } from "./types/user32.types.js";
-import { ObDumpHandles, ObEnumObjects, ObGetObject, ObGetOwnedHandleCount } from "./objects.js";
+import { HWND, WM } from "./types/user32.types.js";
+import { ObDumpHandles, ObEnumHandles, ObGetObject, ObGetOwnedHandleCount } from "./objects.js";
 import { NtInit } from "./boot.js";
+import { NtUserGetForegroundWindow } from "./win32k/focus.js";
+import WND from "./win32k/wnd.js";
 
 (async () => {
     const procs: HANDLE[] = [];
@@ -36,29 +38,40 @@ import { NtInit } from "./boot.js";
     }
 
     const GetSelectedProcess = () => {
-        const row = processList.getElementsByClassName("highlighted")[0];
-        if (!row) return procs[procs.length - 1]
-
-        const proc = ObGetObject<PsProcess>(parseInt(row.id));
-        if (!proc) {
-            row.remove();
-            return;
+        let row = processList.getElementsByClassName("highlighted")[0];
+        let proc: PsProcess;
+        let hWnd: HWND;
+        if (!row && (hWnd = NtUserGetForegroundWindow())) {
+            let wnd = ObGetObject<WND>(hWnd);
+            if (!wnd) return;
+            proc = ObGetObject<PsProcess>(wnd.peb.hProcess);
+        }
+        else {
+            proc = ObGetObject<PsProcess>(parseInt(row.id));
+            if (!proc) {
+                row.remove();
+                return;
+            }
         }
 
         return proc.handle;
     }
 
     const UpdateStates = () => {
-        const rows = processList.getElementsByTagName("tr");
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            const proc = ObGetObject<PsProcess>(parseInt(row.id));
-            if (proc) {
-                (<HTMLElement>row.children[2]).innerText = ObGetOwnedHandleCount(proc.handle).toString();
+        try {
+            const rows = processList.getElementsByTagName("tr");
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const proc = ObGetObject<PsProcess>(parseInt(row.id));
+                if (proc) {
+                    (<HTMLElement>row.children[2]).innerText = ObGetOwnedHandleCount(proc.handle).toString();
+                }
             }
-        }
 
-        document.getElementById("handles").innerText = [...ObEnumObjects()].length.toString();
+            document.getElementById("handles").innerText = [...ObEnumHandles()].length.toString();
+        } catch (error) {
+
+        }
     }
 
     const UpdateButtons = () => {
@@ -85,7 +98,7 @@ import { NtInit } from "./boot.js";
 
     const QuitProc = async () => {
         const proc = GetSelectedProcess();
-        
+
         try {
             NtPostProcessMessage(proc, { hWnd: null, message: WM.QUIT, wParam: 0, lParam: 0 });
         }

@@ -71,6 +71,11 @@ export default class WindowElementBase extends HTMLElement {
 
     }
 
+    invalidateStyle(): void {
+        this.applyStyles(this.dwStyle);
+        this.applyExStyles(this.dwExStyle);
+    }
+
     applyStyles(dwNewStyle: string): void {
         if (dwNewStyle === null) return;
 
@@ -80,6 +85,13 @@ export default class WindowElementBase extends HTMLElement {
         }
 
         this._style = dwStyle;
+
+        if (!(dwStyle & WS.VISIBLE)) {
+            this.style.display = "none";
+        }
+        else {
+            this.style.display = "";
+        }
 
         this.applyStylesCore(dwStyle);
     }

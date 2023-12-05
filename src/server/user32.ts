@@ -1,8 +1,9 @@
-import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
+import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, PEEK_MESSAGE, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
-import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtSetWindowPos, NtShowWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
-import { NtDispatchMessage, NtGetMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
-import { NtInitSysMetrics, NtIntGetSystemMetrics } from "../win32k/metrics.js";
+import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
+import { NtDispatchMessage, NtGetMessage, NtPeekMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
+import { NtInitSysMetrics, NtUserGetSystemMetrics } from "../win32k/metrics.js";
+import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow } from "../win32k/wndpos.js";
 import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js";
 import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
 import USER32, { HWND, LRESULT, MSG, WNDCLASSEX, WS, } from "../types/user32.types.js";
@@ -70,7 +71,16 @@ function NtUser32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
         procInfo = {
             classes: [],
             hWnds: [],
-            lpMsgQueue: null
+            lpMsgQueue: null,
+            hwndFocus: null,
+            hwndActive: null,
+            hwndActivePrev: null,
+            hwndCapture: null,
+            nVisibleWindows: 0,
+            flags: {
+                bInActivateAppMsg: false,
+                bAllowForegroundActivate: false,
+            }
         }
 
         const msgQueue = new W32MSG_QUEUE(peb, procInfo);
@@ -112,18 +122,17 @@ async function UserCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promise<CRE
 }
 
 async function UserShowWindow(peb: PEB, data: SHOW_WINDOW): Promise<SHOW_WINDOW_REPLY> {
-    await NtShowWindow(peb, data.hWnd, data.nCmdShow);
+    let retVal = await NtUserShowWindow(peb, data.hWnd, data.nCmdShow);
 
-    return { retVal: true };
+    return { retVal };
 }
 
 async function UserGetMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    const msg = await NtGetMessage(peb, data);
-    return msg;
+    return await NtGetMessage(peb, data);
 }
 
-async function UserPeekMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
-    return { retVal: false, lpMsg: data.lpMsg };
+async function UserPeekMessage(peb: PEB, data: PEEK_MESSAGE): Promise<GET_MESSAGE_REPLY> {
+    return await NtPeekMessage(peb, data);
 }
 
 async function UserTranslateMessage(peb: PEB, data: GET_MESSAGE): Promise<GET_MESSAGE_REPLY> {
@@ -144,7 +153,7 @@ async function UserGetDC(peb: PEB, data: HWND) {
 }
 
 function UserGetSystemMetrics(peb: PEB, nIndex: number): number {
-    return NtIntGetSystemMetrics(peb, nIndex);
+    return NtUserGetSystemMetrics(peb, nIndex);
 }
 
 function UserSetWindowPos(peb: PEB, params: SET_WINDOW_POS) {
@@ -161,7 +170,9 @@ function UserGetWindowRect(peb: PEB, params: HWND): RECT {
 
 function UserScreenToClient(peb: PEB, params: SCREEN_TO_CLIENT): SCREEN_TO_CLIENT_REPLY {
     const point = { ...params.lpPoint };
-    if (NtUserScreenToClient(params.hWnd, point)) {
+    const wnd = ObGetObject<WND>(params.hWnd);
+
+    if (wnd && NtUserScreenToClient(wnd, point)) {
         return { retVal: true, lpPoint: point };
     }
     else {
