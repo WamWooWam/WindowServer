@@ -10,8 +10,8 @@ import { NtUserIsDesktopWindow } from "./window.js";
 import { NtUserScreenToClient } from "./client.js";
 import WND from "./wnd.js";
 
-let captureElement: HTMLElement;
-let lastMouseMove = 0;
+let gCaptureElement: HTMLElement;
+let gLastMouseMove = 0;
 
 export function NtInitInput() {
     window.addEventListener("pointerdown", NtOnPointerDown);
@@ -23,8 +23,8 @@ export function NtInitInput() {
 async function NtOnPointerDown(e: PointerEvent) {
     e.preventDefault();
 
-    captureElement = e.target as HTMLElement;
-    captureElement.setPointerCapture(e.pointerId);
+    gCaptureElement = e.target as HTMLElement;
+    gCaptureElement.setPointerCapture(e.pointerId);
 
     const x = e.clientX;
     const y = e.clientY;
@@ -55,10 +55,10 @@ async function NtOnPointerMove(e: PointerEvent) {
     const x = e.clientX;
     const y = e.clientY;
     const now = performance.now();
-    if (now - lastMouseMove < 8)
+    if (now - gLastMouseMove < 8)
         return;
 
-    lastMouseMove = now;
+    gLastMouseMove = now;
 
     for (const hDesktop of ObEnumHandlesByType("DESKTOP")) {
         const desk = ObGetObject<DESKTOP>(hDesktop);
@@ -72,8 +72,8 @@ async function NtOnPointerMove(e: PointerEvent) {
 async function NtOnPointerUp(e: PointerEvent) {
     e.preventDefault();
 
-    if (captureElement)
-        captureElement.releasePointerCapture(e.pointerId);
+    if (gCaptureElement)
+        gCaptureElement.releasePointerCapture(e.pointerId);
 
     const x = e.clientX;
     const y = e.clientY;
@@ -98,8 +98,16 @@ async function NtOnPointerUp(e: PointerEvent) {
     }
 }
 
+let hitEatCount = 0;
+
 function OnHitWindowMouseUp(x: number, y: number, result: HT, hWnd: HWND, wmc: WM, wmnc: WM) {
     const wnd = ObGetObject<WND>(hWnd);
+
+    // if (result === HT.CLIENT && hitEatCount > 0) {
+    //     hitEatCount--;
+    //     return;
+    // }
+
     const point = { x, y };
     if (result === HT.CLIENT)
         NtUserScreenToClient(wnd, point);
@@ -128,9 +136,15 @@ async function OnHitWindowMouseDown(hWnd: HWND, x: number, y: number, result: HT
 
     if (topLevel && (NtUserGetForegroundWindow() !== topLevel.hWnd)) {
         await NtUserIntSetForegroundWindowMouse(topLevel);
-        if (result === HT.CLIENT)
-            return;
+        // if (result === HT.CLIENT) {
+        //     return;
+        // }
     }
+
+    // if (result === HT.CLIENT && hitEatCount > 0) {
+    //     hitEatCount--;
+    //     return;
+    // }
 
     const point = { x, y };
     if (result === HT.CLIENT)
