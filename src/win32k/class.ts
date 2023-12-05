@@ -6,7 +6,7 @@ import { PEB } from "../types/types.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 import { WNDCLASS_WIRE } from "../types/user32.int.types.js";
 
-function CreateWndProcCallback(peb: PEB, lpfnWndProc: number | WNDPROC): WNDPROC {
+export function NtCreateWndProcCallback(peb: PEB, lpfnWndProc: number | WNDPROC): WNDPROC {
     if (typeof lpfnWndProc === "number") {
         async function NT_IS_CALLING_INTO_USERSPACE(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<number> {
             const now = performance.now();
@@ -51,14 +51,13 @@ export function NtRegisterClassEx(peb: PEB, lpWndClass: WNDCLASS_WIRE | WNDCLASS
         return 0;
     }
 
-    const lpfnWndProc = CreateWndProcCallback(peb, lpWndClass.lpfnWndProc);
     const classInfo: W32CLASSINFO = {
         style: lpWndClass.style,
         exStyle: 0,
         lpszClassName: className,
         lpszClassVersion: className,
         lpszMenuName: lpWndClass.lpszMenuName as string,
-        lpfnWndProc: lpfnWndProc,
+        lpfnWndProc: lpWndClass.lpfnWndProc,
         hIcon: lpWndClass.hIcon,
         hCursor: lpWndClass.hCursor,
         hbrBackground: lpWndClass.hbrBackground,

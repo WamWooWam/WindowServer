@@ -14,12 +14,13 @@ import {
 } from "../types/user32.types.js";
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "../types/types.js";
-import { HDC, POINT, RECT } from "../types/gdi32.types.js";
+import { HDC, LPRECT, POINT, RECT } from "../types/gdi32.types.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { NtUserIntSetStyle, NtUserUnlinkWindow } from "./window.js";
 import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetObject } from "../objects.js";
 import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
+import { NtCreateWndProcCallback } from "./class.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
 
@@ -30,7 +31,8 @@ export default class WND {
     private _dwExStyle: number;
     private _rcWindow: RECT;
     private _rcClient: RECT;
-    private _lpfnWndProc: WNDPROC;
+    private _lpfnWndProc: WNDPROC | number;
+    private _lpfnWndProcCallback: WNDPROC;
     private _pClsInfo: W32CLASSINFO;
     private _lpszName: string;
 
@@ -41,6 +43,8 @@ export default class WND {
     private _peb: PEB;
 
     private _zIndex: number;
+
+    private _hRootElement: HANDLE;
 
     public stateFlags = {
         bIsLinked: false,
@@ -65,9 +69,8 @@ export default class WND {
         initialized: boolean
     };
 
-    private _hRootElement: HANDLE;
-
-    public data: any;
+    public props: Map<string, any> = new Map();
+    public dwUserData: number = 0;
 
     public wndLastActive: PWND;
 
@@ -175,6 +178,7 @@ export default class WND {
         this._dwStyle = cs.dwStyle;
         this._dwExStyle = cs.dwExStyle;
         this._lpfnWndProc = lpClass.lpfnWndProc;
+        this._lpfnWndProcCallback = NtCreateWndProcCallback(peb, this._lpfnWndProc);
         this._pClsInfo = lpClass;
         this._hMenu = cs.hMenu;
         this._lpParam = cs.lpParam;
@@ -324,8 +328,17 @@ export default class WND {
         return this._pClsInfo;
     }
 
+    public get lpfnWndProc(): WNDPROC | number {
+        return this._lpfnWndProc;
+    }
+
+    public set lpfnWndProc(value: WNDPROC | number) {
+        this._lpfnWndProc = value;
+        this._lpfnWndProcCallback = NtCreateWndProcCallback(this._peb, value);
+    }
+
     public async CallWndProc(msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
-        return await this._lpfnWndProc(this._hWnd, msg, wParam, lParam);
+        return await this._lpfnWndProcCallback(this._hWnd, msg, wParam, lParam);
     }
 
     public Show(): void {
@@ -389,7 +402,7 @@ export default class WND {
         rect.bottom -= rect.top;
         rect.left = rect.top = 0;
 
-        const newRect = await NtDispatchMessage(this._peb, [this._hWnd, WM.NCCALCSIZE, 0, rect]);
+        const newRect = <LPRECT>await NtDispatchMessage(this._peb, [this._hWnd, WM.NCCALCSIZE, 0, rect]);
         if (newRect) {
             this._rcClient = newRect;
         }
@@ -498,7 +511,7 @@ export default class WND {
         else {
             console.warn("Root element was not created!!")
         }
-        
+
         // if we're a top level window, allocate a DC
         if (!(this.dwStyle & WS.CHILD)) {
             this._hDC = GreAllocDCForWindow(this._peb, this._hWnd);

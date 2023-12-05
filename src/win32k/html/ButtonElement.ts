@@ -240,6 +240,18 @@ export class ButtonElement extends WindowElementBase {
 
         return shadowRoot;
     }
+
+    setText(text: string): void {
+        if (!this.primaryElement) return;
+
+        if (this.primaryElement instanceof HTMLInputElement) {
+            this.primaryElement.value = text;
+        }
+        else if (this.primaryElement instanceof HTMLDivElement) {
+            const textSpan = this.primaryElement.querySelector(".text") as HTMLSpanElement;
+            textSpan.innerText = text;
+        }
+    }
 }
 
 customElements.define('x-button', ButtonElement);

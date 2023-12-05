@@ -1,13 +1,13 @@
 import { CREATE_WINDOW_EX, PWND, WMP } from "../types/user32.int.types.js";
-import { GA, GW, HWND, HWND_BOTTOM, HWND_TOP, HWND_TOPMOST, MAKEWPARAM, MINMAXINFO, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
+import { GA, GW, HWND, HWND_BOTTOM, HWND_TOP, HWND_TOPMOST, LPARAM, LRESULT, MAKEWPARAM, MINMAXINFO, SM, SW, SWP, WM, WNDPROC, WPARAM, WS } from "../types/user32.types.js";
 import { HDC, InflateRect, POINT, RECT, SIZE } from "../types/gdi32.types.js";
+import { NtCreateWndProcCallback, NtFindClass } from "./class.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow, NtUserWinPosShowWindow } from "./wndpos.js";
 import { NtUserGetDesktop, NtUserGetProcInfo } from "./shared.js";
 import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import { GreAllocDCForMonitor } from "./gdi/dc.js";
-import { NtFindClass } from "./class.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtSetLastError } from "../error.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
@@ -1018,3 +1018,17 @@ export function NtUserIntSetStyle(pwnd: WND, set_bits: number, clear_bits: numbe
     }
     return styleOld;
 }
+
+export async function NtCallWindowProc(peb: PEB, lpPrevWndFunc: WNDPROC | number, hWnd: HWND, Msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    if (!lpPrevWndFunc) {
+        return 0;
+    }
+
+    let lpPrevWndFuncPtr = NtCreateWndProcCallback(peb, lpPrevWndFunc);
+    if (!lpPrevWndFuncPtr) {
+        return 0;
+    }
+
+    return await lpPrevWndFuncPtr(hWnd, Msg, wParam, lParam);
+}
+    

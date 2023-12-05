@@ -22,7 +22,7 @@ export async function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lP
             return 0;
         }
         case WM.SETTEXT: {
-            element.innerText = lParam;
+            element.innerText = <string>lParam;
             return 0;
         }
         case WM.GETTEXT: {

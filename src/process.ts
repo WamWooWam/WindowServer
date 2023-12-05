@@ -189,10 +189,11 @@ export class PsProcess {
         this.worker.postMessage(msg);
     }
 
-    private RegisterCallback(callback: (msg: Message) => any | Promise<any>) {
+    public RegisterCallback(callback: (msg: Message) => any | Promise<any>, persist: boolean = false) {
         const id = --this.callbackId;
         const handler = (msg: Message) => {
-            this.callbackMap.delete(id);
+            if (!persist)
+                this.callbackMap.delete(id);
             return callback(msg);
         };
 

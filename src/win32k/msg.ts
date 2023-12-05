@@ -82,7 +82,7 @@ export async function NtDispatchMessage(peb: PEB | null, msg: MSG | WNDPROC_PARA
     const wnd = ObGetObject<WND>(_msg.hWnd);
     const _peb = wnd ? wnd.peb : peb;
     const state = NtUserGetProcInfo(_peb!);
-    if (!state) return; // this process doesn't have a message queue
+    if (!state) return null; // this process doesn't have a message queue
 
     return await state.lpMsgQueue.DispatchMessage(_msg);
 }

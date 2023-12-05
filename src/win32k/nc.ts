@@ -196,7 +196,7 @@ export async function NtDefNCLButtonDown(peb: PEB, hWnd: HWND, Msg: number, wPar
         case HT.TOPRIGHT:
         case HT.BOTTOMLEFT:
         case HT.BOTTOMRIGHT: {
-            await NtDispatchMessage(peb, [hWnd, WM.SYSCOMMAND, SC.SIZE + wParam - (HT.LEFT - WMSZ.LEFT), lParam]);
+            await NtDispatchMessage(peb, [hWnd, WM.SYSCOMMAND, SC.SIZE + <number>wParam - (HT.LEFT - WMSZ.LEFT), lParam]);
             break;
         }
     }
@@ -309,14 +309,14 @@ export function NtUserDefNCHitTest(peb: PEB, hWnd: HWND, Msg: number, wParam: WP
     return HT.CLIENT;
 }
 
-export async function NtUserDoNCHitTest(wnd: WND, x: number, y: number) {
+export async function NtUserDoNCHitTest(wnd: WND, x: number, y: number): Promise<HT> {
     if (!wnd.stateFlags.bOverridesNCHITTEST) {
-        return await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
+        return <HT>await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
     }
 
     const { status, result } = await NtSendMessageTimeout(wnd.peb, [wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x], 10);
     if (status !== 0) // STATUS_TIMEOUT
-        return await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
+        return <HT>await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
 
-    return result;
+    return <HT>result;
 }

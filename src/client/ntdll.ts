@@ -76,7 +76,7 @@ class SubsystemClass {
                 }
             });
 
-            __postMessage({
+            globalThis.postMessage({
                 lpSubsystem: this.name,
                 nType: msg.nType,
                 nChannel: msg.nReplyChannel ?? channel,
@@ -98,7 +98,7 @@ class SubsystemClass {
         });
     }
 
-    public RegisterCallback(callback: (msg: Message) => void, persist: boolean = false): number {
+    public RegisterCallback(callback: (msg: Message) => any | Promise<any>, persist: boolean = false): number {
         const id = this.callbackId++;
         const handler = async (msg: Message) => {
             if (!persist)
@@ -110,6 +110,10 @@ class SubsystemClass {
         return id;
     }
 
+    public GetCallback(id: number): ((msg: Message) => void) | undefined {
+        return this.callbackMap.get(id);
+    }
+
     private async HandleMessage(msg: Message): Promise<void> {
         if (msg.lpSubsystem !== this.name) return;
 
@@ -118,7 +122,7 @@ class SubsystemClass {
         const callback = msg.nChannel && this.callbackMap.get(msg.nChannel);
         if (callback) {
             let ret = await callback(msg);
-            if (ret !== undefined && msg.nReplyChannel) {
+            if (msg.nReplyChannel) {
                 await this.PostMessage({ nType: msg.nType, nChannel: msg.nReplyChannel, data: ret });
             }
         } else {

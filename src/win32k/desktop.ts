@@ -1,7 +1,7 @@
 import { ObEnumHandlesByType, ObGetObject, ObSetObject } from "../objects.js";
 import { HANDLE, PEB } from "../types/types.js";
 import { CREATE_DESKTOP, CREATE_WINDOW_EX, WMP } from "../types/user32.int.types.js";
-import { HT, HWND, SM, SW, SWP, WM, WS } from "../types/user32.types.js";
+import { HT, HWND, LPARAM, LRESULT, SM, SW, SWP, WM, WPARAM, WS } from "../types/user32.types.js";
 import { NtDefWindowProc } from "./def.js";;
 import DesktopElement from "./html/DesktopElement.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
@@ -70,7 +70,7 @@ export async function NtUserCreateDesktop(peb: PEB, pDeskParams: CREATE_DESKTOP)
 }
 
 
-export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: number, lParam: number): Promise<number> {
+export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     const wnd = ObGetObject<WND>(hWnd);
     if (!wnd) {
         console.error("NtUserDesktopWndProc: wnd not found");

@@ -1,7 +1,38 @@
-import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, PEEK_MESSAGE, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
+import {
+    CALL_WINDOW_PROC_PARAMS,
+    CALL_WINDOW_PROC_REPLY,
+    CREATE_DESKTOP,
+    CREATE_WINDOW_EX,
+    CREATE_WINDOW_EX_REPLY,
+    FIND_WINDOW,
+    GET_CLIENT_RECT,
+    GET_CLIENT_RECT_REPLY,
+    GET_MESSAGE,
+    GET_MESSAGE_REPLY,
+    GET_PROP_PARAMS,
+    GET_PROP_REPLY,
+    GET_WINDOW_LONG_PARAMS,
+    GET_WINDOW_LONG_REPLY,
+    PEEK_MESSAGE,
+    REGISTER_CLASS,
+    REGISTER_CLASS_REPLY,
+    REMOVE_PROP_PARAMS,
+    REMOVE_PROP_REPLY,
+    SCREEN_TO_CLIENT,
+    SCREEN_TO_CLIENT_REPLY,
+    SET_PROP_PARAMS,
+    SET_PROP_REPLY,
+    SET_WINDOW_LONG_PARAMS,
+    SET_WINDOW_LONG_REPLY,
+    SET_WINDOW_POS,
+    SHOW_WINDOW,
+    SHOW_WINDOW_REPLY,
+    WNDCLASS_WIRE,
+    WNDPROC_PARAMS
+} from "../types/user32.int.types.js";
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "../types/types.js";
 import { LPRECT, OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
-import { NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
+import { NtCallWindowProc, NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
 import { NtDispatchMessage, NtGetMessage, NtPeekMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
 import { NtInitSysMetrics, NtUserGetSystemMetrics } from "../win32k/metrics.js";
 import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow } from "../win32k/wndpos.js";
@@ -9,8 +40,10 @@ import { NtUserCreateDesktop, NtUserDesktopWndProc } from "../win32k/desktop.js"
 import USER32, { HWND, LRESULT, MSG, WNDCLASSEX, WS, } from "../types/user32.types.js";
 
 import { ButtonWndProc } from "./user32/button.js";
+import { NtCreateCallback } from "../callback.js";
 import { NtDefWindowProc } from "../win32k/def.js";
 import { NtRegisterClassEx } from "../win32k/class.js";
+import { NtUserGetWindowLong, NtUserSetWindowLong } from "../win32k/gwl.js";
 import { NtUserScreenToClient } from "../win32k/client.js";
 import { ObGetObject } from "../objects.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
@@ -204,6 +237,75 @@ function UserPostMessage(peb: PEB, params: WNDPROC_PARAMS) {
     NtPostMessage(peb, params);
 }
 
+function UserGetProp(peb: PEB, params: GET_PROP_PARAMS): GET_PROP_REPLY {
+    const wnd = ObGetObject<WND>(params.hWnd);
+    if (!wnd) return { retVal: 0 };
+
+    let prop = wnd.props.get(params.lpString) || 0;
+    if (typeof prop === 'function') {
+        prop = { __t: 'callback', __c: NtCreateCallback(peb, prop), __s: 'server' };
+    }
+
+    return { retVal: prop };
+}
+
+function UserSetProp(peb: PEB, params: SET_PROP_PARAMS): SET_PROP_REPLY {
+    const wnd = ObGetObject<WND>(params.hWnd);
+    if (!wnd) return { retVal: false };
+
+    wnd.props.set(params.lpString, params.hData);
+
+    return { retVal: true };
+}
+
+function UserRemoveProp(peb: PEB, params: REMOVE_PROP_PARAMS): REMOVE_PROP_REPLY {
+    const wnd = ObGetObject<WND>(params.hWnd);
+    if (!wnd) return { retVal: 0 };
+
+    const prop = wnd.props.get(params.lpString);
+    if (!prop) return { retVal: 0 };
+
+    wnd.props.delete(params.lpString);
+
+    return { retVal: prop };
+}
+
+function UserGetWindowLong(peb: PEB, params: GET_WINDOW_LONG_PARAMS): GET_WINDOW_LONG_REPLY {
+    const wnd = ObGetObject<WND>(params.hWnd);
+    if (!wnd) return { retVal: 0 };
+
+    let val = NtUserGetWindowLong(peb, wnd, params.nIndex)
+    if (typeof val === 'function') {
+        val = NtCreateCallback(peb, <any>val);
+    }
+
+    return { retVal: val };
+}
+
+async function UserSetWindowLong(peb: PEB, params: SET_WINDOW_LONG_PARAMS): Promise<SET_WINDOW_LONG_REPLY> {
+    const wnd = ObGetObject<WND>(params.hWnd);
+    if (!wnd) return { retVal: 0 };
+
+    let val = await NtUserSetWindowLong(peb, wnd, params.nIndex, params.dwNewLong);
+    if (typeof val === 'function') {
+        val = NtCreateCallback(peb, <any>val);
+    }
+
+    return { retVal: val };
+}
+
+function UserGetParent(peb: PEB, params: HWND): HWND {
+    const wnd = ObGetObject<WND>(params);
+    if (!wnd) return 0;
+
+    return wnd.hParent;
+}
+
+async function UserCallWindowProc(peb: PEB, params: CALL_WINDOW_PROC_PARAMS): Promise<CALL_WINDOW_PROC_REPLY> {
+    let result = await NtCallWindowProc(peb, params.lpPrevWndFunc, params.hWnd, params.uMsg, params.wParam, params.lParam);
+    return { retVal: result };
+}
+
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_USER32,
     lpfnInit: NtUser32Initialize,
@@ -227,7 +329,15 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.FindWindow]: UserFindWindow,
         [USER32.GetClientRect]: UserGetClientRect,
         [USER32.SendMessage]: UserSendMessage,
-        [USER32.PostMessage]: UserPostMessage
+        [USER32.PostMessage]: UserPostMessage,
+        [USER32.GetProp]: UserGetProp,
+        [USER32.SetProp]: UserSetProp,
+        [USER32.RemoveProp]: UserRemoveProp,
+        [USER32.GetWindowLong]: UserGetWindowLong,
+        [USER32.SetWindowLong]: UserSetWindowLong,
+        [USER32.GetParent]: UserGetParent,
+        // [USER32.SetParent]: null,
+        [USER32.CallWindowProc]: UserCallWindowProc,
     }
 };
 

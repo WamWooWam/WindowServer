@@ -248,7 +248,7 @@ async function NtUserWinPosDoNCCALCSize(wnd: WND, winPos: WINDOWPOS, windowRect:
         winposCopy = { ...winPos };
         params.lppos = winposCopy;
 
-        params = await NtDispatchMessage(wnd.peb, [wnd.hWnd, WM.NCCALCSIZE, true, params]);
+        params = <NCCALCSIZE_PARAMS>await NtDispatchMessage(wnd.peb, [wnd.hWnd, WM.NCCALCSIZE, true, params]);
         if (params.rgrc[0] === null) {
             params.rgrc[0] = { top: 0, left: 0, right: 0, bottom: 0 }
         }
@@ -977,8 +977,10 @@ export async function NtUserActivateOtherWindowMin(peb: PEB, wnd: WND) {
         while (pWndSetActive) {
             if (ObGetObject<WND>(pWndSetActive.hWnd) &&
                 !(pWndSetActive.dwExStyle & WS.EX.NOACTIVATE) &&
-                (pWndSetActive.dwStyle & (WS.VISIBLE | WS.DISABLED)) == WS.VISIBLE &&
-                (!(pWndSetActive.dwStyle & WS.ICONIC) /* FIXME MinMax pos? */)) {
+                (pWndSetActive.dwStyle & (WS.VISIBLE | WS.DISABLED)) == WS.VISIBLE
+                // && (!(pWndSetActive.dwStyle & WS.ICONIC) /* FIXME MinMax pos? */)
+                ) {
+
                 if (!(pWndSetActive.dwExStyle & WS.EX.TOOLWINDOW)) {
                     // UserRefObjectCo(pWndSetActive, &Ref);
                     //ERR("ActivateOtherWindowMin Set FG 1\n");

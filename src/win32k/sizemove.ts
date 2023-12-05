@@ -1,7 +1,7 @@
 import { HT, LPARAM, SC, SM, SWP, VK, WM, WMSZ, WPARAM, WS } from "../types/user32.types.js";
 import { NtUserGetCapture, NtUserGetCursorPos, NtUserReleaseCapture, NtUserSetCapture } from "./cursor.js";
 import { NtUserGetClientRect, NtUserMapWindowPoints, NtUserWinPosGetMinMaxInfo } from "./window.js";
-import { OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
+import { LPRECT, OffsetRect, POINT, RECT } from "../types/gdi32.types.js";
 
 import { HasThickFrame } from "./def.js";
 import { NtDispatchMessage } from "./msg.js";
@@ -22,8 +22,8 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
         return;
     }
 
-    const sysCommand = wParam & 0xFFF0;
-    let hitTest = wParam & 0xF;
+    const sysCommand = <number>wParam & 0xFFF0;
+    let hitTest = <number>wParam & 0xF;
 
     const style = wnd.dwStyle;
     const exStyle = wnd.dwExStyle;
@@ -216,8 +216,8 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
                 if (hitTest >= HT.LEFT && hitTest <= HT.BOTTOMRIGHT)
                     wpSizingHit = WMSZ.LEFT + (hitTest - HT.LEFT);
 
-                let rect = await NtDispatchMessage(peb, [wnd.hWnd, WM.SIZING, wpSizingHit, newRect]);
-                if (typeof rect === "object") {
+                let rect = <LPRECT>await NtDispatchMessage(peb, [wnd.hWnd, WM.SIZING, wpSizingHit, newRect]);
+                if (rect && typeof rect === "object") {
                     newRect.left = rect.left;
                     newRect.top = rect.top;
                     newRect.right = rect.right;
@@ -225,8 +225,8 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
                 }
             }
             else {
-                let rect = await NtDispatchMessage(peb, [wnd.hWnd, WM.MOVING, 0, newRect]);
-                if (typeof rect === "object") {
+                let rect = <LPRECT>await NtDispatchMessage(peb, [wnd.hWnd, WM.MOVING, 0, newRect]);
+                if (rect && typeof rect === "object") {
                     newRect.left = rect.left;
                     newRect.top = rect.top;
                     newRect.right = rect.right;
@@ -267,7 +267,7 @@ export async function DefWndStartSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, pt
     const rectWindow = wnd.rcWindow as RECT;
 
     let hitTest = 0;
-    if ((wParam & 0xFFF0) === SC.MOVE) {
+    if ((<number>wParam & 0xFFF0) === SC.MOVE) {
         if (wnd.dwStyle & WS.SYSMENU) {
             rectWindow.left += NtUserGetSystemMetrics(peb, SM.CXSIZE) + 1;
         }

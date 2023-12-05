@@ -25,6 +25,14 @@ const USER32 = {
     GetClientRect: 0x00000011,
     SendMessage: 0x00000012,
     PostMessage: 0x00000013,
+    GetProp: 0x00000014,
+    SetProp: 0x00000015,
+    RemoveProp: 0x00000016,
+    GetWindowLong: 0x00000017,
+    SetWindowLong: 0x00000018,
+    GetParent: 0x00000019,
+    SetParent: 0x0000001A,
+    CallWindowProc: 0x0000001B,
 }
 
 export const HWND_TOP = 0;
@@ -343,7 +351,7 @@ export enum WM {
     EXITSIZEMOVE = 0x0232,
 
     // TODO: the rest
-    
+
     COMMAND = 0x0111,
 
     PARENTNOTIFY = 0x0210,
@@ -897,6 +905,16 @@ export enum PM {
     NOYIELD = 2,
 }
 
+export enum GWL {
+    WNDPROC = -4,
+    HINSTANCE = -6,
+    HWNDPARENT = -8,
+    STYLE = -16,
+    EXSTYLE = -20,
+    USERDATA = -21,
+    ID = -12,
+}
+
 export type HWND = HANDLE;
 export type HINSTANCE = HANDLE;
 export type HICON = HANDLE;
@@ -904,20 +922,20 @@ export type HCURSOR = HANDLE;
 export type HBRUSH = HANDLE;
 export type HMENU = HANDLE;
 
-export type WPARAM = number | any;
-export type LPARAM = number | any;
-export type LRESULT = number | any;
+export type WPARAM = number | object | string | boolean | symbol | null;
+export type LPARAM = number | object | string | boolean | symbol | null;
+export type LRESULT = number | object | string | boolean | symbol | null;
 
 export type ATOM = number;
 
 export type WNDPROC = (hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM) => LRESULT | Promise<LRESULT>;
 
 export function LOWORD(lParam: LPARAM) {
-    return lParam & 0xFFFF;
+    return <number>lParam & 0xFFFF;
 }
 
 export function HIWORD(lParam: LPARAM) {
-    return (lParam >> 16) & 0xFFFF;
+    return (<number>lParam >> 16) & 0xFFFF;
 }
 
 export function MAKEWPARAM(low: number, high: number) {

@@ -5,10 +5,42 @@
  * @usermode
  */
 
-import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, PEEK_MESSAGE, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
+import {
+    CALL_WINDOW_PROC_PARAMS,
+    CALL_WINDOW_PROC_REPLY,
+    CREATE_DESKTOP,
+    CREATE_WINDOW_EX,
+    CREATE_WINDOW_EX_REPLY,
+    FIND_WINDOW,
+    GET_CLIENT_RECT,
+    GET_CLIENT_RECT_REPLY,
+    GET_MESSAGE,
+    GET_MESSAGE_REPLY,
+    GET_PROP_PARAMS,
+    GET_PROP_REPLY,
+    GET_WINDOW_LONG_PARAMS,
+    GET_WINDOW_LONG_REPLY,
+    PEEK_MESSAGE,
+    REGISTER_CLASS,
+    REGISTER_CLASS_REPLY,
+    REMOVE_PROP_PARAMS,
+    REMOVE_PROP_REPLY,
+    SCREEN_TO_CLIENT,
+    SCREEN_TO_CLIENT_REPLY,
+    SET_PROP_PARAMS,
+    SET_PROP_REPLY,
+    SET_WINDOW_LONG_PARAMS,
+    SET_WINDOW_LONG_REPLY,
+    SET_WINDOW_POS,
+    SHOW_WINDOW,
+    SHOW_WINDOW_REPLY,
+    WNDCLASS_WIRE,
+    WNDPROC_PARAMS
+} from "../types/user32.int.types.js";
 import { HDC, POINT, RECT } from "../types/gdi32.types.js";
-import USER32, { ATOM, HINSTANCE, LPARAM, LRESULT, MSG, SM, WNDCLASS, WPARAM } from "../types/user32.types.js";
+import USER32, { ATOM, HINSTANCE, LPARAM, LRESULT, MSG, SM, WNDCLASS, WNDPROC, WPARAM } from "../types/user32.types.js";
 
+import { CALLBACK_MESSAGE_TYPE } from "../types/ntdll.types.js";
 import Executable from "../types/Executable.js";
 import { GetModuleHandle } from "./kernel32.js";
 import { HANDLE } from "../types/types.js";
@@ -339,7 +371,7 @@ export function GetSystemMetrics(nIndex: number): number {
     }
 
     if (!User32.memory) {
-        throw new Error(`GetSystemMetrics: User32 memory not initialized`); 
+        throw new Error(`GetSystemMetrics: User32 memory not initialized`);
     }
 
     const SysMetricsSharedBufferView = new Int32Array(User32.memory.slice(16, 16 + SM.CMETRICS * 4));
@@ -465,6 +497,116 @@ export async function PostMessage(hWnd: HANDLE, Msg: number, wParam: WPARAM, lPa
         nType: USER32.PostMessage,
         data: [hWnd, Msg, wParam, lParam]
     });
+}
+
+export async function GetProp(hWnd: HANDLE, lpString: string): Promise<any> {
+    const msg = await User32.SendMessage<GET_PROP_PARAMS, GET_PROP_REPLY>({
+        nType: USER32.GetProp,
+        data: { hWnd, lpString }
+    });
+
+    if ((typeof msg.data.retVal === "object")
+        && '__c' in msg.data.retVal
+        && '__t' in msg.data.retVal
+        && '__s' in msg.data.retVal
+        && msg.data.retVal.__t === 'callback'
+        && typeof msg.data.retVal.__c === "number"
+        && typeof msg.data.retVal.__s === "string") {
+        if (msg.data.retVal.__s === 'client') {
+            let callback = User32.GetCallback(msg.data.retVal.__c)
+            msg.data.retVal = (...params: any[]) => {
+                return callback!({ data: params } as Message<any>);
+            }
+        }
+        else {
+            msg.data.retVal = (...params: any[]) => {
+                return User32.SendMessage({
+                    nType: CALLBACK_MESSAGE_TYPE,
+                    nReplyChannel: msg.data.retVal.__c,
+                    data: params
+                })
+            }
+        }
+    }
+
+    return msg.data.retVal;
+}
+
+export async function SetProp(hWnd: HANDLE, lpString: string, hData: any): Promise<boolean> {
+    if (typeof hData === "function") {
+        let func = hData;
+        let cbFunc = (msg: Message<any[]>) =>
+            func(...msg.data);
+        hData = { __t: 'callback', __c: User32.RegisterCallback(cbFunc, true), __s: 'client' };
+    }
+
+    const msg = await User32.SendMessage<SET_PROP_PARAMS, SET_PROP_REPLY>({
+        nType: USER32.SetProp,
+        data: { hWnd, lpString, hData }
+    });
+
+    return msg.data.retVal;
+}
+
+export async function RemoveProp(hWnd: HANDLE, lpString: string): Promise<any> {
+    const msg = await User32.SendMessage<REMOVE_PROP_PARAMS, REMOVE_PROP_REPLY>({
+        nType: USER32.RemoveProp,
+        data: { hWnd, lpString }
+    });
+
+    return msg.data.retVal;
+}
+
+export async function GetWindowLong(hWnd: HANDLE, nIndex: number): Promise<number> {
+    const msg = await User32.SendMessage<GET_WINDOW_LONG_PARAMS, GET_WINDOW_LONG_REPLY>({
+        nType: USER32.GetWindowLong,
+        data: { hWnd, nIndex }
+    });
+
+    return msg.data.retVal;
+}
+
+export async function SetWindowLong(hWnd: HANDLE, nIndex: number, dwNewLong: number | Function): Promise<number> {
+    let dwNewLongWire: number | Function = dwNewLong;
+    if (typeof dwNewLong === 'function') {
+        dwNewLongWire = User32.RegisterCallback((msg: Message<any[]>) => { return dwNewLong(...msg.data); }, true)
+    }
+
+    const msg = await User32.SendMessage<SET_WINDOW_LONG_PARAMS, SET_WINDOW_LONG_REPLY>({
+        nType: USER32.SetWindowLong,
+        data: { hWnd, nIndex, dwNewLong: dwNewLongWire }
+    });
+
+    return msg.data.retVal;
+}
+
+export async function GetParent(hWnd: HANDLE): Promise<HANDLE> {
+    const msg = await User32.SendMessage<HANDLE>({
+        nType: USER32.GetParent,
+        data: hWnd
+    });
+
+    return msg.data;
+}
+
+export async function CallWindowProc(lpPrevWndFunc: WNDPROC | number, hWnd: HANDLE, Msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    let lpPrevWndFuncWire: number | Function = lpPrevWndFunc;
+    if (typeof lpPrevWndFunc === 'function') {
+        lpPrevWndFuncWire = User32.RegisterCallback((msg: Message<any[]>) => { return (<Function>lpPrevWndFunc)(...msg.data); }, false);
+    }
+
+    const msg = await User32.SendMessage<CALL_WINDOW_PROC_PARAMS, CALL_WINDOW_PROC_REPLY>({
+        nType: USER32.CallWindowProc,
+        data: {
+            lpPrevWndFunc: <number>lpPrevWndFuncWire,
+            hWnd,
+            uMsg: Msg,
+            wParam,
+            lParam
+        }
+    });
+
+    return msg.data.retVal;
 }
 
 const user32: Executable = {

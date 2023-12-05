@@ -40,11 +40,11 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
             case WMP.CREATEELEMENT:
                 return await NtDefCreateElement(peb, hWnd, Msg, wParam, lParam);
             case WMP.ADDCHILD:
-                return await NtDefAddChild(hWnd, wParam);
+                return await NtDefAddChild(hWnd, <number>(wParam || 0));
             case WMP.REMOVECHILD:
-                return await NtDefRemoveChild(hWnd, wParam);
+                return await NtDefRemoveChild(hWnd, <number>(wParam || 0));
             case WMP.UPDATEWINDOWSTYLE:
-                return await NtDefUpdateWindowStyle(peb, hWnd, wParam, lParam);
+                return await NtDefUpdateWindowStyle(peb, hWnd, <number>(wParam), <number>(lParam));
             case WM.NCCALCSIZE:
                 return NtDefCalcNCSizing(peb, hWnd, Msg, wParam, lParam);
             case WM.NCHITTEST:
@@ -170,7 +170,7 @@ function NtDefUpdateWindowStyle(peb: PEB, hWnd: HWND, dwNewStyle: number, dwOldS
 
 async function NtDefWndHandleSysCommand(peb: PEB, wnd: WND, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     // console.log(`NtDefWndHandleSysCommand: probably ${SC[wParam & 0xFFF0]}`);
-    switch (wParam & 0xFFF0) {
+    switch (<number>(wParam) & 0xFFF0) {
         case SC.MINIMIZE:
             await NtUserShowWindow(peb, wnd.hWnd, SW.MINIMIZE);
             return 0;

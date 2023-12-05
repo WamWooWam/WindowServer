@@ -71,7 +71,7 @@ export async function ButtonWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lP
         case WM.NCHITTEST:
             return HT.CLIENT;
         case WM.SETTEXT:
-            element.innerText = lParam;
+            element.setText(<string>lParam);
             return 0;
         case WM.GETTEXT:
             return element.innerText;
@@ -80,7 +80,7 @@ export async function ButtonWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lP
         case BM.GETCHECK:
             return element.checkState;
         case BM.SETCHECK:
-            element.checkState = wParam;
+            element.checkState = <number>wParam;
             return 0;
         case BM.GETSTATE:
             return element.pressState ? 1 : 0;

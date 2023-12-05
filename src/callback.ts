@@ -21,3 +21,13 @@ export async function NtDoCallbackAsync(peb: PEB, subsys: SubsystemId, callback:
 
     return await process.SendMessage(msg);
 }
+
+export function NtCreateCallback(peb: PEB, handler: (...params: any[]) => any | Promise<any>): HCALLBACK {
+    const process = ObGetObject<PsProcess>(peb.hProcess);
+    if (!process) {
+        return 0;
+    }
+
+    const callback = process.RegisterCallback((msg) => handler(...msg.data), true);
+    return callback;
+}

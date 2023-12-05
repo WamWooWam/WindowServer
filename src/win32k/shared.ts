@@ -1,4 +1,4 @@
-import { HBRUSH, HCURSOR, HICON, HINSTANCE, HWND, LPARAM, LRESULT, MSG, WPARAM } from "../types/user32.types.js";
+import { HBRUSH, HCURSOR, HICON, HINSTANCE, HWND, LPARAM, LRESULT, MSG, WNDPROC, WPARAM } from "../types/user32.types.js";
 
 import DESKTOP from "./desktop.js";
 import { ObGetObject } from "../objects.js";
@@ -36,7 +36,7 @@ export interface W32CLASSINFO {
     lpszClassName: string;
     lpszClassVersion: string;
     lpszMenuName: string;
-    lpfnWndProc: (hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM) => LRESULT | Promise<LRESULT>;
+    lpfnWndProc: number | WNDPROC; 
     hIcon: HICON;
     hCursor: HCURSOR;
     hbrBackground: HBRUSH;

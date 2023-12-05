@@ -250,7 +250,7 @@ async function NtUserHitTestWindowRecursive(lpPoint: POINT, hWnd: HWND, callback
         }
     }
 
-    const result = await NtUserDoNCHitTest(pWnd, lpPoint.x, lpPoint.y);
+    const result = <HT>await NtUserDoNCHitTest(pWnd, lpPoint.x, lpPoint.y);
     if (result !== HT.TRANSPARENT && result !== HT.NOWHERE && result !== HT.ERROR) {
         callback(hWnd, result);
         return hWnd;

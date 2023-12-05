@@ -1,4 +1,4 @@
-import { ATOM, HCURSOR, HICON, HINSTANCE, HMENU, HWND, LPARAM, MSG, WNDCLASS, WPARAM } from "./user32.types.js";
+import { ATOM, HCURSOR, HICON, HINSTANCE, HMENU, HWND, LPARAM, LRESULT, MSG, WNDCLASS, WPARAM } from "./user32.types.js";
 import { HBRUSH, LPPOINT, LPRECT, POINT, RECT } from "./gdi32.types.js";
 
 import { HANDLE } from "./types.js";
@@ -137,3 +137,62 @@ export interface GET_CLIENT_RECT_REPLY {
 }
 
 export type PWND = WND | null;
+
+export type GET_PROP_PARAMS = {
+    hWnd: HWND;
+    lpString: string;
+}
+
+export type GET_PROP_REPLY = {
+    retVal: any;
+}
+
+export type SET_PROP_PARAMS = {
+    hWnd: HWND;
+    lpString: string;
+    hData: any;
+}
+
+export type SET_PROP_REPLY = {
+    retVal: boolean;
+}
+
+export type REMOVE_PROP_PARAMS = {
+    hWnd: HWND;
+    lpString: string;
+}
+
+export type REMOVE_PROP_REPLY = {
+    retVal: any;
+}
+
+export type GET_WINDOW_LONG_PARAMS = {
+    hWnd: HWND;
+    nIndex: number;
+}
+
+export type GET_WINDOW_LONG_REPLY = {
+    retVal: number;
+}
+
+export type SET_WINDOW_LONG_PARAMS = {
+    hWnd: HWND;
+    nIndex: number;
+    dwNewLong: any;
+}
+
+export type SET_WINDOW_LONG_REPLY = {
+    retVal: number;
+}
+
+export type CALL_WINDOW_PROC_PARAMS = {
+    lpPrevWndFunc: number;
+    hWnd: HWND;
+    uMsg: number;
+    wParam: WPARAM;
+    lParam: LPARAM;
+}
+
+export type CALL_WINDOW_PROC_REPLY = {
+    retVal: LRESULT;
+}
