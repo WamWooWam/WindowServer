@@ -63,6 +63,7 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
     if (wnd.wndPrev) {
         console.assert(wnd != wInsertAfter.wndNext);
 
+        let oldParent = wnd.wndParent;
         NtUserWndSetNext(wnd, wInsertAfter.wndNext);
 
         if (wnd.wndNext) {
@@ -72,12 +73,19 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
         console.assert(wnd != wnd.wndPrev);
         NtUserWndSetNext(wnd.wndPrev, wnd);
 
-        // TODO: i don't know if this is where this should be done
-        if (wInsertAfter) {
-            wInsertAfter.pRootElement.insertAdjacentElement("afterend", wnd.pRootElement);
+        // if the parent element is going to be the same, then we don't need to remove the element
+        if (wnd?.wndParent.pRootElement.contains(wnd.pRootElement)) {
+            // so just fix the z-order
+            wnd.wndParent?.FixZOrder();
         }
         else {
-            wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
+            // TODO: i don't know if this is where this should be done
+            if (wInsertAfter) {
+                wInsertAfter.pRootElement.insertAdjacentElement("afterend", wnd.pRootElement);
+            }
+            else {
+                wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
+            }
         }
     }
     else {
@@ -92,12 +100,19 @@ export function NtUserLinkWindow(wnd: WND, wInsertAfter: WND) {
 
         NtUserWndSetChild(wnd.wndParent, wnd);
 
-        // TODO: i dont know if this is where this should be done        
-        if (wInsertAfter) {
-            wInsertAfter.pRootElement.insertAdjacentElement("afterbegin", wnd.pRootElement);
+        // if the parent element is going to be the same, then we don't need to remove the element
+        if (wnd?.wndParent.pRootElement.contains(wnd.pRootElement)) {
+            // so just fix the z-order
+            wnd.wndParent?.FixZOrder();
         }
         else {
-            wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
+            // TODO: i dont know if this is where this should be done        
+            if (wInsertAfter) {
+                wInsertAfter.pRootElement.insertAdjacentElement("afterbegin", wnd.pRootElement);
+            }
+            else {
+                wnd.wndParent?.pRootElement.appendChild(wnd.pRootElement);
+            }
         }
     }
 }
