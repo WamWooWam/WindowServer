@@ -1,3 +1,10 @@
+/**
+ * @module kernel32
+ * @description Windows NT BASE API Client Library
+ * @see {@link https://docs.microsoft.com/en-us/windows/win32/api/winbase/}
+ * @usermode
+ */
+
 import { CLOSE_HANDLE, CREATE_DIRECTORY, CREATE_DIRECTORY_REPLY, CREATE_FILE, CREATE_FILE_REPLY, GET_MODULE_HANDLE, GET_MODULE_HANDLE_REPLY, GET_PROCESS_INFO, GET_PROCESS_INFO_REPLY, READ_FILE, READ_FILE_REPLY, SET_FILE_POINTER, SET_FILE_POINTER_REPLY, WRITE_FILE, WRITE_FILE_REPLY } from "../types/kernel32.int.types.js";
 import KERNEL32, { IDX_LAST_ERROR, IDX_PID, STD_ERROR_HANDLE, STD_INPUT_HANDLE, } from "../types/kernel32.types.js";
 

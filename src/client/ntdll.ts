@@ -1,4 +1,9 @@
-// env: worker
+/**
+ * @module ntdll
+ * @description NT Layer DLL
+ * @see {@link https://docs.microsoft.com/en-us/windows/win32/api/winbase/}
+ * @usermode
+ */
 
 import {
     LOAD_SUBSYSTEM,

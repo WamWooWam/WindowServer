@@ -1,3 +1,10 @@
+/**
+ * @module gdi32
+ * @description GDI Client Library
+ * @see {@link https://docs.microsoft.com/en-us/windows/win32/gdi/windows-gdi}
+ * @usermode
+ */
+
 import { GDI32, HRGN } from "../types/gdi32.types.js";
 
 import { HANDLE } from "../types/types.js";

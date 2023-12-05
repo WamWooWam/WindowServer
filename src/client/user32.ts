@@ -1,3 +1,10 @@
+/**
+ * @module user32
+ * @description Windows USER API Client Library
+ * @see {@link https://docs.microsoft.com/en-us/windows/win32/api/winuser/}
+ * @usermode
+ */
+
 import { CREATE_DESKTOP, CREATE_WINDOW_EX, CREATE_WINDOW_EX_REPLY, FIND_WINDOW, GET_CLIENT_RECT, GET_CLIENT_RECT_REPLY, GET_MESSAGE, GET_MESSAGE_REPLY, PEEK_MESSAGE, REGISTER_CLASS, REGISTER_CLASS_REPLY, SCREEN_TO_CLIENT, SCREEN_TO_CLIENT_REPLY, SET_WINDOW_POS, SHOW_WINDOW, SHOW_WINDOW_REPLY, WNDCLASS_WIRE, WNDPROC_PARAMS } from "../types/user32.int.types.js";
 import { HDC, POINT, RECT } from "../types/gdi32.types.js";
 import USER32, { ATOM, HINSTANCE, LPARAM, LRESULT, MSG, SM, WNDCLASS, WPARAM } from "../types/user32.types.js";

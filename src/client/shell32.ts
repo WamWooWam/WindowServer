@@ -1,20 +1,13 @@
-import { SH_CREATE_DIRECTORY_EX, SH_CREATE_DIRECTORY_EX_REPLY } from "../types/shell32.int.types.js";
+/**
+ * @module shell32
+ * @description Windows Shell Common Library
+ * @see {@link https://docs.microsoft.com/en-us/windows/win32/shell/shell-reference}
+ * @usermode
+ */
 
+import { CreateDirectory } from "./kernel32.js";
 import Executable from "../types/Executable.js";
-import Message from "../types/Message.js";
-import { NtRegisterSubsystem } from "./ntdll.js";
-import SHELL32 from "../types/shell32.types.js";
-import { SUBSYS_SHELL32 } from "../types/subsystems.js";
 
-export * from "../types/shell32.types.js";
-
-const Shell32 = await NtRegisterSubsystem(SUBSYS_SHELL32, Shell32_HandleMessage);
-
-function Shell32_HandleMessage(msg: Message) {
-
-}
-
-// TOOD: this should really be client-side
 /**
  * Creates a new file system folder with the specified attributes.
  * @deprecated This function is available through Windows XP with Service Pack 2 (SP2) and Windows Server 2003. It might be altered or unavailable in subsequent versions of Windows.
@@ -31,16 +24,19 @@ export async function SHCreateDirectoryEx(
     pszPath: string,
     psa: number
 ): Promise<number> {
-    const msg = await Shell32.SendMessage<SH_CREATE_DIRECTORY_EX, SH_CREATE_DIRECTORY_EX_REPLY>({
-        nType: SHELL32.SHCreateDirectoryEx,
-        data: {
-            hwnd: hwnd,
-            pszPath: pszPath,
-            psa: psa
+    try {
+        let split = pszPath.split("\\");
+        let path = "";
+        for (let i = 0; i < split.length; i++) {
+            path += split[i] + "\\";
+            await CreateDirectory(path, psa);
         }
-    });
 
-    return msg.data.retVal;
+        return 0;
+    }
+    catch {
+        return -1;
+    }
 }
 
 const shell32: Executable = {
