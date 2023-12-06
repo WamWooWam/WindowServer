@@ -5,9 +5,19 @@ import { NtDoCallbackAsync } from "../callback.js";
 import { PEB } from "../types/types.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
 import { WNDCLASS_WIRE } from "../types/user32.int.types.js";
+import { ObGetObject } from "../objects.js";
+import { PsProcess } from "../process.js";
 
 export function NtCreateWndProcCallback(peb: PEB, lpfnWndProc: number | WNDPROC): WNDPROC {
     if (typeof lpfnWndProc === "number") {
+        let process = ObGetObject<PsProcess>(peb.hProcess);
+        let localCallback: Function | null = null;
+        if (process && (localCallback = process.GetCallback(lpfnWndProc)!)) {
+            return async (hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM) => {
+                return (await localCallback!({ data: [hWnd, uMsg, wParam, lParam] })).data;
+            };
+        }
+
         async function NT_IS_CALLING_INTO_USERSPACE(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<number> {
             const now = performance.now();
             try {

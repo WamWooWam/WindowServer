@@ -47,9 +47,9 @@ export async function NtUserSetWindowLong(peb: PEB, wnd: WND, nIndex: number, dw
             wnd.dwUserData = dwNewLong;
             break;
         case GWL.WNDPROC: {
-            let oldValue = wnd.lpfnWndProc;
-            if (typeof oldValue === 'function') {
-                oldValue = NtCreateCallback(peb, oldValue);
+            let pOldValue = wnd.lpfnWndProc;
+            if (typeof pOldValue === 'function') {
+                oldValue = NtCreateCallback(peb, pOldValue);
             }
             else {
                 oldValue = <number>oldValue;

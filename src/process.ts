@@ -201,6 +201,10 @@ export class PsProcess {
         return id;
     }
 
+    public GetCallback(id: number): ((msg: Message) => void) | undefined {
+        return this.callbackMap.get(id);
+    }
+
     private async HandleMessage(msg: Message) {
         const callback = this.callbackMap.get(msg.nChannel!);
         if (callback) {

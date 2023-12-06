@@ -85,7 +85,7 @@ export async function ButtonWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lP
         case BM.GETSTATE:
             return element.pressState ? 1 : 0;
         case BM.SETSTATE:
-            element.pressState = wParam === 1;
+            element.pressState = !!wParam;
             return 0;
 
         default:

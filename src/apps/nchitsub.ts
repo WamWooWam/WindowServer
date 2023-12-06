@@ -21,18 +21,17 @@ import {
     DefWindowProc,
     DispatchMessage,
     GetMessage,
-    GetWindowRect,
     PostQuitMessage,
     RegisterClass,
     ScreenToClient,
     ShowWindow,
     TranslateMessage,
-    SendMessage,
-    GetParent,
     SetWindowLong,
     GWL,
     GetWindowLong,
-    CallWindowProc
+    CallWindowProc,
+    SendMessage,
+    BM
 } from "../client/user32.js";
 import { INRECT } from "../types/gdi32.types.js";
 
@@ -47,8 +46,6 @@ async function ButtonWndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LP
             return await CallWindowProc(oldWndProc, hwnd, msg, wParam, lParam);
         }
     }
-
-    return 0;
 }
 
 async function CreateButton(text: string, x: number, y: number, width: number, height: number, parent: HWND, nId: number) {
@@ -89,6 +86,9 @@ const htButtons = [
     HT.CLOSE,
 ];
 
+const hButtons: HWND[] = [];
+let hFocus = 0;
+
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
         case WM.CREATE: {
@@ -104,7 +104,8 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
             );
 
             for (let i = 0; i < 6; i++) {
-                await CreateButton(lpszButtons[i], rcButtons[i].left, rcButtons[i].top, rcButtons[i].right - rcButtons[i].left, rcButtons[i].bottom - rcButtons[i].top, hwnd, i);
+                let hBtn = await CreateButton(lpszButtons[i], rcButtons[i].left, rcButtons[i].top, rcButtons[i].right - rcButtons[i].left, rcButtons[i].bottom - rcButtons[i].top, hwnd, i);
+                hButtons.push(hBtn);
             }
             break;
         }
@@ -122,9 +123,17 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
 
             for (let i = 0; i < 6; i++) {
                 if (INRECT(point.x, point.y, rcButtons[i])) {
+                    if(hFocus !== hButtons[i]) {
+                        await SendMessage(hFocus, BM.SETSTATE, 0, 0);
+                        hFocus = hButtons[i];
+                        await SendMessage(hFocus, BM.SETSTATE, 1, 0);
+                    }
                     return htButtons[i];
                 }
             }
+
+            await SendMessage(hFocus, BM.SETSTATE, 0, 0);
+            hFocus = 0;
 
             return hitTest;
         }

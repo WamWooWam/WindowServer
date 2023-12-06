@@ -21,7 +21,6 @@ import {
     DefWindowProc,
     DispatchMessage,
     GetMessage,
-    GetWindowRect,
     PostQuitMessage,
     RegisterClass,
     ScreenToClient,
