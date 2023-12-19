@@ -1,10 +1,9 @@
-import { DRAWITEMSTRUCT, HT, HWND, LPARAM, LRESULT, ODA, ODS, ODT, SS, WM, WPARAM } from "../../types/user32.types.js";
+import { DRAWITEMSTRUCT, HT, HWND, LPARAM, LRESULT, ODA, ODS, ODT, SS, WM, WPARAM, WMP } from "../user32.js";
 import { NtDispatchMessage, NtPostMessage } from "../../win32k/msg.js";
 import { NtUserGetDC, NtUserIsWindowEnabled } from "../../win32k/window.js";
 
 import { ObGetObject } from "../../objects.js";
 import { StaticElement } from "../../win32k/html/StaticElement.js";
-import { WMP } from "../../types/user32.int.types.js";
 import WND from "../../win32k/wnd.js";
 
 export async function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {

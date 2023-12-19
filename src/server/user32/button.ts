@@ -1,4 +1,4 @@
-import { BM, BN, BS, HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, MAKEWPARAM, VK, WM, WPARAM, WS } from "../../types/user32.types.js";
+import { BM, BN, BS, HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, MAKEWPARAM, VK, WM, WPARAM, WS, WMP } from "../user32.js";
 import { NtUserReleaseCapture, NtUserSetCapture } from "../../win32k/cursor.js";
 
 import { ButtonElement } from "../../win32k/html/ButtonElement.js";
@@ -6,7 +6,6 @@ import { NtDefWindowProc } from "../../win32k/def.js";
 import { NtDispatchMessage } from "../../win32k/msg.js";
 import { NtUserGetClientRect } from "../../win32k/window.js";
 import { ObGetObject } from "../../objects.js";
-import { WMP } from "../../types/user32.int.types.js";
 import WND from "../../win32k/wnd.js";
 
 export async function ButtonWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {

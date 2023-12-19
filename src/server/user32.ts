@@ -20,6 +20,7 @@ import {
     REMOVE_PROP_REPLY,
     SCREEN_TO_CLIENT,
     SCREEN_TO_CLIENT_REPLY,
+    SET_PARENT_PARAMS,
     SET_PROP_PARAMS,
     SET_PROP_REPLY,
     SET_WINDOW_LONG_PARAMS,
@@ -51,6 +52,9 @@ import { StaticWndProc } from "./user32/static.js";
 import W32MSG_QUEUE from "../win32k/msgqueue.js";
 import { W32PROCINFO } from "../win32k/shared.js";
 import WND from "../win32k/wnd.js";
+
+export * from '../types/user32.int.types.js';
+export * from '../types/user32.types.js';
 
 const DefaultClasses: WNDCLASSEX[] = [
     {
@@ -301,6 +305,10 @@ function UserGetParent(peb: PEB, params: HWND): HWND {
     return wnd.hParent;
 }
 
+function UserSetParent(peb: PEB, params: SET_PARENT_PARAMS): HWND {
+    throw new Error("Not implemented");
+}
+
 async function UserCallWindowProc(peb: PEB, params: CALL_WINDOW_PROC_PARAMS): Promise<CALL_WINDOW_PROC_REPLY> {
     let result = await NtCallWindowProc(peb, params.lpPrevWndFunc, params.hWnd, params.uMsg, params.wParam, params.lParam);
     return { retVal: result };
@@ -336,7 +344,7 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.GetWindowLong]: UserGetWindowLong,
         [USER32.SetWindowLong]: UserSetWindowLong,
         [USER32.GetParent]: UserGetParent,
-        // [USER32.SetParent]: null,
+        [USER32.SetParent]: UserSetParent,
         [USER32.CallWindowProc]: UserCallWindowProc,
     }
 };

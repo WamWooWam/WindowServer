@@ -312,12 +312,13 @@ export default class WND {
         return [...this.GetChildren()];
     }
 
-    public set pRootElement(value: HTMLElement) {
+    public set pRootElement(value: HTMLElement | null) {
         if (this._hRootElement)
             ObCloseHandle(this._hRootElement);
 
         // store a handle to the element, so we can close it when we're done
-        this._hRootElement = ObSetObject(value, "HTMLElement", this._hWnd, (el) => el.remove());
+        if (value)
+            this._hRootElement = ObSetObject(value, "HTMLElement", this._hWnd, (el) => el.remove());
     }
 
     public get zIndex(): number {

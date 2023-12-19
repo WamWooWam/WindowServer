@@ -727,14 +727,16 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
 async function NtSendParentNotify(peb: PEB, pWnd: WND, msg: number) {
     if ((pWnd.dwStyle & (WS.CHILD | WS.POPUP)) == WS.CHILD
         && !(pWnd.dwExStyle & WS.EX.NOPARENTNOTIFY)) {
-        const parentWnd = ObGetObject<WND>(pWnd.hParent);
-        if (!parentWnd) {
+        const parentWnd = pWnd.wndParent;
+        if (!parentWnd || NtUserIsDesktopWindow(peb, parentWnd)) {
             console.warn("NtSendParentNotify: parentWnd is null");
             return;
         }
 
         const handle = ObDuplicateHandle(parentWnd.hWnd);
-        NtPostMessage(peb, [handle, msg, pWnd.hWnd, 0]);
+        const notify = MAKEWPARAM(msg, handle); 
+
+        await NtDispatchMessage(peb, [parentWnd.hWnd, WM.PARENTNOTIFY, notify, pWnd.hWnd]);
 
         ObCloseHandle(handle);
     }
@@ -796,7 +798,6 @@ export async function NtDestroyWindow(peb: PEB, hWnd: HWND) {
 
     await NtDispatchMessage(peb, [wnd.hWnd, WM.DESTROY, 0, 0]);
 
-
     ObDestroyHandle(wnd.hWnd);
 
     return true;
@@ -824,23 +825,28 @@ export function NtUserIsWindowEnabled(hWnd: HWND): boolean {
     return !(wnd.dwStyle & WS.DISABLED) && (wnd.hParent === null || NtUserIsWindowEnabled(wnd.hParent));
 }
 
-export function NtUserMapWindowPoints(fromWnd: PWND, toWnd: PWND, lpPoints: POINT[]) {
+export function NtUserMapWindowPoints(fromWnd: PWND, toWnd: PWND, lpPoints: POINT[]): POINT[] {
     let delta = { cx: 0, cy: 0 };
 
     if (fromWnd && fromWnd.hParent !== null) {
-        delta.cx = fromWnd.rcClient.left;
-        delta.cy = fromWnd.rcClient.top;
+        delta.cx = fromWnd.rcClient.left + fromWnd.rcWindow.left;
+        delta.cy = fromWnd.rcClient.top + fromWnd.rcWindow.top;
     }
 
     if (toWnd && toWnd.hParent !== null) {
-        delta.cx -= toWnd.rcClient.left;
-        delta.cy -= toWnd.rcClient.top;
+        delta.cx -= toWnd.rcClient.left + toWnd.rcWindow.left;
+        delta.cy -= toWnd.rcClient.top + toWnd.rcWindow.top;
     }
 
+    let lpPoint: POINT[] = [];
     for (const point of lpPoints) {
-        point.x += delta.cx;
-        point.y += delta.cy;
+        lpPoint.push({
+            x: point.x + delta.cx,
+            y: point.y + delta.cy
+        });
     }
+
+    return lpPoint;
 }
 
 export function NtUserHasWindowEdge(style: number, exStyle: number) {
@@ -1031,4 +1037,3 @@ export async function NtCallWindowProc(peb: PEB, lpPrevWndFunc: WNDPROC | number
 
     return await lpPrevWndFuncPtr(hWnd, Msg, wParam, lParam);
 }
-    

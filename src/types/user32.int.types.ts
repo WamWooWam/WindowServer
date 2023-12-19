@@ -196,3 +196,8 @@ export type CALL_WINDOW_PROC_PARAMS = {
 export type CALL_WINDOW_PROC_REPLY = {
     retVal: LRESULT;
 }
+
+export type SET_PARENT_PARAMS = {
+    hWndChild: HWND;
+    hWndNewParent: HWND;
+}

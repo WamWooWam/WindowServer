@@ -80,8 +80,8 @@ export async function NtDefWndDoSizeMove(peb: PEB, wnd: WND, wParam: WPARAM, lPa
         let clientPoints = [{ x: mouseRect.left, y: mouseRect.top }, { x: mouseRect.right, y: mouseRect.bottom }];
         let sizingPoints = [{ x: sizingRect.left, y: sizingRect.top }, { x: sizingRect.right, y: sizingRect.bottom }];
 
-        NtUserMapWindowPoints(pWndParent, null, clientPoints);
-        NtUserMapWindowPoints(null, pWndParent, sizingPoints);
+        clientPoints = NtUserMapWindowPoints(pWndParent, null, clientPoints);
+        sizingPoints = NtUserMapWindowPoints(null, pWndParent, sizingPoints);
 
         sizingRect = { left: sizingPoints[0].x, top: sizingPoints[0].y, right: sizingPoints[1].x, bottom: sizingPoints[1].y };
         mouseRect = { left: clientPoints[0].x, top: clientPoints[0].y, right: clientPoints[1].x, bottom: clientPoints[1].y };
