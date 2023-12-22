@@ -1021,6 +1021,31 @@ export interface NONCLIENTMETRICS {
     lfMessageFont: LOGFONT;
     iPaddedBorderWidth: number;
 }
+
+export interface PAINTSTRUCT {
+    hdc: HDC;
+    fErase: boolean;
+    rcPaint: RECT;
+    fRestore: boolean;
+    fIncUpdate: boolean;
+    rgbReserved: number[];
+}
+
+export interface CREATESTRUCT {
+    lpCreateParams: LPARAM;
+    hInstance: HINSTANCE;
+    hMenu: HMENU;
+    hwndParent: HWND;
+    cy: number;
+    cx: number;
+    y: number;
+    x: number;
+    style: number;
+    lpszName: string;
+    lpszClass: string;
+    dwExStyle: number;
+}
+
 export interface DRAWITEMSTRUCT {
     CtlType: number;
     CtlID: number;

@@ -45,11 +45,11 @@ class DC implements DC {
     crText: number;
     dwBkMode: number;
 
-    constructor(hOwner: HANDLE, params: Partial<DC>) {
+    constructor(peb: PEB | null, hOwner: HANDLE, params: Partial<DC>) {
         this.hDC = ObSetObject(this, "DC", hOwner || params.pdcParent?.hDC || -1, (val) => GreCleanupDC(val));
 
         const metrics = {};
-        NtUserSystemParametersInfo(SPI.GETNONCLIENTMETRICS, metrics)
+        NtUserSystemParametersInfo(peb, SPI.GETNONCLIENTMETRICS, metrics)
 
         this.pSurface = params.pSurface || null!;
         this.pCtx = params.pCtx || null!;
@@ -100,9 +100,7 @@ export function GreAllocDCForMonitor(hMonitor: HANDLE): DC {
     pCanvas.height = window.innerHeight;
 
     const pCtx = pCanvas.getContext("2d")!;
-    pCtx.translate(0.5, 0.5);
-
-    const dc = new DC(hMonitor, {
+    const dc = new DC(null, hMonitor, {
         pSurface: pCanvas,
         pCtx
     });
@@ -134,7 +132,7 @@ export function GreAllocDCForWindow(peb: PEB, hWnd: HWND): HDC {
     const pCtx = pCanvas.getContext("2d")!;
     wnd.pRootElement?.appendChild(pCanvas);
 
-    return new DC(hWnd, {
+    return new DC(peb, hWnd, {
         pSurface: pCanvas,
         pCtx
     }).hDC;
@@ -197,28 +195,6 @@ export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ | null {
 export function GreMoveTo(dc: DC, x: number, y: number) {
     const ptPrev = { x: dc.ptCurrent.x, y: dc.ptCurrent.y };
     dc.ptCurrent = { x, y };
-
-    return ptPrev;
-}
-
-export function GreLineTo(dc: DC, x: number, y: number) {
-    GreRealisePen(dc, dc.pbrLine);
-
-    const ptPrev = { x: dc.ptCurrent.x, y: dc.ptCurrent.y };
-    dc.ptCurrent = { x, y };
-    dc.pCtx.beginPath();
-
-    // there's an off-by-one error somewhere, so we need to draw the line ourselves
-    const dx = x - ptPrev.x;
-    const dy = y - ptPrev.y;
-    const steps = Math.max(Math.abs(dx), Math.abs(dy));
-
-    for (let i = 0; i < steps; i++) {
-        dc.pCtx.lineTo(ptPrev.x + (dx * i / steps), ptPrev.y + (dy * i / steps));
-    }
-
-    dc.pCtx.closePath();
-    dc.pCtx.stroke();
 
     return ptPrev;
 }

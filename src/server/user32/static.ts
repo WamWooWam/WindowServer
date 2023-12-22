@@ -55,7 +55,9 @@ export async function StaticWndProc(hWnd: HWND, uMsg: number, wParam: WPARAM, lP
                     itemData: 0
                 };
 
-                await NtDispatchMessage(null, [wnd.hParent, WM.DRAWITEM, wnd.hWnd, 0]);
+                await NtDispatchMessage(null, [wnd.hParent, WM.DRAWITEM, wnd.hWnd, struct]);
+            }
+            else {
             }
         }
 

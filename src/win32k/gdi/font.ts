@@ -24,6 +24,6 @@ export function GreCreateFontIndirect(lf: LOGFONT): FONT {
     return ObCreateObject("FONT", (hObj) => ({
         _type: "FONT",
         _hObj: hObj,
-        lpLogFont: lf
+        lpLogFont: { ...lf }
     }), 0, () => { });
 }

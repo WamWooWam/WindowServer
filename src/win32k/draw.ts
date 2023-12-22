@@ -566,7 +566,7 @@ function UserDrawCaptionText(
     let r = { ...rect };
     let peb = pWnd.peb;
 
-    if (!NtUserSystemParametersInfo(SPI.GETNONCLIENTMETRICS, nclm)) {
+    if (!NtUserSystemParametersInfo(pWnd.peb, SPI.GETNONCLIENTMETRICS, nclm)) {
         return false;
     }
 

@@ -1,12 +1,12 @@
-import DC, { GreLineTo, GreMoveTo, GreSelectObject } from "./dc.js";
+import DC, { GreMoveTo, GreSelectObject } from "./dc.js";
 import { GreCreateFontIndirect, GreRealiseFont } from "./font.js";
 import { GreGetObj, GreGetStockObject, GreInitStockObjects } from "./obj.js";
+import { GreLineTo, GreRectangle } from "./draw.js";
 import { HDC, HFONT, LPPOINT, POINT, PS, RECT, SIZE } from "../../types/gdi32.types.js";
 import { ObCloseHandle, ObDestroyHandle } from "../../objects.js";
 import PEN, { GreCreatePen } from "./pen.js";
 
 import { GreCreateSolidBrush } from "./brush.js";
-import { GreRectangle } from "./draw.js";
 import { HANDLE } from "../../types/types.js";
 import { LOGFONT } from "../../types/user32.types.js";
 

@@ -1,8 +1,47 @@
+import { LOGFONT, SM, SPI } from "../types/user32.types.js";
 import { MONITOR, NtGetPrimaryMonitor, NtRegisterMonitorHook } from "./monitor.js";
-import { SM, SPI } from "../types/user32.types.js";
 
 import { PEB } from "../types/types.js";
 import { SUBSYS_USER32 } from "../types/subsystems.js";
+
+const CAPTION_LOGFONT: LOGFONT = {
+    lfHeight: 11,
+    lfWidth: 0,
+    lfEscapement: 0,
+    lfOrientation: 0,
+    lfWeight: 700,
+    lfItalic: 0,
+    lfUnderline: 0,
+    lfStrikeOut: 0,
+    lfCharSet: 1,
+    lfOutPrecision: 3,
+    lfClipPrecision: 2,
+    lfQuality: 1,
+    lfPitchAndFamily: 34,
+    lfFaceName: "Tahoma"
+};
+
+const SMCAPTION_LOGFONT: LOGFONT = {
+    lfHeight: 11,
+    lfWidth: 0,
+    lfEscapement: 0,
+    lfOrientation: 0,
+    lfWeight: 700,
+    lfItalic: 0,
+    lfUnderline: 0,
+    lfStrikeOut: 0,
+    lfCharSet: 1,
+    lfOutPrecision: 3,
+    lfClipPrecision: 2,
+    lfQuality: 1,
+    lfPitchAndFamily: 34,
+    lfFaceName: "Tahoma"
+};
+
+// TODO: these are not the correct defaults
+const MENU_LOGFONT: LOGFONT = { ...CAPTION_LOGFONT };
+const STATUS_LOGFONT: LOGFONT = { ...CAPTION_LOGFONT };
+const MESSAGE_LOGFONT: LOGFONT = { ...CAPTION_LOGFONT };
 
 export function NtInitSysMetrics(peb: PEB) {
     const monitor = NtGetPrimaryMonitor();
@@ -62,42 +101,27 @@ export function NtUserGetSystemMetrics(peb: PEB, nIndex: number): number {
     return view[nIndex];
 }
 
-export function NtUserSystemParametersInfo(nParam: SPI, obj: any): boolean {
+export function NtUserSystemParametersInfo(peb: PEB | null, nParam: SPI, obj: any): boolean {
     switch (nParam) {
         case SPI.GETNONCLIENTMETRICS:
             Object.assign(obj, {
-                lfCaptionFont: {
-                    lfHeight: 11,
-                    lfWidth: 0,
-                    lfEscapement: 0,
-                    lfOrientation: 0,
-                    lfWeight: 700,
-                    lfItalic: 0,
-                    lfUnderline: 0,
-                    lfStrikeOut: 0,
-                    lfCharSet: 1,
-                    lfOutPrecision: 3,
-                    lfClipPrecision: 2,
-                    lfQuality: 1,
-                    lfPitchAndFamily: 34,
-                    lfFaceName: "Pixelated MS Sans Serif"
-                },
-                lfSmCaptionFont: {
-                    lfHeight: 11,
-                    lfWidth: 0,
-                    lfEscapement: 0,
-                    lfOrientation: 0,
-                    lfWeight: 400,
-                    lfItalic: 0,
-                    lfUnderline: 0,
-                    lfStrikeOut: 0,
-                    lfCharSet: 1,
-                    lfOutPrecision: 3,
-                    lfClipPrecision: 2,
-                    lfQuality: 1,
-                    lfPitchAndFamily: 34,
-                    lfFaceName: "MS Shell Dlg 2"
-                },
+                lfCaptionFont: { ...CAPTION_LOGFONT },
+                lfSmCaptionFont: { ...SMCAPTION_LOGFONT },
+                lfMenuFont: { ...MENU_LOGFONT },
+                lfStatusFont: { ...STATUS_LOGFONT },
+                lfMessageFont: { ...MESSAGE_LOGFONT },
+
+                // TODO: these are also all wrong, should be based on GetSystemMetrics
+                iBorderWidth: 1,
+                iScrollWidth: 12,
+                iScrollHeight: 12,
+                iCaptionWidth: 18,
+                iCaptionHeight: 18,
+                iSmCaptionWidth: 18,
+                iSmCaptionHeight: 18,
+                iMenuWidth: 18,
+                iMenuHeight: 18,
+                iPaddedBorderWidth: 1
             });
             return true;
         default:
