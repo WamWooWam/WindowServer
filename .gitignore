@@ -4,7 +4,7 @@
 .vs/
 
 # dependencies
-/node_modules
+**/node_modules
 /.pnp
 .pnp.js
 
@@ -27,8 +27,9 @@ yarn-error.log*
 
 .env
 
-dist/**/*.js
-dist/**/*.js.map
+**/dist/**/*.js
+**/dist/**/*.js.map
+sdk/lib/**
 publish/
 publish.zip
 

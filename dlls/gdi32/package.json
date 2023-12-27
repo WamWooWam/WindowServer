@@ -1,0 +1,26 @@
+{
+  "name": "gdi32",
+  "version": "1.0.0",
+  "description": "NT Layer DLL",
+  "main": "dist/gdi32.js",
+  "types": "dist/gdi32.d.ts",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "ntos-sdk": "../../sdk",
+    "rollup-plugin-dts": "^6.1.0",
+    "kernel32": "file:../../dlls/kernel32",
+    "ntdll": "file:../../dlls/ntdll"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "rollup": "^4.9.1",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
+  }
+}

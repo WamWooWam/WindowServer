@@ -1,0 +1,23 @@
+{
+  "name": "wininit",
+  "version": "1.0.0",
+  "description": "Notepad",
+  "main": "dist/wininit.js",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "user32": "file:../../dlls/user32"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "magic-string": "^0.30.5",
+    "rollup": "^4.9.1",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
+  }
+}

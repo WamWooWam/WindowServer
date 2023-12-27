@@ -1,0 +1,2 @@
+As of right now this is a completely separate JavaScript bundle that downloads the OS, and extracts the archive onto the filesystem,
+eventually this will be a textmode application.

@@ -1,0 +1,16 @@
+{
+    "file": "notepad.js",
+    "type": "executable",
+    "subsystem": "windows",
+    "arch": "js",
+    "entryPoint": "main",
+    "dependencies": [
+        "kernel32.js",
+        "gdi32.js",
+        "user32.js",
+        "comctl32.js"
+    ],
+
+    "name": "Notepad",
+    "version": [1, 0, 0, 0]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "ntdll",
+  "version": "1.0.0",
+  "description": "NT Layer DLL",
+  "main": "dist/ntdll.js",
+  "types": "dist/ntdll.d.ts",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "ntos-link": "../../build/link",
+    "ntos-sdk": "../../sdk",
+    "rollup-plugin-dts": "^6.1.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "rollup": "^4.9.1",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
+  }
+}

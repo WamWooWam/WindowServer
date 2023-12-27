@@ -1,0 +1,26 @@
+{
+  "name": "notepad",
+  "version": "1.0.0",
+  "description": "Notepad",
+  "main": "dist/notepad.js",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "ntos-sdk": "../../sdk",
+    "ntdll": "file:../../dlls/ntdll",
+    "kernel32": "../../dlls/kernel32",
+    "user32": "../../dlls/user32"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "magic-string": "^0.30.5",
+    "rollup": "^4.9.1",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
+  }
+}

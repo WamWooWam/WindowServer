@@ -1,0 +1,12 @@
+{
+    "file": "ntdll.js",
+    "type": "dll",
+    "subsystem": "windows",
+    "arch": "js",
+    "entryPoint": "main",
+    "dependencies": [
+    ],
+
+    "name": "ntdll",
+    "version": [1, 0, 0, 0]
+}
