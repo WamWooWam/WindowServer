@@ -85,6 +85,7 @@ function ProcessCrash(peb: PEB, data: PROCESS_CRASH) {
 }
 
 // TODO: this will need refactoring if/when we want to support webassembly modules
+// TODO: modules should be loaded globally based on the file path, not per-process
 export async function LdrLoadDll(peb: PEB, data: LOAD_LIBRARY): Promise<LOAD_LIBRARY_REPLY> {
     const process = ObGetObject<PsProcess>(peb.hProcess);
     if (!process) {
