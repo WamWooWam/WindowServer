@@ -90,6 +90,13 @@ const asar = require('asar');
                 external: targetDependencies,
                 onLog: (level, msg) => {
                     console.log(msg.message);
+                },
+                onwarn: (warning, warn) => {
+                    if (warning.code === 'CIRCULAR_DEPENDENCY') {
+                        return;
+                    }
+
+                    warn(warning);
                 }
             };
 
@@ -191,5 +198,7 @@ const asar = require('asar');
     }
     catch (e) {
         console.log(e);
+
+
     }
 })();

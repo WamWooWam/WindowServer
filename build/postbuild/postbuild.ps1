@@ -1,33 +1,35 @@
+# if -NoBuild is passed, we don't want to build anything
+if (-not ($args -contains "-NoBuild")) {
+    $configuration = "debug"
+    $projects = @(
+        "dlls/ntdll",
+        "dlls/kernel32",
+        "dlls/gdi32",
+        "dlls/user32"
+    )
 
-$configuration = "debug"
-$projects = @(
-    "dlls/ntdll",
-    "dlls/kernel32",
-    "dlls/gdi32",
-    "dlls/user32"
-)
+    $parallelProjects = @(
+        "ntos/kernel",
+        "ntos/ldr",
+        "ntos/setup",
+        "apps/notepad",
+        "apps/wininit"
+    )
 
-$parallelProjects = @(
-    "ntos/kernel",
-    "ntos/ldr",
-    "ntos/setup",
-    "apps/notepad",
-    "apps/wininit"
-)
+    foreach ($project in $projects) {
+        Write-Host "Building $project"
+        Set-Location $project
+        yarn ntos-link . /p:configuration=$configuration
+        Set-Location ../..
+    }
 
-foreach ($project in $projects) {
-    Write-Host "Building $project"
-    Set-Location $project
-    yarn ntos-link . /p:configuration=$configuration
-    Set-Location ../..
-}
-
-$parallelProjects | Foreach-Object -ThrottleLimit 5 -Parallel {
-    #Action that will run in Parallel. Reference the current object via $PSItem and bring in outside variables with $USING:varname
-    Write-Host "Building $PSItem"
-    Set-Location $PSItem
-    yarn ntos-link . /p:configuration=$USING:configuration
-    Set-Location ../..
+    $parallelProjects | Foreach-Object -ThrottleLimit 5 -Parallel {
+        #Action that will run in Parallel. Reference the current object via $PSItem and bring in outside variables with $USING:varname
+        Write-Host "Building $PSItem"
+        Set-Location $PSItem
+        yarn ntos-link . /p:configuration=$USING:configuration
+        Set-Location ../..
+    }
 }
 
 Copy-Item ntos/kernel/dist/ntoskrnl.exe dist/windows/system32/ntoskrnl.exe

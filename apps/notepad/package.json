@@ -9,7 +9,8 @@
     "ntos-sdk": "../../sdk",
     "ntdll": "file:../../dlls/ntdll",
     "kernel32": "../../dlls/kernel32",
-    "user32": "../../dlls/user32"
+    "user32": "../../dlls/user32",
+    "gdi32": "../../dlls/gdi32"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",
@@ -17,7 +18,8 @@
     "magic-string": "^0.30.5",
     "rollup": "^4.9.1",
     "rollup-plugin-typescript2": "^0.36.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "ntos-link": "file:../../build/link"
   },
   "scripts": {
     "build": "rollup -c",
