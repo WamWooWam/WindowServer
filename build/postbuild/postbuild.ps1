@@ -1,6 +1,6 @@
 # if -NoBuild is passed, we don't want to build anything
 if (-not ($args -contains "-NoBuild")) {
-    $configuration = "debug"
+    $configuration = "release"
     $projects = @(
         "dlls/ntdll",
         "dlls/kernel32",
@@ -55,4 +55,4 @@ Copy-Item ntos/ldr/dist/ntldr.js dist/
 
 Compress-Archive -Path dist/windows -DestinationPath dist/install.zip -Force
 
-
+Remove-Item dist/windows -Recurse -Force
