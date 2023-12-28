@@ -13,11 +13,6 @@
     "gdi32": "../../dlls/gdi32"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^25.0.7",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "magic-string": "^0.30.5",
-    "rollup": "^4.9.1",
-    "rollup-plugin-typescript2": "^0.36.0",
     "typescript": "^5.3.3",
     "ntos-link": "file:../../build/link"
   },
