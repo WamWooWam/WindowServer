@@ -91,7 +91,7 @@ import WND from "./win32k/wnd.js";
 
     const SpawnProc = async () => {
         const exe = launchSelect.value;
-        PsCreateProcess(`${exe}.js`, "", false, {}, "C:\\Windows\\System32", null);
+        PsCreateProcess(`${exe}.exe`, "", false, {}, "C:\\Windows\\System32", null);
     }
 
     const KillProc = async () => {

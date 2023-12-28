@@ -12,7 +12,8 @@
             "type": "dll",
             "sources": [
                 "src/user32.ts"
-            ]
+            ],
+            "entryPoint": "DllMain"
         },
         {
             "name": "user32.int",

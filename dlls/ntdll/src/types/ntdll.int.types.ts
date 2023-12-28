@@ -14,7 +14,7 @@ export default NTDLL;
 
 export interface PROCESS_CREATE {
     hProcess: HANDLE;
-    lpExecutable: Executable;
+    lpExecutable: string;
     lpCommandLine: string;
     lpCurrentDirectory: string;
     lpEnvironment: { [key: string]: string };
@@ -45,5 +45,6 @@ export interface LOAD_LIBRARY {
 
 export interface LOAD_LIBRARY_REPLY {
     retVal: HANDLE;
+    lpExecInfo: Executable;
     lpszLibFile: string; // a data URI to the library file
 }

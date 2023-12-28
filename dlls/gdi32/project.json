@@ -8,7 +8,8 @@
             "type": "dll",
             "sources": [
                 "src/gdi32.ts"
-            ]
+            ],
+            "entryPoint": "DllMain"
         },
         {
             "name": "gdi32.int",

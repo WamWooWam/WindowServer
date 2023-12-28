@@ -31,6 +31,6 @@ export async function NtInit() {
     await NtUserInit();
 
     // spawn wininit    
-    const hProc = PsCreateProcess("C:\\Windows\\System32\\wininit.js", "", false, {}, "C:\\Windows\\System32", null);
+    const hProc = await PsCreateProcess("C:\\Windows\\System32\\wininit.exe", "", false, {}, "C:\\Windows\\System32", null);
     PsProcessMarkCritical(hProc, true);
 }

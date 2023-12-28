@@ -22,7 +22,19 @@ import { SubsystemId } from "ntos-sdk/types/types.js";
 
 export * from "./types/ntdll.types.js";
 
-console.warn("ntdll.js");
+const ntdll: Executable = {
+    file: "ntdll.js",
+    type: "dll",
+    subsystem: "console",
+    arch: "js",
+    entryPoint: null,
+    dependencies: [],
+
+    name: "ntdll",
+    version: [1, 0, 0, 0],
+    rsrc: {}
+}
+
 
 // all worker events should be handled by this subsystem
 const __addEventListener = globalThis.addEventListener;
@@ -126,10 +138,11 @@ class SubsystemClass implements Subsystem {
     }
 }
 
-const loadedModules: string[] = ["ntdll.js"];
+const loadedModules: string[] = ["ntdll.dll"];
 const loadedModuleExports = new Map<string, any>();
 loadedModuleExports.set("ntdll", {
-    NtRegisterSubsystem
+    NtRegisterSubsystem,
+    default: ntdll
 });
 
 const __oldRequire = globalThis.require;
@@ -192,79 +205,89 @@ async function NtRegisterSubsystem(subsys: SubsystemId, handler: (msg: Omit<Mess
 }
 
 async function LdrInitializeThunk(pPC: PROCESS_CREATE) {
-    const exec = pPC.lpExecutable;
-    for (const lpDependencies of exec.dependencies) {
-        await LdrLoadDll(lpDependencies, pPC);
-    }
-
     await BaseThreadInitThunk(pPC);
 }
 
 
-async function LdrSearchPath(lpLibFileName: string, pPC: PROCESS_CREATE) {
+async function LdrSearchPath(lpLibFileName: string, skipExports: boolean = false) {
+    // debugger;
     try {
-        let libLibraryName = lpLibFileName.split('.')[0]; // kernel32.js -> kernel32
-        if (loadedModules.includes(lpLibFileName)) {
-            return loadedModuleExports.get(libLibraryName);
+        let dotIdx = lpLibFileName.lastIndexOf('.');
+        let libLibraryName = lpLibFileName;
+        if (dotIdx !== -1 && lpLibFileName.substring(dotIdx) === '.js') {
+            libLibraryName = lpLibFileName.substring(0, dotIdx) + '.dll';
         }
+        else if (dotIdx === -1) {
+            libLibraryName += '.dll';
+        }
+
+        console.log(`LdrSearchPath:${libLibraryName}...`);
 
         const retVal = await Ntdll.SendMessage<LOAD_LIBRARY, LOAD_LIBRARY_REPLY>({
             nType: NTDLL.LoadLibrary,
             data: {
-                lpLibFileName
+                lpLibFileName: libLibraryName
             }
         });
+
+        const execInfo = retVal.data.lpExecInfo;
+        if (skipExports) return { execInfo, exports: null };
 
         const module = await fetch(retVal.data.lpszLibFile);
         const exec = await module.text();
 
-        const func = new Function("exports", exec);
-        const exports = {};
-        func(exports); // TODO: use a sandbox
+        const func = new Function("exports", "module", exec);
+        const exports = {} as any;
+        const moduleObj = { exports: {} } as any;
+        func(exports, moduleObj); // TODO: use a sandbox
+
+        // handle commonjs modules
+        if (moduleObj.exports) {
+            if (typeof moduleObj.exports === "function") {
+                exports.default = moduleObj.exports;
+            }
+            else {
+                Object.assign(exports, moduleObj.exports);
+            }
+        }
 
         console.log(`LdrSearchPath:${lpLibFileName} -> ${retVal.data.lpszLibFile}`);
         console.log(exports);
 
-        loadedModules.push(lpLibFileName);
-        loadedModuleExports.set(libLibraryName, exports);
-
-        return exports as any;
+        return { execInfo, exports: exports as any };
     }
     catch (e) {
         console.error(`LdrSearchPath:${lpLibFileName} -> ${e}`);
-        debugger;
+        // debugger;
         throw e;
     }
 }
 
-async function LdrLoadDll(lpLibFileName: string, pPC: PROCESS_CREATE) {
+async function LdrLoadDll(lpLibFileName: string) {
     if (loadedModules.includes(lpLibFileName)) return;
 
     console.log(`LdrLoadDll:${lpLibFileName}...`);
 
     // TODO: search for dll in search path
-    const module = await LdrSearchPath(lpLibFileName, pPC);
-    if (!module?.default) {
-        throw new Error(`invalid module ${lpLibFileName}`);
-    }
-
-    loadedModules.push(lpLibFileName);
-
-    const exec = module.default as Executable;
+    const module = await LdrSearchPath(lpLibFileName);
+    const exec = module.execInfo;
     if (exec.type !== "dll") {
         throw new Error(`invalid module ${lpLibFileName}`);
     }
 
+    loadedModules.push(lpLibFileName);
+    loadedModuleExports.set(exec.name, module.exports);
+
     for (const lpDependency of exec.dependencies) {
-        await LdrLoadDll(lpDependency, pPC);
+        await LdrLoadDll(lpDependency);
     }
 
     console.log(`LdrLoadDll:${lpLibFileName} -> ${exec.entryPoint}`)
 
     let retVal = 0;
     if (exec.entryPoint) {
-        if (typeof exec.entryPoint === "string" && module[exec.entryPoint]) {
-            retVal = await module[exec.entryPoint]();
+        if (typeof exec.entryPoint === "string" && module.exports[exec.entryPoint]) {
+            retVal = await module.exports[exec.entryPoint]();
         }
         else if (typeof exec.entryPoint === "function") {
             retVal = await exec.entryPoint();
@@ -278,13 +301,25 @@ async function LdrLoadDll(lpLibFileName: string, pPC: PROCESS_CREATE) {
 }
 
 async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
-    const exec = pPC.lpExecutable;
-    const module = await LdrSearchPath(exec.file, pPC);
+
+    // load the executable, but don't run it yet
+    let module = await LdrSearchPath(pPC.lpExecutable, true);
+    let exec = module.execInfo;
+    if (exec.type !== "executable") {
+        throw new Error(`invalid module ${pPC.lpExecutable}`);
+    }
+
+    for (const lpDependencies of exec.dependencies) {
+        await LdrLoadDll(lpDependencies);
+    }
+
+    // load and run the executable
+    module = await LdrSearchPath(pPC.lpExecutable);
 
     let retVal = 0;
     if (exec.entryPoint) {
-        if (typeof exec.entryPoint === "string" && module[exec.entryPoint]) {
-            retVal = await module[exec.entryPoint]();
+        if (typeof exec.entryPoint === "string" && module.exports[exec.entryPoint]) {
+            retVal = await module.exports[exec.entryPoint]();
         }
         else if (typeof exec.entryPoint === "function") {
             retVal = await exec.entryPoint();
@@ -309,19 +344,6 @@ function NTDLL_HandleMessage(msg: Message) {
             break;
     }
 };
-
-const ntdll: Executable = {
-    file: "ntdll.js",
-    type: "dll",
-    subsystem: "console",
-    arch: "js",
-    entryPoint: null,
-    dependencies: [],
-
-    name: "ntdll",
-    version: [1, 0, 0, 0],
-    rsrc: {}
-}
 
 export default ntdll;
 

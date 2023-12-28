@@ -29,7 +29,8 @@ import {
     IMAGE,
     SM,
     WM,
-    WNDCLASSEX
+    WNDCLASSEX,
+    PostQuitMessage
 } from "user32";
 import { IntersectRect, RECT, LOGFONT } from "gdi32";
 import { GetModuleHandle } from "kernel32";
@@ -41,6 +42,11 @@ import { InitData, LoadSettingsFromRegistry } from "./settings.js";
 async function WndProc(hWnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
         case WM.CREATE: {
+            break;
+        }
+        case WM.DESTROY: {
+            await SendMessage(Globals.hEdit, WM.DESTROY, 0, 0);
+            await PostQuitMessage(0);
             break;
         }
         default: {
@@ -124,6 +130,6 @@ export async function WinMain(hInstance: HINSTANCE, hPrevInstance: HINSTANCE, lp
     return <number>msg.wParam;
 }
 
-export async function main() {
+export default async function main() {
     return WinMain(await GetModuleHandle(null), 0, "", 0);
 }

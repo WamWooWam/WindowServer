@@ -53,7 +53,7 @@ import { SUBSYS_USER32 } from "ntos-sdk/types/subsystems.js";
 export * from "./types/user32.types.js";
 
 let User32: Subsystem;
-async function DllMain() {
+export async function DllMain() {
     User32 = await NtRegisterSubsystem(SUBSYS_USER32, User32_HandleMessage, 0x1000);
 }
 

@@ -1,12 +1,13 @@
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF, Version } from "ntos-sdk/types/types.js";
 import NTDLL, { PROCESS_CREATE } from "ntdll/dist/ntdll.int.js";
-import NTDLL_SUBSYSTEM, { LdrLoadDll } from "./subsystems/ntdll.js";
 import { ObDestroyHandle, ObGetObject, ObSetObject } from "./objects.js";
 
 import Executable from "ntos-sdk/types/Executable.js";
 import { IMAGEINFO } from "./types/image.js";
 import { KeBugCheckEx } from "./bugcheck.js";
+import { LdrLoadLibrary } from "./loader.js";
 import Message from "ntos-sdk/types/Message.js";
+import NTDLL_SUBSYSTEM from "./subsystems/ntdll.js";
 import { NtAllocSharedMemory } from "./sharedmem.js";
 import { NtGetDefaultDesktop } from "./win32k/desktop.js";
 import { SUBSYS_NTDLL } from "ntos-sdk/types/subsystems.js";
@@ -48,12 +49,12 @@ export class PsProcess {
 
     private state: 'running' | 'terminating' | 'terminated' = 'running';
 
-    constructor(exec: Executable, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
+    constructor(exec: Executable, lpApplicationName: string, args: string, cwd: string = "C:\\Windows\\System32", env: { [key: string]: string; } = {}) {
         this.handle = ObSetObject<PsProcess>(this, "PROC", 0, this.Quit.bind(this));
         this.id = this.handle;
         this.name = exec.name;
         this.version = exec.version;
-        this.executable = exec.file;
+        this.executable = lpApplicationName;
         this.args = args;
         this.cwd = cwd;
         this.env = env;
@@ -75,16 +76,16 @@ export class PsProcess {
     }
 
     async Start() {
-        let { lpszLibFile } = await LdrLoadDll(this.peb, { lpLibFileName: 'ntdll.js' })
+        let { lpszEntryPoint } = await LdrLoadLibrary(this.peb, 'ntdll.dll');
 
-        this.worker = new Worker(lpszLibFile, { type: "module", name: this.name });
+        this.worker = new Worker(lpszEntryPoint, { type: "module", name: this.name });
         this.worker.onmessage = (event) => this.HandleMessage(event.data as Message);
         this.worker.onerror = (event) => console.error(event);
         this.worker.onmessageerror = (event) => console.error(event);
 
         const create: PROCESS_CREATE = {
             hProcess: this.handle,
-            lpExecutable: this.exec,
+            lpExecutable: this.executable,
             lpCommandLine: this.args,
             lpCurrentDirectory: this.cwd,
             lpEnvironment: this.env,

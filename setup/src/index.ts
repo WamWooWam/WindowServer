@@ -87,4 +87,6 @@ import { Buffer as B, FileSystem, Path } from "./extern/filer.js"
     script.src = url
     document.body.appendChild(script)
 
+    textArea.remove();
+
 })();

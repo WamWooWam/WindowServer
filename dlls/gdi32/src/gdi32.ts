@@ -15,7 +15,7 @@ export * from "./types/gdi32.types.js";
 
 // const Gdi32 = await NtRegisterSubsystem(SUBSYS_GDI32, () => { });
 let Gdi32: Subsystem;
-async function DllMain() {
+export async function DllMain() {
     Gdi32 = await NtRegisterSubsystem(SUBSYS_GDI32, () => { });
 }
 

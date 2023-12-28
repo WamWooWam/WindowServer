@@ -8,7 +8,8 @@
             "type": "dll",
             "sources": [
                 "src/kernel32.ts"
-            ]
+            ],
+            "entryPoint": "Kernel32Initialize"
         },
         {
             "name": "kernel32.int",
