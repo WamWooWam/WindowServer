@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "../client/kernel32.js";
+import { GetModuleHandle } from "kernel32";
 import {
     CreateWindow,
     CW_USEDEFAULT,
@@ -26,8 +26,8 @@ import {
     ScreenToClient,
     ShowWindow,
     TranslateMessage
-} from "../client/user32.js";
-import { INRECT } from "../types/gdi32.types.js";
+} from "user32";
+import { INRECT } from "gdi32";
 
 async function CreateButton(text: string, x: number, y: number, width: number, height: number, parent: HWND, nId: number) {
     const button = await CreateWindow("BUTTON", text, BS.PUSHBUTTON | WS.CHILD | WS.VISIBLE | WS.DISABLED,
@@ -165,4 +165,4 @@ async function main() {
     return 0;
 }
 
-export { main };
+export default main;

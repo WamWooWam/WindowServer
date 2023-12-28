@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "../client/kernel32.js";
+import { GetModuleHandle } from "kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -22,15 +22,17 @@ import {
     RegisterClass,
     ShowWindow,
     TranslateMessage
-} from "../client/user32.js";
+} from "user32";
 
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     switch (msg) {
         case WM.CREATE: {
             await CreateWindow(
                 "STATIC",
-                "This window cannot be bigger than 450x400, or smaller than 250x200.",
+                "This window will intentionally asynchronously freeze the UI thread for 100ms, every time it recieves a message.",
                 WS.CHILD | WS.VISIBLE | SS.CENTER,
                 10, 12, 210, 20,
                 hwnd,
@@ -40,16 +42,6 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
             );
             break;
         }
-
-        case WM.GETMINMAXINFO: {
-            const minmax = <MINMAXINFO>lParam;
-            minmax.ptMinTrackSize.x = 250;
-            minmax.ptMinTrackSize.y = 200;
-            minmax.ptMaxTrackSize.x = 450;
-            minmax.ptMaxTrackSize.y = 400;
-            return minmax;
-        }
-
         case WM.DESTROY: {
             await PostQuitMessage(0);
             break;
@@ -87,7 +79,7 @@ async function main() {
     const hWnd = await CreateWindowEx(
         0,                           // dwExStyle
         className,                   // lpClassName
-        "WM_GETMINMAXINFO Test Window",  // lpWindowName
+        "Asynchronous Freeze",  // lpWindowName
         WS.OVERLAPPEDWINDOW,         // dwStyle
 
         // x, y, nWidth, nHeight
@@ -111,4 +103,4 @@ async function main() {
     return 0;
 }
 
-export { main };
+export default main;

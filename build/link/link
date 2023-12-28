@@ -75,6 +75,7 @@ const asar = require('asar');
                     inlineDynamicImports: targetType === 'sys',
                     compact: configuration === 'release',
                     name: format === 'iife' ? targetName : undefined,
+                    exports: 'named'
                 },
                 plugins: [
                     resolve({ preferBuiltins: false }),

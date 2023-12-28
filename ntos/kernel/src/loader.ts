@@ -24,24 +24,6 @@ export async function PsCreateProcess(
     lpStartupInfo: any): Promise<HANDLE> {
 
     const mark = performance.mark("PsCreateProcess");
-
-    // get filename from path
-    const procName = lpApplicationName.split('\\').pop()!.split('/').pop();
-
-    // TODO: this should be loaded from the executable file
-    // const exec: Executable = {
-    //     file: lpApplicationName,
-    //     type: "executable",
-    //     subsystem: "console",
-    //     arch: "js",
-    //     entryPoint: "main",
-    //     dependencies: ["ntdll.js", "kernel32.js", "gdi32.js", "user32.js"],
-
-    //     name: procName!,
-    //     version: [1, 0, 0, 0],
-    //     rsrc: {}
-    // }
-
     const module = await LdrLoadLibrary(NtGetKernelPeb(), lpApplicationName);
     if (module.hModule === 0) {
         return 0;
@@ -152,6 +134,7 @@ export async function LdrLoadLibrary(peb: PEB, lpLibFileName: string): Promise<I
 
     let loaderDirs = [
         process && NtGetDirectoryName(process.executable),
+        "C:\\Windows\\System32\\Tests", // TODO: remove this
         "C:\\Windows\\System32",
         "C:\\Windows\\SysWASM",
         "C:\\Windows",

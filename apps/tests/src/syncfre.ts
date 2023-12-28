@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "../client/kernel32.js";
+import { GetModuleHandle } from "kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -11,33 +11,37 @@ import {
     WM,
     WNDCLASSEX,
     WPARAM,
+    SS,
+    MINMAXINFO,
+    CreateWindow,
     CreateWindowEx,
     DefWindowProc,
     DispatchMessage,
+    GetMessage,
     PostQuitMessage,
     RegisterClass,
     ShowWindow,
-    TranslateMessage,
-    PeekMessage,
-    PM,
-    PostMessage
-} from "../client/user32.js";
+    TranslateMessage
+} from "user32";
 
-let hText: HWND;
-let iCnt: number = 0;
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    for (let time = performance.now(); performance.now() - time < 100;) { }
+
     switch (msg) {
         case WM.CREATE: {
-            hText = await CreateWindowEx(
-                0, "STATIC", "0",
-                WS.CHILD | WS.VISIBLE,
-                10, 10, 100, 20,
-                hwnd, 0, 0, null
+            await CreateWindow(
+                "STATIC",
+                "This window will intentionally synchronously freeze the UI thread for 100ms, every time it recieves a message.",
+                WS.CHILD | WS.VISIBLE | SS.CENTER,
+                10, 12, 210, 20,
+                hwnd,
+                0,
+                0,
+                null
             );
             break;
         }
-
         case WM.DESTROY: {
             await PostQuitMessage(0);
             break;
@@ -75,11 +79,11 @@ async function main() {
     const hWnd = await CreateWindowEx(
         0,                           // dwExStyle
         className,                   // lpClassName
-        "PeekMessage Test Window",  // lpWindowName
-        WS.OVERLAPPEDWINDOW | WS.VISIBLE,         // dwStyle
+        "Synchronous Freeze",  // lpWindowName
+        WS.OVERLAPPEDWINDOW,         // dwStyle
 
         // x, y, nWidth, nHeight
-        CW_USEDEFAULT, CW_USEDEFAULT, 234, 170,
+        CW_USEDEFAULT, CW_USEDEFAULT, 350, 350,
 
         0,          // hWndParent
         0,          // hMenu      
@@ -90,20 +94,13 @@ async function main() {
 
     await ShowWindow(hWnd, SW.SHOWDEFAULT);
 
-    for (; ;) {
-        let msg: MSG = {} as MSG;
-        while (await PeekMessage(msg, 0, 0, 0, PM.REMOVE)) {
-            if (msg.message == WM.QUIT)
-                return 1;
-
-            await TranslateMessage(msg);
-            await DispatchMessage(msg);
-        }
-
-        iCnt++;
-
-        await PostMessage(hText, WM.SETTEXT, 0, iCnt.toString());
+    let msg: MSG = {} as MSG;
+    while (await GetMessage(msg, 0, 0, 0)) {
+        await TranslateMessage(msg);
+        await DispatchMessage(msg);
     }
+
+    return 0;
 }
 
-export { main };
+export default main;

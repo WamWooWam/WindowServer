@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "../client/kernel32.js";
+import { GetModuleHandle } from "kernel32";
 import {
     CreateWindow,
     CW_USEDEFAULT,
@@ -32,8 +32,8 @@ import {
     CallWindowProc,
     SendMessage,
     BM
-} from "../client/user32.js";
-import { INRECT } from "../types/gdi32.types.js";
+} from "user32";
+import { INRECT } from "gdi32"
 
 async function ButtonWndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
@@ -199,4 +199,4 @@ async function main() {
     return 0;
 }
 
-export { main };
+export default main;

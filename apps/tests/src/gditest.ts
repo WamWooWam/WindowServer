@@ -1,4 +1,5 @@
-import { GetModuleHandle } from "../client/kernel32.js";
+import { CombineRgn, CreateRectRgn, CreateSolidBrush, DeleteObject, FillRgn, SelectObject, TextOut, HDC, RGN } from "gdi32";
+import { GetModuleHandle } from "kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -11,37 +12,45 @@ import {
     WM,
     WNDCLASSEX,
     WPARAM,
-    SS,
-    MINMAXINFO,
-    CreateWindow,
     CreateWindowEx,
     DefWindowProc,
     DispatchMessage,
+    GetDC,
     GetMessage,
     PostQuitMessage,
     RegisterClass,
     ShowWindow,
     TranslateMessage
-} from "../client/user32.js";
-
+} from "user32";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
     switch (msg) {
         case WM.CREATE: {
-            await CreateWindow(
-                "STATIC",
-                "This window will intentionally asynchronously freeze the UI thread for 100ms, every time it recieves a message.",
-                WS.CHILD | WS.VISIBLE | SS.CENTER,
-                10, 12, 210, 20,
-                hwnd,
-                0,
-                0,
-                null
-            );
             break;
         }
+
+        case WM.PAINT: {
+            const hdc: HDC = await GetDC(hwnd);
+
+            const brush = await CreateSolidBrush(0x696db8);
+            await SelectObject(hdc, brush);
+
+            const rgn1 = await CreateRectRgn(0, 0, 100, 100);
+            const rgn2 = await CreateRectRgn(50, 50, 150, 150);
+            const intersect = await CreateRectRgn(0, 0, 0, 0);
+            await CombineRgn(intersect, rgn1, rgn2, RGN.XOR);
+            await FillRgn(hdc, intersect);
+
+            await TextOut(hdc, 10, 10, "Hello, world!");
+
+            await DeleteObject(rgn1);
+            await DeleteObject(rgn2);
+            await DeleteObject(intersect);
+            await DeleteObject(brush);
+            await DeleteObject(hdc);
+            break;
+        }
+
         case WM.DESTROY: {
             await PostQuitMessage(0);
             break;
@@ -74,12 +83,10 @@ async function main() {
     }
 
     const atom = await RegisterClass(wndClass);
-    console.log(atom);
-
     const hWnd = await CreateWindowEx(
         0,                           // dwExStyle
         className,                   // lpClassName
-        "Asynchronous Freeze",  // lpWindowName
+        "GDI Test Window",           // lpWindowName
         WS.OVERLAPPEDWINDOW,         // dwStyle
 
         // x, y, nWidth, nHeight
@@ -90,7 +97,6 @@ async function main() {
         hModule,    // hInstance
         null        // lpParam
     );
-    console.log(hWnd);
 
     await ShowWindow(hWnd, SW.SHOWDEFAULT);
 
@@ -103,4 +109,4 @@ async function main() {
     return 0;
 }
 
-export { main };
+export default main;

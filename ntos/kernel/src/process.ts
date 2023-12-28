@@ -164,7 +164,7 @@ export class PsProcess {
             }
 
             const mark = performance.mark(`Server_SendMessage:${msg.lpSubsystem}:${msg.nType}`);
-            console.debug(`sending message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+            // console.debug(`sending message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
             const channel = this.RegisterCallback((msg) => {
                 if (msg.nType & 0x80000000) {
                     reject(msg.data);
@@ -173,7 +173,7 @@ export class PsProcess {
                     resolve(msg);
                 }
 
-                console.debug(`received reply %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+                // console.debug(`received reply %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
                 performance.measure(`SendMessage:${msg.lpSubsystem}:${msg.nType}`, { start: mark.startTime, end: performance.now() });
             });
 
@@ -194,7 +194,7 @@ export class PsProcess {
         }
 
         performance.mark(`Server_PostMessage:${msg.lpSubsystem}:${msg.nType}`);
-        console.debug(`posting message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
+        // console.debug(`posting message %s:%d, %O`, msg.lpSubsystem, msg.nType, msg);
         this.worker.postMessage(msg);
     }
 

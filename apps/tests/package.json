@@ -1,0 +1,22 @@
+{
+  "name": "tests",
+  "version": "1.0.0",
+  "description": "NT Tests",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "ntos-sdk": "file:../../sdk",
+    "ntdll": "file:../../dlls/ntdll",
+    "kernel32": "file:../../dlls/kernel32",
+    "user32": "file:../../dlls/user32",
+    "gdi32": "file:../../dlls/gdi32"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ntos-link": "file:../../build/link"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
+  }
+}

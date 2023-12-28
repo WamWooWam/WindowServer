@@ -1,5 +1,4 @@
-import { CombineRgn, CreateRectRgn, CreateSolidBrush, DeleteObject, FillRgn, SelectObject, TextOut, HDC, RGN } from "../client/gdi32.js";
-import { GetModuleHandle } from "../client/kernel32.js";
+import { GetModuleHandle } from "kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -12,47 +11,59 @@ import {
     WM,
     WNDCLASSEX,
     WPARAM,
+    SS,
+    MINMAXINFO,
     CreateWindowEx,
     DefWindowProc,
     DispatchMessage,
-    GetDC,
     GetMessage,
     PostQuitMessage,
     RegisterClass,
     ShowWindow,
-    TranslateMessage
-} from "../client/user32.js";
+    TranslateMessage,
+    FindWindow,
+    SendMessage
+} from "user32";
+
+const className = "b19563a3-13df-4838-88b2-27a4c3f25e22";
+let wndCount = 0;
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
         case WM.CREATE: {
+            await CreateWindowEx(0,
+                "STATIC",
+                "This is a single instance application. When launched, it looks for another window of the same type, if it finds one, it sends a message to it to create a new window, then exits.",
+                WS.CHILD | WS.VISIBLE | SS.CENTER,
+                10, 10, 220, 220,
+                hwnd,
+                0,
+                0,
+                null
+            );
             break;
         }
 
-        case WM.PAINT: {
-            const hdc: HDC = await GetDC(hwnd);
-
-            const brush = await CreateSolidBrush(0x696db8);
-            await SelectObject(hdc, brush);
-
-            const rgn1 = await CreateRectRgn(0, 0, 100, 100);
-            const rgn2 = await CreateRectRgn(50, 50, 150, 150);
-            const intersect = await CreateRectRgn(0, 0, 0, 0);
-            await CombineRgn(intersect, rgn1, rgn2, RGN.XOR);
-            await FillRgn(hdc, intersect);
-
-            await TextOut(hdc, 10, 10, "Hello, world!");
-
-            await DeleteObject(rgn1);
-            await DeleteObject(rgn2);
-            await DeleteObject(intersect);
-            await DeleteObject(brush);
-            await DeleteObject(hdc);
+        case WM.USER: {
+            await CreateWindow();
             break;
+        }
+
+        case WM.GETMINMAXINFO: {
+            const minmax = <MINMAXINFO>lParam;
+            minmax.ptMinTrackSize.x = 250;
+            minmax.ptMinTrackSize.y = 200;
+            minmax.ptMaxTrackSize.x = 250;
+            minmax.ptMaxTrackSize.y = 250;
+            return minmax;
         }
 
         case WM.DESTROY: {
-            await PostQuitMessage(0);
+            // if there are no more windows, quit
+            wndCount--;
+            if (wndCount === 0) {
+                await PostQuitMessage(0);
+            }
             break;
         }
 
@@ -63,9 +74,8 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
     return 0;
 }
 
-async function main() {
+async function CreateWindow() {
     const hModule = await GetModuleHandle(null);
-    const className = "Test Window Class";
 
     const wndClass: WNDCLASSEX = {
         cbSize: 0,
@@ -86,7 +96,7 @@ async function main() {
     const hWnd = await CreateWindowEx(
         0,                           // dwExStyle
         className,                   // lpClassName
-        "GDI Test Window",           // lpWindowName
+        "WM_GETMINMAXINFO Test Window",  // lpWindowName
         WS.OVERLAPPEDWINDOW,         // dwStyle
 
         // x, y, nWidth, nHeight
@@ -100,6 +110,18 @@ async function main() {
 
     await ShowWindow(hWnd, SW.SHOWDEFAULT);
 
+    wndCount++;
+}
+
+async function main() {
+    let otherWindow = await FindWindow(className, null);
+    if (otherWindow) {
+        await SendMessage(otherWindow, WM.USER, 0, 0);
+        return -1;
+    }
+
+    await CreateWindow();
+
     let msg: MSG = {} as MSG;
     while (await GetMessage(msg, 0, 0, 0)) {
         await TranslateMessage(msg);
@@ -109,4 +131,4 @@ async function main() {
     return 0;
 }
 
-export { main };
+export default main;

@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "../client/kernel32.js";
+import { GetModuleHandle } from "kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -21,7 +21,7 @@ import {
     RegisterClass,
     ShowWindow,
     TranslateMessage
-} from "../client/user32.js";
+} from "user32";
 
 
 async function main() {
@@ -118,4 +118,4 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
     return 0;
 }
 
-export { main };
+export default main;

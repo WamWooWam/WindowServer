@@ -10,8 +10,8 @@ import {
     Rectangle,
     SelectObject,
     TextOut
-} from "../client/gdi32.js";
-import { GetModuleHandle } from "../client/kernel32.js";
+} from "gdi32";
+import { GetModuleHandle } from "kernel32";
 import {
     COLOR,
     CW_USEDEFAULT,
@@ -39,7 +39,7 @@ import {
     WNDCLASSEX,
     WPARAM,
     WS
-} from "../client/user32.js";
+} from "user32";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
@@ -166,4 +166,4 @@ async function main() {
     return 0;
 }
 
-export { main };
+export default main;

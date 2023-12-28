@@ -13,7 +13,8 @@ if (-not ($args -contains "-NoBuild")) {
         "ntos/ldr",
         "ntos/setup",
         "apps/notepad",
-        "apps/wininit"
+        "apps/wininit",
+        "apps/tests"
     )
 
     foreach ($project in $projects) {
@@ -32,6 +33,11 @@ if (-not ($args -contains "-NoBuild")) {
     }
 }
 
+New-Item .\dist -ItemType Directory 
+New-Item .\dist\windows -ItemType Directory -Force
+New-Item .\dist\windows\system32 -ItemType Directory -Force
+New-Item .\dist\windows\system32\tests -ItemType Directory -Force
+
 Copy-Item ntos/kernel/dist/ntoskrnl.exe dist/windows/system32/ntoskrnl.exe
 
 Copy-Item dlls/ntdll/dist/ntdll.dll dist/windows/system32/
@@ -41,6 +47,8 @@ Copy-Item dlls/gdi32/dist/gdi32.dll dist/windows/system32/
 
 Copy-Item apps/notepad/dist/notepad.exe dist/windows/
 Copy-Item apps/wininit/dist/wininit.exe dist/windows/system32/
+
+Copy-Item apps/tests/dist/*.exe dist/windows/system32/tests/
 
 Copy-Item ntos/setup/dist/ntsetup.js dist/setup.js
 Copy-Item ntos/ldr/dist/ntldr.js dist/

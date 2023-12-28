@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "../client/kernel32.js";
+import { GetModuleHandle } from "kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -26,16 +26,39 @@ import {
     GetProp,
     BS,
     PostMessage,
-    SendMessage
-} from "../client/user32.js";
+    SendMessage,
+    SetWindowLong,
+    GWL
+} from "user32";
 
+let hBtn: HWND;
+
+async function WndProc2(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
+    switch (msg) {
+        case WM.COMMAND: {
+            await SendMessage(hBtn, WM.SETTEXT, 0, "WndProc2 Clicked!");
+            await SetWindowLong(hwnd, GWL.WNDPROC, WndProc);
+            break;
+        }
+
+        case WM.DESTROY: {
+            await PostQuitMessage(0);
+            break;
+        }
+
+        default:
+            return await DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+
+    return 0;
+}
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
         case WM.CREATE: {
-            let hBtn = await CreateWindow(
+            hBtn = await CreateWindow(
                 "BUTTON",
-                "Call SetProp function",
+                "Click Me!",
                 WS.CHILD | WS.VISIBLE | BS.CENTER | BS.PUSHBUTTON,
                 10, 12, 210, 20,
                 hwnd,
@@ -44,18 +67,12 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
                 null
             );
 
-            let fn = async (param1: string, param2: number) => {
-                await SendMessage(hBtn, WM.SETTEXT, 0, `Called: ${param1}, ${param2}`);
-            }
-
-            await SetProp(hwnd, "test", fn);
-
             break;
         }
 
         case WM.COMMAND: {
-            let fn = await GetProp(hwnd, "test");
-            await fn("Hello", 123);
+            await SendMessage(hBtn, WM.SETTEXT, 0, "WndProc Clicked!");
+            await SetWindowLong(hwnd, GWL.WNDPROC, WndProc2);
             break;
         }
 
@@ -96,7 +113,7 @@ async function main() {
     const hWnd = await CreateWindowEx(
         0,                           // dwExStyle
         className,                   // lpClassName
-        "GetProp/SetProp",  // lpWindowName
+        "GWL_WNDPROC Test",  // lpWindowName
         WS.OVERLAPPEDWINDOW,         // dwStyle
 
         // x, y, nWidth, nHeight
@@ -120,4 +137,4 @@ async function main() {
     return 0;
 }
 
-export { main };
+export default main;
