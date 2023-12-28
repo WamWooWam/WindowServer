@@ -87,7 +87,10 @@ const asar = require('asar');
                     // globals(),
                     ...(configuration === 'release' ? [terser()] : [])
                 ],
-                external: targetDependencies
+                external: targetDependencies,
+                onLog: (level, msg) => {
+                    console.log(msg.message);
+                }
             };
 
             let bundle = await rollup.rollup(rollupConfig);

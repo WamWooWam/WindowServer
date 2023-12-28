@@ -13,6 +13,7 @@
     "typescript": "^5.3.3"
   },
   "devDependencies": {
+    "ntos-link": "file:../../build/link",
     "rollup": "^4.9.1",
     "rollup-plugin-dts": "^6.1.0",
     "rollup-plugin-esbuild": "^6.1.0",

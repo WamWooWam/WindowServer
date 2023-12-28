@@ -3,9 +3,7 @@ import * as zip from '@zip.js/zip.js'
 import { Buffer as B, FileSystem, Path } from "filer"
 
 (async () => {
-    const fs = await new Promise((res, rej) => {
-        const fs = new FileSystem({ flags: ['FORMAT'] }, () => res(fs));
-    }) as typeof import('node:fs');
+    const fs = new FileSystem({ flags: ['FORMAT'] });
     const path = Path
 
     const exists = (path: string) => new Promise((res, rej) => {
