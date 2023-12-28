@@ -9,6 +9,7 @@ export default [{
     file: 'dist/setup.js',
     format: 'iife',
     sourcemap: true,
+    name: 'setup',
   },
   plugins: [
     resolve(),

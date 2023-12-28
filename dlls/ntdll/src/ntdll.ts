@@ -22,6 +22,8 @@ import { SubsystemId } from "ntos-sdk/types/types.js";
 
 export * from "./types/ntdll.types.js";
 
+console.warn("ntdll.js");
+
 // all worker events should be handled by this subsystem
 const __addEventListener = globalThis.addEventListener;
 const __removeEventListener = globalThis.removeEventListener;

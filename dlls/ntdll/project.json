@@ -1,0 +1,21 @@
+{
+    "name": "ntdll",
+    "dependencies": [],
+    "subsystem": "native",
+    "targets": [
+        {
+            "name": "ntdll",
+            "type": "dll",
+            "sources": [
+                "src/ntdll.ts"
+            ]
+        },
+        {
+            "name": "ntdll.int",
+            "type": "sys",
+            "sources": [
+                "src/types/ntdll.int.types.ts"
+            ]
+        }
+    ]
+}

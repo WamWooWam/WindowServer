@@ -1,4 +1,4 @@
-import KERNEL32_SUBSYSTEM, { GENERIC_ALL, OPEN_EXISTING } from "./kernel32.js";
+import KERNEL32_SUBSYSTEM, { FILE_SHARE_READ, GENERIC_ALL, OPEN_EXISTING } from "./kernel32.js";
 import NTDLL, { LOAD_LIBRARY, LOAD_LIBRARY_REPLY, LOAD_SUBSYSTEM, PROCESS_CRASH, PROCESS_EXIT } from "ntdll/dist/ntdll.int.js";
 import { NtCreateFile, NtGetDirectoryName, NtGetFileName, NtGetFileSizeEx, NtReadFile } from "../fs/file.js";
 import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetHandleOwner, ObSetObject } from "../objects.js";
@@ -10,7 +10,6 @@ import {
     SUBSYS_USER32
 } from "ntos-sdk/types/subsystems.js";
 
-import { FILE_SHARE_READ } from "kernel32";
 import GDI32_SUBSYSTEM from "./gdi32.js";
 import { KeBugCheckEx } from "../bugcheck.js";
 import { PsProcess } from "../process.js";

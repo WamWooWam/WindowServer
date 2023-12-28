@@ -11,8 +11,6 @@
 # testing
 /coverage
 
-# production
-/build
 
 # misc
 .DS_Store
@@ -29,6 +27,10 @@ yarn-error.log*
 
 **/dist/**/*.js
 **/dist/**/*.js.map
+**/dist/**/*.d.ts
+**/dist/**/*.d.ts.map
+**/dist/**/*.dll
+**/dist/**/*.exe
 sdk/lib/**
 publish/
 publish.zip

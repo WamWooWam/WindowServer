@@ -1,0 +1,24 @@
+{
+  "name": "ntos-link",
+  "version": "1.0.0",
+  "main": "package",
+  "license": "MIT",
+  "private": true,
+  "bin": {
+    "ntos-link": "link"
+  },
+  "dependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "asar": "^3.2.0",
+    "rollup": "^4.9.1",
+    "rollup-plugin-dts": "^6.1.0",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-node-globals": "^1.4.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-json": "^6.1.0"
+  }
+}

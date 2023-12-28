@@ -1,0 +1,25 @@
+{
+    "name": "user32",
+    "dependencies": [
+        "ntdll",
+        "kernel32",
+        "gdi32"
+    ],
+    "subsystem": "windows",
+    "targets": [
+        {
+            "name": "user32",
+            "type": "dll",
+            "sources": [
+                "src/user32.ts"
+            ]
+        },
+        {
+            "name": "user32.int",
+            "type": "sys",
+            "sources": [
+                "src/types/user32.int.types.ts"
+            ]
+        }
+    ]
+}

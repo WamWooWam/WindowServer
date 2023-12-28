@@ -21,13 +21,13 @@ import {
 } from "../subsystems/user32.js";
 import { HDC, InflateRect, POINT, RECT, SIZE } from "../subsystems/gdi32.js";
 import { NtCreateWndProcCallback, NtFindClass } from "./class.js";
-import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { NtSetWindowPos, NtUserSetWindowPos, NtUserShowWindow, NtUserWinPosShowWindow } from "./wndpos.js";
 import { NtUserGetDesktop, NtUserGetProcInfo } from "./shared.js";
 import { ObCloseHandle, ObDestroyHandle, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject } from "../objects.js";
 import WND, { PWND } from "./wnd.js";
 
 import { GreAllocDCForMonitor } from "./gdi/dc.js";
+import { NtDispatchMessage } from "./msg.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtSetLastError } from "../error.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";

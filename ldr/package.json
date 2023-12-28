@@ -1,0 +1,15 @@
+{
+  "name": "ntos",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+    "browserify": "^17.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "ntos-link": "file:../build/link",
+    "typescript": "^5.3.3"
+  }
+}

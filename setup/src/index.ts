@@ -1,6 +1,6 @@
 import * as zip from '@zip.js/zip.js'
 
-import { Buffer, FileSystem, Path } from "./extern/filer.js"
+import { Buffer as B, FileSystem, Path } from "./extern/filer.js"
 
 (async () => {
     const fs = await new Promise((res, rej) => {
@@ -58,27 +58,33 @@ import { Buffer, FileSystem, Path } from "./extern/filer.js"
             const buffer = await blob.arrayBuffer()
 
             textArea.value += `Writing file ${file}\n`
-            await writeFile(file, Buffer.from(buffer))
+            await writeFile(file, B.from(buffer))
         }
     }
 
     textArea.value += 'Done!\n'
 
-    textArea.value += 'Launching ntoskrnl.exe\n'
-    fs.readFile('/windows/system32/ntoskrnl.js', (err, data) => {
-        if (err) {
-            textArea.value += `Error: ${err}\n`
-            return
-        }
-        else {
-            textArea.remove();
-        }
+    // textArea.value += 'Launching ntoskrnl.exe\n'
+    // fs.readFile('/windows/system32/ntoskrnl.js', (err, data) => {
+    //     if (err) {
+    //         textArea.value += `Error: ${err}\n`
+    //         return
+    //     }
+    //     else {
+    //         textArea.remove();
+    //     }
 
-        const blob = new Blob([data], { type: 'text/javascript' })
-        const url = URL.createObjectURL(blob)
-        const script = document.createElement('script')
-        script.src = url
-        document.body.appendChild(script)
-    })
+    //     const blob = new Blob([data], { type: 'text/javascript' })
+    //     const url = URL.createObjectURL(blob)
+    //     const script = document.createElement('script')
+    //     script.src = url
+    //     document.body.appendChild(script)
+    // })
+
+    const url = "/ntldr.js"
+    const script = document.createElement('script')
+    script.setAttribute('type', 'module')
+    script.src = url
+    document.body.appendChild(script)
 
 })();

@@ -1,0 +1,19 @@
+{
+    "name": "notepad",
+    "dependencies": [
+        "ntdll",
+        "kernel32",
+        "gdi32",
+        "user32"
+    ],
+    "subsystem": "windows",
+    "targets": [
+        {
+            "name": "notepad",
+            "type": "exe",
+            "sources": [
+                "src/notepad.ts"
+            ]
+        }
+    ]
+}
