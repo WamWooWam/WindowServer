@@ -1,6 +1,6 @@
 import type { FileData, DirectoryMetadata, FileMetadata, Metadata } from './types'
 
-import { Path } from '../filer'
+import { Path } from 'filer'
 
 import { isDirectoryMetadata } from './utils'
 

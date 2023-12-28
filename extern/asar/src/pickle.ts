@@ -1,4 +1,4 @@
-import { Buffer } from '../filer.js'
+import { Buffer } from 'filer'
 
 // sizeof(T).
 export const SIZE_INT32 = 4

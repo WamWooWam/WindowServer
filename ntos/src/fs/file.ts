@@ -1,4 +1,4 @@
-import { Buffer, FileSystem, Path } from "../extern/filer.js";
+import { Buffer, FileSystem, Path } from "filer";
 import { HANDLE, PEB } from "ntos-sdk/types/types.js";
 import { ObDestroyHandle, ObGetObject, ObSetObject } from "../objects.js";
 

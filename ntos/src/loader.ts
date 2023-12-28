@@ -1,4 +1,4 @@
-import * as asar from "./extern/asar/index.js"
+import * as asar from 'asar'
 
 import { FILE_SHARE_READ, GENERIC_ALL, OPEN_EXISTING } from "./subsystems/kernel32.js";
 import { HANDLE, PEB } from "ntos-sdk/types/types.js";

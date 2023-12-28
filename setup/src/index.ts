@@ -1,6 +1,6 @@
 import * as zip from '@zip.js/zip.js'
 
-import { Buffer as B, FileSystem, Path } from "./extern/filer.js"
+import { Buffer as B, FileSystem, Path } from "filer"
 
 (async () => {
     const fs = await new Promise((res, rej) => {

@@ -1,6 +1,6 @@
-import * as asar from './extern/asar/index.js';
+import * as asar from 'asar';
 
-import { Buffer, FileSystem, Path } from "./extern/filer";
+import { Buffer, FileSystem, Path } from 'filer';
 
 const fs = new FileSystem();
 const path = Path;
