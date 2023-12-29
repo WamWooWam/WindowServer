@@ -4,9 +4,13 @@ import { CREATE_DESKTOP, CREATE_WINDOW_EX, WMP, HT, HWND, LPARAM, LRESULT, SM, S
 import { NtDefWindowProc } from "./def.js";;
 import DesktopElement from "./html/DesktopElement.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
-import { NtCreateWindowEx } from "./window.js";
+import { NtCreateWindowEx, NtUserGetClientRect, NtUserGetDC } from "./window.js";
 import WND from "./wnd.js";
 import { NtSetWindowPos, NtUserShowWindow } from "./wndpos.js";
+import { GreCreateSolidBrush } from "./gdi/brush.js";
+import { GreSelectObject } from "./gdi/dc.js";
+import { NtGdiCreateSolidBrush, NtGdiDeleteObject, NtGdiGetStockObject, NtGdiRectangle, NtGdiSelectObject } from "./gdi/ntgdi.js";
+import { NULL_PEN } from "gdi32/dist/gdi32.int.js";
 
 // export default interface DESKTOP {
 //     dwSessionId: number;
@@ -89,6 +93,20 @@ export async function NtUserDesktopWndProc(hWnd: HWND, msg: number, wParam: WPAR
             console.log("WM_DISPLAYCHANGE", screenW, screenH);
 
             NtSetWindowPos(peb, hWnd, 0, 0, 0, screenW, screenH, SWP.NOZORDER | SWP.NOACTIVATE | SWP.FRAMECHANGED);
+            break;
+        }
+        case WM.ERASEBKGND: {
+            const rect = NtUserGetClientRect(peb, hWnd);
+            const dc = NtUserGetDC(peb, hWnd);
+            const brush = NtGdiCreateSolidBrush(0x3a6ea5);
+            const oldBrush = NtGdiSelectObject(dc, brush);
+            const oldPen = NtGdiSelectObject(dc, NtGdiGetStockObject(NULL_PEN));
+            NtGdiRectangle(dc, rect);
+
+            NtGdiSelectObject(dc, oldBrush);
+            NtGdiSelectObject(dc, oldPen);
+
+            NtGdiDeleteObject(brush);
             break;
         }
         case WM.NCHITTEST: {

@@ -7,13 +7,14 @@ import {
     DFCS,
     EDGE,
     HICON,
+    HWND,
     NONCLIENTMETRICS,
     SM,
     SPI,
     WS
 } from "../subsystems/user32.js";
 import DC, { GreSelectObject } from "./gdi/dc.js";
-import { DEFAULT_CHARSET, FW, HBRUSH, HDC, HFONT, LOGFONT, NONANTIALIASED_QUALITY, NULL_PEN, PS, RECT, TRANSPARENT } from "../subsystems/gdi32.js";
+import { DEFAULT_CHARSET, FW, HBRUSH, HDC, HFONT, LOGFONT, LPRECT, NONANTIALIASED_QUALITY, NULL_PEN, PS, RECT, TRANSPARENT } from "../subsystems/gdi32.js";
 import { GreGetObj, GreGetStockObject } from "./gdi/obj.js";
 import { IntGetSysColor, IntGetSysColorBrush } from "./brush.js";
 import {
@@ -47,10 +48,14 @@ import {
     NtGdiTextOut
 } from "./gdi/ntgdi.js";
 import { NtUserGetSystemMetrics, NtUserSystemParametersInfo } from "./metrics.js";
+import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import BRUSH from "./gdi/brush.js";
+import DESKTOP from "./desktop.js";
 import { GreRectangle } from "./gdi/draw.js";
+import { NtDispatchMessage } from "./msg.js";
 import PEN from "./gdi/pen.js";
+import { WM } from "user32";
 import WND from "./wnd.js";
 
 export function NtUserFillRect(hDC: HDC, prc: RECT, hbr: HBRUSH) {
@@ -633,4 +638,90 @@ function UserDrawCaptionText(
         NtGdiDeleteObject(hFont);
 
     return ret;
+}
+
+export async function NtUserInvalidateRect(hWnd: HWND, lpRect: LPRECT, bErase: boolean) {
+    // right now, we just invalidate the entire window
+
+    let wnd = ObGetObject<WND>(hWnd);
+    if (!wnd) return false;
+
+    if (bErase) {
+        await NtDispatchMessage(wnd.peb, [hWnd, WM.ERASEBKGND, 0, 0]);
+    }
+
+    await NtDispatchMessage(wnd.peb, [hWnd, WM.PAINT, 0, 0]);
+
+    wnd.stateFlags.bInvalidated = true;
+
+    return true;
+}
+
+export function NtUserDrawLoop() {
+    for (const hDesktop of ObEnumHandlesByType("DESKTOP")) {
+        let desktop = ObGetObject<DESKTOP>(hDesktop);
+        if (!desktop) {
+            continue;
+        }
+
+        const wnd = ObGetObject<WND>(desktop.hwndDesktop);
+        if (!wnd) {
+            continue;
+        }
+
+        for (let child = wnd.wndChild; child; child = child.wndNext) {
+            NtUserDrawWindowTopLevel(child);
+        }
+    }
+
+    requestAnimationFrame(NtUserDrawLoop);
+}
+
+function NtUserDrawWindowTopLevel(wnd: WND) {
+    if (!wnd.pRootElement) {
+        return;
+    }
+
+    if (!wnd.stateFlags.bInvalidated) {
+        return;
+    }
+
+    const canvas = wnd.pRootElement.querySelector("canvas") as HTMLCanvasElement;
+    if (!canvas) {
+        return;
+    }
+
+    canvas.width = wnd.rcClient.right - wnd.rcClient.left;
+    canvas.height = wnd.rcClient.bottom - wnd.rcClient.top;
+
+    const ctx = canvas.getContext("2d")!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const dc = ObGetObject<DC>(wnd.hDC)!;
+    ctx.drawImage(dc.pSurface, 0, 0);
+
+    for (let child = wnd.wndChild; child; child = child.wndNext) {
+        NtUserDrawChildWindow(child, canvas);
+    }
+}
+
+function NtUserDrawChildWindow(wnd: WND, canvas: HTMLCanvasElement) {
+    if (!wnd.stateFlags.bInvalidated) {
+        return;
+    }
+
+    const childCanvas = ObGetObject<DC>(wnd.hDC)?.pSurface;
+    if (!childCanvas) {
+        return;
+    }
+
+    const ctx = canvas.getContext("2d")!;
+    ctx.translate(wnd.rcClient.left, wnd.rcClient.top);
+    ctx.drawImage(childCanvas, 0, 0);
+
+    for (let child = wnd.wndChild; child; child = child.wndNext) {
+        NtUserDrawChildWindow(child, canvas);
+    }
+
+    ctx.translate(-wnd.rcClient.left, -wnd.rcClient.top);
 }

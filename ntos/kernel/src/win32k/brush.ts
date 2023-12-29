@@ -28,6 +28,6 @@ export function IntGetSysColor(nIndex: COLOR): number {
 }
 
 export function IntGetSysColorBrush(nIndex: COLOR): HBRUSH {
-    let color = IntGetSysColor(nIndex);
+    let color = IntGetSysColor(nIndex) ?? 0;
     return NtGdiCreateSolidBrush(color);
 }

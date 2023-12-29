@@ -41,6 +41,15 @@ import USER32, {
     MSG,
     WNDCLASSEX,
     WS,
+    BEGIN_PAINT_PARAMS,
+    BEGIN_PAINT_REPLY,
+    END_PAINT_PARAMS,
+    END_PAINT_REPLY,
+    INVALIDATE_RECT_PARAMS,
+    INVALIDATE_RECT_REPLY,
+    ADJUST_WINDOW_RECT_PARAMS,
+    ADJUST_WINDOW_RECT_REPLY,
+    COLOR,
 } from "user32/dist/user32.int.js";
 import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "ntos-sdk/types/types.js";
 import { LPRECT, OffsetRect, POINT, RECT } from "gdi32/dist/gdi32.int.js"
@@ -63,6 +72,10 @@ import W32MSG_QUEUE from "../win32k/msgqueue.js";
 import { NtUserGetProcInfo, W32PROCINFO } from "../win32k/shared.js";
 import WND from "../win32k/wnd.js";
 import { MONITOR, NtMonitorFromPoint, NtMonitorFromRect, NtMonitorFromWindow } from "../win32k/monitor.js";
+import { NtUserAdjustWindowRectEx } from "../win32k/nc.js";
+import { NtUserInvalidateRect } from "../win32k/draw.js";
+import { GreReleaseDC } from "../win32k/gdi/dc.js";
+import { IntGetSysColorBrush } from "../win32k/brush.js";
 
 export * from 'user32/dist/user32.int.js';
 
@@ -74,7 +87,7 @@ const DefaultClasses: WNDCLASSEX[] = [
         lpfnWndProc: NtUserDesktopWndProc,
         hIcon: 0,
         hCursor: 0,
-        hbrBackground: 0,
+        hbrBackground: IntGetSysColorBrush(COLOR.DESKTOP),
         hInstance: 0,
         hIconSm: 0,
         cbClsExtra: 0,
@@ -366,6 +379,46 @@ function UserGetMonitorInfo(peb: PEB, params: GET_MONITOR_INFO_PARAMS): GET_MONI
     return { retVal: true, lpmi: info };
 }
 
+async function UserBeginPaint(peb: PEB, params: BEGIN_PAINT_PARAMS): Promise<BEGIN_PAINT_REPLY> {
+    let wnd = ObGetObject<WND>(params.hWnd);
+    if (!wnd) {
+        return { retVal: 0, lpPaint: null! };
+    }
+
+    let lpPaint = { ...params.lpPaint };
+    lpPaint.hDC = NtUserGetDC(peb, params.hWnd);
+    lpPaint.rcPaint = wnd.rcClient;
+    lpPaint.fErase = true;
+
+    return { retVal: lpPaint.hDC, lpPaint };
+}
+
+async function UserEndPaint(peb: PEB, params: END_PAINT_PARAMS): Promise<END_PAINT_REPLY> {
+    let wnd = ObGetObject<WND>(params.hWnd);
+    if (!wnd) {
+        return { retVal: false };
+    }
+
+    let lpPaint = params.lpPaint;
+    if (!lpPaint) {
+        return { retVal: false };
+    }
+
+    GreReleaseDC(lpPaint.hDC);
+
+    return { retVal: true };
+}
+
+async function UserInvalidateRect(peb: PEB, params: INVALIDATE_RECT_PARAMS): Promise<INVALIDATE_RECT_REPLY> {
+    return { retVal: await NtUserInvalidateRect(params.hWnd, params.lpRect, params.bErase) };
+}
+
+async function UserAdjustWindowRect(peb: PEB, params: ADJUST_WINDOW_RECT_PARAMS): Promise<ADJUST_WINDOW_RECT_REPLY> {
+    let rect = { ...params.lpRect! };
+    let result = NtUserAdjustWindowRectEx(peb, rect, params.dwStyle, params.bMenu, 0);
+    return { retVal: result, lpRect: { ...rect } };
+}
+
 const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
     lpszName: SUBSYS_USER32,
     lpfnInit: NtUser32Initialize,
@@ -403,7 +456,11 @@ const USER32_SUBSYSTEM: SUBSYSTEM_DEF = {
         [USER32.MonitorFromPoint]: UserMonitorFromPoint,
         [USER32.MonitorFromRect]: UserMonitorFromRect,
         [USER32.CallWindowProc]: UserCallWindowProc,
-        [USER32.GetMonitorInfo]: UserGetMonitorInfo
+        [USER32.GetMonitorInfo]: UserGetMonitorInfo,
+        [USER32.BeginPaint]: UserBeginPaint,
+        [USER32.EndPaint]: UserEndPaint,
+        [USER32.InvalidateRect]: UserInvalidateRect,
+        [USER32.AdjustWindowRect]: UserAdjustWindowRect,
     }
 };
 

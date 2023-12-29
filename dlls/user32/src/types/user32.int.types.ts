@@ -1,5 +1,5 @@
-import { ATOM, HCURSOR, HICON, HINSTANCE, HMENU, HWND, LPARAM, LRESULT, MONITORINFO, MONITORINFOEX, MSG, WNDCLASS, WPARAM } from "./user32.types.js";
-import { HBRUSH, LPPOINT, LPRECT, POINT } from "gdi32";
+import { ATOM, HCURSOR, HICON, HINSTANCE, HMENU, HWND, LPARAM, LRESULT, MONITORINFO, MONITORINFOEX, MSG, PAINTSTRUCT, WNDCLASS, WPARAM } from "./user32.types.js";
+import { HBRUSH, HDC, LPPOINT, LPRECT, POINT } from "gdi32";
 
 import { HANDLE } from "ntdll";
 
@@ -41,6 +41,10 @@ const USER32 = {
     MonitorFromPoint: 0x0000001E,
     MonitorFromWindow: 0x0000001F,
     GetMonitorInfo: 0x00000020,
+    BeginPaint: 0x00000021,
+    EndPaint: 0x00000022,
+    InvalidateRect: 0x00000023,
+    AdjustWindowRect: 0x00000024,
 }
 
 export default USER32;
@@ -253,3 +257,15 @@ export type GET_MONITOR_INFO_REPLY = {
 
 export type LOAD_IMAGE_PARAMS = { hinst: HANDLE, lpszName: string, uType: number, cxDesired: number, cyDesired: number, fuLoad: number };
 export type LOAD_IMAGE_REPLY = { retVal: HANDLE };
+
+export type BEGIN_PAINT_PARAMS = { hWnd: HWND, lpPaint: PAINTSTRUCT };
+export type BEGIN_PAINT_REPLY = { retVal: HDC, lpPaint: PAINTSTRUCT };
+
+export type END_PAINT_PARAMS = { hWnd: HWND, lpPaint: PAINTSTRUCT };
+export type END_PAINT_REPLY = { retVal: boolean };
+
+export type INVALIDATE_RECT_PARAMS = { hWnd: HWND, lpRect: LPRECT, bErase: boolean };
+export type INVALIDATE_RECT_REPLY = { retVal: boolean };
+
+export type ADJUST_WINDOW_RECT_PARAMS = { lpRect: LPRECT, dwStyle: number, bMenu: boolean };
+export type ADJUST_WINDOW_RECT_REPLY = { retVal: boolean, lpRect: LPRECT };

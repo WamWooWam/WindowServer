@@ -1,6 +1,6 @@
 import { GA, HWND, HWND_TOP, MAKEWPARAM, SWP, WA, WM, WMP, WS } from "../subsystems/user32.js";
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
-import { NtGetDesktopWindow, NtUserGetAncestor, NtUserIsDesktopWindow } from "./window.js";
+import { NtGetDesktopWindow, NtUserGetAncestor, NtUserIntGetNonChildAncestor, NtUserIsDesktopWindow } from "./window.js";
 import { NtSetWindowPos, NtUserActivateOtherWindowMin, NtUserSetWindowPos } from "./wndpos.js";
 import { NtUserGetDesktop, NtUserGetProcInfo, W32PROCINFO } from "./shared.js";
 import WND, { PWND } from "./wnd.js";
@@ -268,6 +268,16 @@ async function NtUserCoIntSetActiveWindow(peb: PEB, wnd: WND, bMouse: boolean, b
     await NtUserIntSendActivateMessages(peb, wndPrev, wnd, bMouse, async);
 
     // TODO: focus messages
+    if (bFocus) { /* Do not change focus if the window is no longer active */
+        let wndActive = ObGetObject<WND>(pti.hwndActive);
+        if (wndActive != NtUserIntGetNonChildAncestor(wndActive)) {
+            let pWndSend = wndActive!;
+            // Clear focus if the active window is minimized.
+            if (pWndSend && pWndSend?.dwStyle & WS.ICONIC) pWndSend = null!;
+            // Send focus messages and if so, set the focus.
+            await NtUserIntSendFocusMessages(peb, pWndSend);
+        }
+    }
 
     wnd.stateFlags.bIsBeingActivated = false;
 
@@ -541,6 +551,15 @@ export function NtUserIntSetFocusMessageQueue(peb: PEB, newQueue: PEB | null) {
     }
 }
 
+export function NtUserIntGetFocusMessageQueue(peb: PEB): PEB | null {
+    const desktop = NtUserGetDesktop(peb);
+    if (!desktop) {
+        return null;
+    }
+
+    return desktop.pActiveProcess;
+}
+
 async function NtUserIntSetForegroundMessageQueue(peb: PEB, wnd: WND, mouseActivate: boolean, type: number) {
     if (wnd && !ObGetObject<WND>(wnd.hWnd)) { // VerifyWnd is used in a bunch of places and i've omitted it, fix that
         return;
@@ -726,3 +745,112 @@ function NtUserIntCanActivateWindow(wnd: PWND) {
     //return !(style & WS_DISABLED);
 }
 
+export async function NtUserIntSendFocusMessages(peb: PEB, wnd: WND | null) {
+    let pti = NtUserGetProcInfo(peb)!;
+    let pwndPrev = ObGetObject<WND>(pti.hwndFocus);
+    let pwndNew = wnd;
+
+    if (pwndPrev === pwndNew) {
+        return;
+    }
+
+    if (peb === wnd?.peb)
+        pti.hwndFocus = pwndNew?.hWnd ?? 0;
+
+    if (pwndPrev) {
+        await NtDispatchMessage(peb, [pwndPrev.hWnd, WM.KILLFOCUS, 0, 0]);
+    }
+
+    if (pwndNew) {
+        await NtDispatchMessage(peb, [pwndNew.hWnd, WM.SETFOCUS, 0, 0]);
+    }
+}
+
+export async function NtUserSetFocus(peb: PEB, wnd: WND) {
+    let hWndPrev = 0;
+    let pwndTop: PWND = null;
+    // PTHREADINFO pti;
+    // PUSER_MESSAGE_QUEUE ThreadQueue;
+
+    // if (Window)
+    //    ASSERT_REFS_CO(Window);
+
+    // pti = PsGetCurrentThreadWin32Thread();
+    // ThreadQueue = pti->MessageQueue;
+    let pti = NtUserGetProcInfo(peb)!;
+    // ASSERT(ThreadQueue != 0);
+
+    // TRACE("Enter SetFocus hWnd 0x%p pti 0x%p\n",Window ? UserHMGetHandle(Window) : 0, pti );
+
+    hWndPrev = pti.hwndFocus;
+
+    if (wnd) {
+        if (hWndPrev == wnd.hWnd) {
+            return hWndPrev ? (ObGetObject<WND>(hWndPrev) ? hWndPrev : 0) : 0; /* Nothing to do */
+        }
+
+        if (wnd.peb != peb) {
+            console.error("SetFocus Must have the same Q!\n");
+            return 0;
+        }
+
+        /* Check if we can set the focus to this window */
+        //// Fixes wine win test_SetParent both "todo" line 3710 and 3720...
+        for (pwndTop = wnd; pwndTop; pwndTop = pwndTop.wndParent) {
+            if (pwndTop.dwStyle & (WS.ICONIC | WS.DISABLED)) return 0;
+            if ((pwndTop.dwStyle & (WS.POPUP | WS.CHILD)) != WS.CHILD) break;
+            if (!pwndTop.wndParent) break;
+        }
+
+        /* Activate pwndTop if needed. */
+        if (pwndTop.hWnd != pti.hwndActive) {
+            let ForegroundQueue = NtUserIntGetFocusMessageQueue(peb)!; // Keep it based on desktop.
+            if (peb != ForegroundQueue && IsAllowedFGActive(peb, pwndTop)) // Rule 2 & 3.
+            {
+                //ERR("SetFocus: Set Foreground!\n");
+                if (!(pwndTop.dwStyle & WS.VISIBLE)) {
+                    // pti -> ppi -> W32PF_flags |= W32PF_ALLOWFOREGROUNDACTIVATE;
+                    pti.flags.bAllowForegroundActivate = true;
+                }
+                if (!await NtUserIntSetForegroundAndFocusWindow(peb, pwndTop, false, true)) {
+                    console.error("SetFocus: Set Foreground and Focus Failed!\n");
+                    return 0;
+                }
+            }
+
+            /* Set Active when it is needed. */
+            if (pwndTop.hWnd != pti.hwndActive) {
+                //ERR("SetFocus: Set Active! %p\n",pwndTop?UserHMGetHandle(pwndTop):0);
+                if (!await NtUserCoIntSetActiveWindow(peb, pwndTop, false, false, false)) {
+                    console.error("SetFocus: Set Active Failed!\n");
+                    return 0;
+                }
+            }
+
+            /* Abort if window destroyed */
+            if (wnd.stateFlags.bIsDestroyed) return 0;
+            /* Do not change focus if the window is no longer active */
+            if (pwndTop.hWnd != pti.hwndActive) {
+                console.error("SetFocus: Top window did not go active!\n");
+                return 0;
+            }
+        }
+
+        // Check again! SetActiveWindow could have set the focus via WM_ACTIVATE.
+        hWndPrev = pti.hwndFocus;
+
+        await NtUserIntSendFocusMessages(peb, wnd);
+
+        // TRACE("Focus: %p -> %p\n", hWndPrev, Window -> head.h);
+    }
+    else /* NULL hwnd passed in */ {
+        // if (co_HOOK_CallHooks(WH_CBT, HCBT_SETFOCUS, (WPARAM)0, (LPARAM)hWndPrev)) {
+        //     ERR("SetFocus: 2 WH_CBT Call Hook return!\n");
+        //     return 0;
+        // }
+        //ERR("SetFocus: Set Focus NULL\n");
+        /* set the current thread focus window null */
+        await NtUserIntSendFocusMessages(peb, null);
+    }
+    return hWndPrev ? (ObGetObject<WND>(hWndPrev) ? hWndPrev : 0) : 0;
+}

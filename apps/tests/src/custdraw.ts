@@ -133,7 +133,7 @@ async function main() {
         hInstance: <HINSTANCE>hModule,
         hIcon: 0,
         hCursor: 0,
-        hbrBackground: <HBRUSH>(COLOR.WINDOW + 1),
+        hbrBackground: await CreateSolidBrush(0x8d69b8),
         lpszMenuName: 0,
         lpszClassName: className,
         hIconSm: 0

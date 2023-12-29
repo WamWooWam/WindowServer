@@ -59,10 +59,11 @@ if (-not ($NoBuild)) {
     }
 }
 
-New-Item .\dist -ItemType Directory 
-New-Item .\dist\windows -ItemType Directory -Force
-New-Item .\dist\windows\system32 -ItemType Directory -Force
-New-Item .\dist\windows\system32\tests -ItemType Directory -Force
+Write-Host "Creating OS image"
+New-Item .\dist -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
+New-Item .\dist\windows -ItemType Directory -Force | Out-Null
+New-Item .\dist\windows\system32 -ItemType Directory -Force | Out-Null
+New-Item .\dist\windows\system32\tests -ItemType Directory -Force | Out-Null
 
 Copy-Item ntos/kernel/dist/ntoskrnl.exe dist/windows/system32/ntoskrnl.exe
 
@@ -79,6 +80,7 @@ Copy-Item apps/tests/dist/*.exe dist/windows/system32/tests/
 Copy-Item ntos/setup/dist/ntsetup.js dist/setup.js
 Copy-Item ntos/ldr/dist/ntldr.js dist/
 
+Write-Host "Creating install.zip"
 Compress-Archive -Path dist/windows -DestinationPath dist/install.zip -Force
 
 Remove-Item dist/windows -Recurse -Force

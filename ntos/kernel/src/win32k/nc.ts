@@ -1,5 +1,5 @@
 import { HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, SC, SM, WM, WMSZ, WPARAM, WS } from "../subsystems/user32.js";
-import { INRECT, InflateRect, RECT } from "../subsystems/gdi32.js";
+import { INRECT, InflateRect, LPRECT, RECT, SIZE } from "../subsystems/gdi32.js";
 import { NtDispatchMessage, NtSendMessageTimeout } from "./msg.js";
 import { NtUserGetWindowBorders, NtUserHasWindowEdge } from "./window.js";
 
@@ -319,4 +319,25 @@ export async function NtUserDoNCHitTest(wnd: WND, x: number, y: number): Promise
         return <HT>await NtDefWindowProc(wnd.hWnd, WM.NCHITTEST, 0, (y << 16) + x);
 
     return <HT>result;
+}
+
+export function NtUserAdjustWindowRectEx(peb: PEB, lpRect: RECT, dwStyle: number, bMenu: boolean, dwExStyle: number): boolean {
+    let borderSize: SIZE = { cx: 0, cy: 0 };
+    if (bMenu) {
+        lpRect.top -= NtUserGetSystemMetrics(peb, SM.CYMENU);
+    }
+
+    if (dwStyle & WS.CAPTION) {
+        if (dwExStyle & WS.EX.TOOLWINDOW) {
+            lpRect.top -= NtUserGetSystemMetrics(peb, SM.CYSMCAPTION);
+        }
+        else {
+            lpRect.top -= NtUserGetSystemMetrics(peb, SM.CYCAPTION);
+        }
+    }
+
+    borderSize = NtUserGetWindowBorders(peb, dwStyle, dwExStyle, true);
+    InflateRect(lpRect, borderSize.cx, borderSize.cy);
+
+    return true;
 }

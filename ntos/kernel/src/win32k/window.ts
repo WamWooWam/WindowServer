@@ -31,6 +31,7 @@ import { NtDispatchMessage } from "./msg.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtSetLastError } from "../error.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
+import { NtUserInvalidateRect } from "./draw.js";
 import { NtUserScreenToClient } from "./client.js";
 import { PEB } from "ntos-sdk/types/types.js";
 
@@ -738,7 +739,8 @@ export async function NtCreateWindowEx(peb: PEB, data: CREATE_WINDOW_EX): Promis
         // TODO: MDI child
     }
 
-    await NtDispatchMessage(peb, [wnd.hWnd, WM.PAINT, 0, 0]);
+
+    await NtUserInvalidateRect(wnd.hWnd, null, true);
 
     performance.measure("NtCreateWindowEx", { start: mark, end: performance.now() });
 

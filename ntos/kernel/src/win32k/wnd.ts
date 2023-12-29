@@ -10,7 +10,8 @@ import {
     WM,
     WNDPROC,
     WPARAM,
-    WS
+    WS,
+    COLOR
 } from "../subsystems/user32.js";
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
 import { HANDLE, PEB } from "ntos-sdk/types/types.js";
@@ -23,6 +24,8 @@ import { W32CLASSINFO, W32PROCINFO } from "./shared.js";
 import { NtCreateWndProcCallback } from "./class.js";
 import { NtGetPrimaryMonitor } from "./monitor.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
+import { NtUserInvalidateRect } from "./draw.js";
+import { IntGetSysColorBrush } from "./brush.js";
 
 export default class WND {
     private _hWnd: HWND;
@@ -59,6 +62,7 @@ export default class WND {
         bIsBeingActivated: false,
         bIsDestroyed: false,
         bIsActiveFrame: false,
+        bInvalidated: true,
     }
 
     public savedPos: {
@@ -156,6 +160,8 @@ export default class WND {
         }
     }
 
+    public hbrBackground: HANDLE = 0;
+
     constructor(
         peb: PEB,
         pti: W32PROCINFO,
@@ -188,6 +194,16 @@ export default class WND {
         this.wndParent = wndParent;
         this.wndOwner = wndOwner;
         this.wndLastActive = this;
+
+        // this.hbrBackground = lpClass.hbrBackground ObDuplicateHandle(lpClass.hbrBackground);
+
+        // debugger;
+        if (lpClass.hbrBackground > 0 && lpClass.hbrBackground < (COLOR.MENUBAR + 1)) {
+            this.hbrBackground = IntGetSysColorBrush(lpClass.hbrBackground - 1);
+        }
+        else {
+            this.hbrBackground = lpClass.hbrBackground == 0 ? 0 : ObDuplicateHandle(lpClass.hbrBackground);
+        }
 
         this._rcClient = {
             left: cs.x,
@@ -389,11 +405,12 @@ export default class WND {
         if (bRepaint && ((oldCX !== newCX || oldCY !== newCY) || !this.stateFlags.bHasHadInitialPaint)) {
             this.stateFlags.bHasHadInitialPaint = true;
 
-            if (this._hDC && !(this.dwStyle & WS.CHILD)) {
-                GreResizeDC(this._hDC, this.rcClient);
-            }
+            // if (this._hDC && !(this.dwStyle & WS.CHILD)) {
+            await GreResizeDC(this._hDC, this.rcClient);
+            // }
 
-            await NtDispatchMessage(this._peb, [this._hWnd, WM.PAINT, 0, 0]);
+            // await NtDispatchMessage(this._peb, [this._hWnd, WM.PAINT, 0, 0]);
+            await NtUserInvalidateRect(this._hWnd, null, true);
         }
     }
 
@@ -518,14 +535,16 @@ export default class WND {
             this._hDC = GreAllocDCForWindow(this._peb, this._hWnd);
         }
         else {
-            // use the parent's DC, with an additional transform
-            this._hDC = ObDuplicateHandle(this.wndParent?.hDC ?? 0);
+            // we should use the parent's DC, with an additional transform
+            // for now, just allocate a new DC
+            this._hDC = GreAllocDCForWindow(this._peb, this._hWnd);
         }
 
         if (!this._hDC)
             return;
 
-        GreResizeDC(this._hDC, this.rcClient);
+        await GreResizeDC(this._hDC, this.rcClient);
+        await NtUserInvalidateRect(this._hWnd, null, true);
     }
 
     public UpdateWindowStyle(dwOldStyle: number, dwNewStyle: number): void {

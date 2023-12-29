@@ -6,11 +6,17 @@
  */
 
 import USER32, {
+    ADJUST_WINDOW_RECT_PARAMS,
+    ADJUST_WINDOW_RECT_REPLY,
+    BEGIN_PAINT_PARAMS,
+    BEGIN_PAINT_REPLY,
     CALL_WINDOW_PROC_PARAMS,
     CALL_WINDOW_PROC_REPLY,
     CREATE_DESKTOP,
     CREATE_WINDOW_EX,
     CREATE_WINDOW_EX_REPLY,
+    END_PAINT_PARAMS,
+    END_PAINT_REPLY,
     FIND_WINDOW,
     GET_CLIENT_RECT,
     GET_CLIENT_RECT_REPLY,
@@ -22,6 +28,8 @@ import USER32, {
     GET_PROP_REPLY,
     GET_WINDOW_LONG_PARAMS,
     GET_WINDOW_LONG_REPLY,
+    INVALIDATE_RECT_PARAMS,
+    INVALIDATE_RECT_REPLY,
     LOAD_IMAGE_PARAMS,
     LOAD_IMAGE_REPLY,
     PEEK_MESSAGE,
@@ -41,8 +49,8 @@ import USER32, {
     WNDCLASS_WIRE,
     WNDPROC_PARAMS
 } from "./types/user32.int.types.js";
-import { HDC, POINT, RECT } from "gdi32";
-import { ATOM, HINSTANCE, LPARAM, LRESULT, MONITORINFO, MONITORINFOEX, MSG, SM, WNDCLASS, WNDPROC, WPARAM } from "./types/user32.types.js";
+import { HDC, LPRECT, POINT, RECT } from "gdi32";
+import { ATOM, HINSTANCE, LPARAM, LRESULT, MONITORINFO, MONITORINFOEX, MSG, PAINTSTRUCT, SM, WNDCLASS, WNDPROC, WPARAM } from "./types/user32.types.js";
 
 import Executable from "ntos-sdk/types/Executable.js";
 import { GetModuleHandle } from "kernel32";
@@ -674,6 +682,46 @@ export async function GetMonitorInfo(hMonitor: HANDLE): Promise<MONITORINFO | MO
         return msg.data.lpmi;
     }
     return null;
+}
+
+export async function BeginPaint(hWnd: HANDLE, lpPaint: PAINTSTRUCT): Promise<HDC> {
+    const msg = await User32.SendMessage<BEGIN_PAINT_PARAMS, BEGIN_PAINT_REPLY>({
+        nType: USER32.BeginPaint,
+        data: { hWnd, lpPaint }
+    });
+
+    Object.assign(lpPaint, msg.data.lpPaint);
+
+    return msg.data.retVal;
+}
+
+export async function EndPaint(hWnd: HANDLE, lpPaint: PAINTSTRUCT): Promise<boolean> {
+    const msg = await User32.SendMessage<END_PAINT_PARAMS, END_PAINT_REPLY>({
+        nType: USER32.EndPaint,
+        data: { hWnd, lpPaint }
+    });
+
+    return msg.data.retVal;
+}
+
+export async function InvalidateRect(hWnd: HANDLE, lpRect: LPRECT, bErase: boolean): Promise<boolean> {
+    const msg = await User32.SendMessage<INVALIDATE_RECT_PARAMS, INVALIDATE_RECT_REPLY>({
+        nType: USER32.InvalidateRect,
+        data: { hWnd, lpRect, bErase }
+    });
+
+    return msg.data.retVal;
+}
+
+export async function AdjustWindowRect(lpRect: LPRECT, dwStyle: number, bMenu: boolean): Promise<boolean> {
+    const msg = await User32.SendMessage<ADJUST_WINDOW_RECT_PARAMS, ADJUST_WINDOW_RECT_REPLY>({
+        nType: USER32.AdjustWindowRect,
+        data: { lpRect, dwStyle, bMenu }
+    });
+
+    Object.assign(lpRect!, msg.data.lpRect);
+
+    return msg.data.retVal;
 }
 
 const user32: Executable = {

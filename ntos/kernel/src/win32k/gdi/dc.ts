@@ -1,13 +1,16 @@
-import { BLACK_PEN, HDC, POINT, RECT, SYSTEM_FONT, TRANSPARENT, WHITE_BRUSH } from "../../subsystems/gdi32.js";
+import { BLACK_PEN, HDC, POINT, RECT, RGN, SYSTEM_FONT, TRANSPARENT, WHITE_BRUSH } from "../../subsystems/gdi32.js";
+import BRUSH, { GreCreateBrush } from "./brush.js";
 import { COLOR, HWND, SPI } from "../../subsystems/user32.js";
 import FONT, { GreCreateFontIndirect } from "./font.js";
+import { GreCombineRgn, GreCreateRectRgn } from "./rgn.js";
 import { HANDLE, PEB } from "ntos-sdk/types/types.js";
-import { ObCloseHandle, ObDuplicateHandle, ObGetObject, ObSetHandleOwner, ObSetObject } from "../../objects.js";
+import { ObCloseHandle, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "../../objects.js";
 import PEN, { GreRealisePen } from "./pen.js";
 
-import BRUSH from "./brush.js";
 import CLIP from "./clip.js";
+import DESKTOP from "../desktop.js";
 import { GDIOBJ } from "./ntgdi.js";
+import { GreFillRegion } from "./draw.js";
 import { GreGetStockObject } from "./obj.js";
 import { IntGetSysColor } from "../brush.js";
 import { MATRIX } from "./trans.js";
@@ -78,12 +81,37 @@ class DC implements DC {
         }
     }
 
-    public Resize(prBounds: RECT) {
+    public async Resize(prBounds: RECT) {
         this.prBounds = prBounds;
 
         if (!this.pdcParent) {
-            this.pSurface.width = prBounds.right - prBounds.left;
-            this.pSurface.height = prBounds.bottom - prBounds.top;
+            // retain the original surface content
+            const pSurface = this.pSurface;
+            const pCtx = this.pCtx;
+
+            if (pSurface.width && pSurface.height) {
+                await createImageBitmap(pSurface).then((bitmap) => {
+                    pSurface.width = prBounds.right - prBounds.left;
+                    pSurface.height = prBounds.bottom - prBounds.top;
+
+                    pCtx.clearRect(0, 0, pSurface.width, pSurface.height);
+                    pCtx.drawImage(bitmap, 0, 0);
+                });
+            }
+            else {
+                pSurface.width = prBounds.right - prBounds.left;
+                pSurface.height = prBounds.bottom - prBounds.top;
+            }
+
+            // let oldRgn = GreCreateRectRgn({ left: 0, top: 0, right: pSurface.width, bottom: pSurface.height });
+            // let newRgn = GreCreateRectRgn(prBounds);
+            // let intersect = GreCreateRectRgn({ left: 0, top: 0, right: 0, bottom: 0 });
+
+            // // calculate the new dirty region
+            // GreCombineRgn(intersect, oldRgn, newRgn, RGN.DIFF);
+
+            // // fill the new dirty region with the background color
+            // GreClearRgn(this, intersect);
         }
     }
 }
@@ -125,12 +153,11 @@ export function GreAllocDCForWindow(peb: PEB, hWnd: HWND): HDC {
         return -1;
     }
 
-    const pCanvas = document.createElement("canvas")!;
-    pCanvas.width = wnd.rcClient.right - wnd.rcClient.left;
-    pCanvas.height = wnd.rcClient.bottom - wnd.rcClient.top;
-
+    const pCanvas = new OffscreenCanvas(wnd.rcClient.right - wnd.rcClient.left, wnd.rcClient.bottom - wnd.rcClient.top);
     const pCtx = pCanvas.getContext("2d")!;
-    wnd.pRootElement?.appendChild(pCanvas);
+
+    const targetCanvas = document.createElement("canvas")!;
+    wnd.pRootElement?.appendChild(targetCanvas);
 
     return new DC(peb, hWnd, {
         pSurface: pCanvas,
@@ -142,18 +169,23 @@ export function GreReleaseDC(hDC: HDC) {
     ObCloseHandle(hDC);
 }
 
-export function GreResizeDC(hDC: HDC, prBounds: RECT) {
+export async function GreResizeDC(hDC: HDC, prBounds: RECT) {
     const dc = ObGetObject<DC>(hDC);
     if (!dc) {
         return;
     }
 
-    dc.Resize(prBounds);
+    await dc.Resize(prBounds);
+}
+
+export function GreClearDC(dc: DC) {
+    dc.pCtx.clearRect(0, 0, dc.pSurface.width, dc.pSurface.height);
 }
 
 function GreCleanupDC(dc: DC) {
 
 }
+
 
 export function GreSelectObject(dc: DC, h: GDIOBJ): GDIOBJ | null {
     if (!h) {

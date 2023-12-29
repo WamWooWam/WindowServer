@@ -1,9 +1,9 @@
-import { HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, MA, MSG, SC, SW, VK, WA, WM, WPARAM, WS, WMP } from "../subsystems/user32.js";
+import { HIWORD, HT, HWND, LOWORD, LPARAM, LRESULT, MA, MSG, SC, SW, VK, WA, WM, WPARAM, WS, WMP, COLOR } from "../subsystems/user32.js";
 import { NtDefNCLButtonDown, NtDefNCLButtonUp, NtUserDefNCHitTest } from "./nc.js";
 
 import { NtDefCalcNCSizing } from "./nc.js";
 import { NtDefWndDoSizeMove } from "./sizemove.js";
-import { NtDestroyWindow } from "./window.js";
+import { NtDestroyWindow, NtUserGetClientRect } from "./window.js";
 import { NtDispatchMessage } from "./msg.js";
 import { NtUserGetProcInfo } from "./shared.js";
 import { NtUserShowWindow } from "./wndpos.js";
@@ -12,6 +12,10 @@ import { PEB } from "ntos-sdk/types/types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
 import WindowElementBase from "./html/WindowElementBase.js";
+import { IntGetSysColorBrush } from "./brush.js";
+import { NtUserFillRect } from "./draw.js";
+import DC, { GreClearDC } from "./gdi/dc.js";
+import { NtUserSetFocus } from "./focus.js";
 
 export function HasThickFrame(dwStyle: number) {
     return (dwStyle & WS.THICKFRAME) === WS.THICKFRAME && !((dwStyle & (WS.DLGFRAME | WS.BORDER)) === WS.DLGFRAME);
@@ -65,7 +69,7 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
                 return NtDefNcActivate(hWnd, wParam, lParam);
             case WM.ACTIVATE:
                 if (LOWORD(wParam) != WA.INACTIVE && !(wnd.dwStyle & WS.MINIMIZE)) {
-                    // await NtUserSetFocus(wnd);
+                    await NtUserSetFocus(peb, wnd);
                 }
                 break;
             case WM.MOUSEACTIVATE: {
@@ -77,6 +81,23 @@ export async function NtDefWindowProc(hWnd: HWND, Msg: number, wParam: WPARAM, l
                 }
 
                 return ((HIWORD(lParam) == WM.LBUTTONDOWN && LOWORD(lParam) == HT.CAPTION) ? MA.NOACTIVATE : MA.ACTIVATE);
+            }
+            case WM.ERASEBKGND: {
+                let rect = NtUserGetClientRect(peb, hWnd);
+                let hBrush = wnd.hbrBackground;
+                if (wnd.hbrBackground === 0) {
+                    GreClearDC(ObGetObject<DC>(wnd.hDC)!);
+                    return true;
+                }
+                if (!hBrush) return false;
+                if (hBrush <= COLOR.MENUBAR) {
+                    hBrush = IntGetSysColorBrush(hBrush);
+                }
+
+                if (hBrush)
+                    NtUserFillRect(wnd.hDC, rect, hBrush);
+
+                return true;
             }
         }
     }

@@ -28,6 +28,7 @@ export function GreFillRegion(dc: DC, reg: REGION) {
     dc.pCtx.fill(path);
 }
 
+
 export function GreRectangle(dc: DC, prc: RECT) {
     let x = ROUND(prc.left);
     let y = ROUND(prc.top);

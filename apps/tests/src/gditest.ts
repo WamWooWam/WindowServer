@@ -1,4 +1,4 @@
-import { CombineRgn, CreateRectRgn, CreateSolidBrush, DeleteObject, FillRgn, SelectObject, TextOut, HDC, RGN } from "gdi32";
+import { CombineRgn, CreateRectRgn, CreateSolidBrush, DeleteObject, FillRgn, SelectObject, TextOut, HDC, RGN, CreatePen, PS, SetTextColor, Rectangle, RECT } from "gdi32";
 import { GetModuleHandle } from "kernel32";
 import {
     CW_USEDEFAULT,
@@ -20,27 +20,46 @@ import {
     PostQuitMessage,
     RegisterClass,
     ShowWindow,
-    TranslateMessage
+    TranslateMessage,
+    PostMessage,
+    GetClientRect
 } from "user32";
+
+function RGB(r: number, g: number, b: number): number {
+    return (r << 16) | (g << 8) | b;
+}
+
+function RandInt(max: number): number {
+    return Math.floor(Math.random() * (max));
+}
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {
         case WM.CREATE: {
+            setInterval(async () => {
+                await PostMessage(hwnd, WM.PAINT, 0, 0);
+            }, 250);
             break;
         }
 
         case WM.PAINT: {
             const hdc: HDC = await GetDC(hwnd);
+            const rect = {} as RECT;
+            await GetClientRect(hwnd, rect);
 
             const brush = await CreateSolidBrush(0x696db8);
             await SelectObject(hdc, brush);
 
-            const rgn1 = await CreateRectRgn(0, 0, 100, 100);
-            const rgn2 = await CreateRectRgn(50, 50, 150, 150);
+            // const rgn1 = await CreateRectRgn(0, 0, 100, 100);
+            // const rgn2 = await CreateRectRgn(50, 50, 150, 150);
+            const rgn1 = await CreateRectRgn(0, 0, (rect.right / 3) * 2, (rect.bottom / 3) * 2);
+            const rgn2 = await CreateRectRgn(rect.right / 3, rect.right / 3, rect.right, rect.bottom);
             const intersect = await CreateRectRgn(0, 0, 0, 0);
             await CombineRgn(intersect, rgn1, rgn2, RGN.XOR);
             await FillRgn(hdc, intersect);
 
+            const color = RGB(RandInt(255), RandInt(255), RandInt(255));
+            await SetTextColor(hdc, color);
             await TextOut(hdc, 10, 10, "Hello, world!");
 
             await DeleteObject(rgn1);
@@ -48,6 +67,7 @@ async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM):
             await DeleteObject(intersect);
             await DeleteObject(brush);
             await DeleteObject(hdc);
+            // await DeleteObject(pen);
             break;
         }
 

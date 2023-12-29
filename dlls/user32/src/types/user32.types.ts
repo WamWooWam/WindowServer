@@ -320,7 +320,10 @@ export enum WM {
 
     COMMAND = 0x0111,
 
+    TIMER = 0x0113, 
+
     PARENTNOTIFY = 0x0210,
+
 
     USER = 0x0400,
 }
@@ -1024,15 +1027,6 @@ export interface NONCLIENTMETRICS {
     iPaddedBorderWidth: number;
 }
 
-export interface PAINTSTRUCT {
-    hdc: HDC;
-    fErase: boolean;
-    rcPaint: RECT;
-    fRestore: boolean;
-    fIncUpdate: boolean;
-    rgbReserved: number[];
-}
-
 export interface CREATESTRUCT {
     lpCreateParams: LPARAM;
     hInstance: HINSTANCE;
@@ -1046,6 +1040,15 @@ export interface CREATESTRUCT {
     lpszName: string;
     lpszClass: string;
     dwExStyle: number;
+}
+
+export interface PAINTSTRUCT {
+    hDC: HDC,
+    fErase: boolean,
+    rcPaint: RECT,
+    fRestore: boolean,
+    fIncUpdate: boolean,
+    rgbReserved: number[]
 }
 
 export interface DRAWITEMSTRUCT {

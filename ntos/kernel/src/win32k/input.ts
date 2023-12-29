@@ -1,6 +1,6 @@
 import { HT, HWND, WM, WS } from "../subsystems/user32.js";
 import { INRECT, InflateRect, OffsetRect, POINT } from "../subsystems/gdi32.js";
-import { NtUserGetForegroundWindow, NtUserIntSetForegroundWindowMouse } from "./focus.js";
+import { NtUserGetForegroundWindow, NtUserIntGetFocusMessageQueue, NtUserIntSetForegroundWindowMouse } from "./focus.js";
 import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import DESKTOP from "./desktop.js";
@@ -9,6 +9,7 @@ import { NtUserDoNCHitTest } from "./nc.js";
 import { NtUserIsDesktopWindow } from "./window.js";
 import { NtUserScreenToClient } from "./client.js";
 import WND, { PWND } from "./wnd.js";
+import { NtUserGetProcInfo } from "./shared.js";
 
 let gCaptureElement: HTMLElement;
 let gLastMouseMove = 0;
@@ -19,6 +20,71 @@ export function NtUserInitInput() {
     window.addEventListener("pointermove", NtOnPointerMove);
     window.addEventListener("pointerup", NtOnPointerUp);
     window.addEventListener("pointercancel", NtOnPointerUp);
+    window.addEventListener("keydown", (e) => {
+        for (const hDesktop of ObEnumHandlesByType("DESKTOP")) {
+            const desk = ObGetObject<DESKTOP>(hDesktop);
+            if (!desk) continue;
+
+            let peb = desk.pActiveProcess;
+            if (!peb) continue;
+
+            let pti = NtUserGetProcInfo(peb);
+            if (!pti) continue;
+            let wnd = ObGetObject<WND>(pti.hwndFocus);
+            if (!wnd && pti.hwndActive)
+                wnd = ObGetObject<WND>(pti.hwndActive);
+
+            if (wnd) {
+                peb = wnd.peb;
+                pti = NtUserGetProcInfo(peb);
+            }
+
+            let msg = {
+                hWnd: wnd?.hWnd || 0,
+                message: WM.KEYDOWN,
+                wParam: e.keyCode,
+                lParam: 0,
+                pt: { x: 0, y: 0 }
+            }
+
+            console.log("keydown", msg);
+
+            NtPostMessage(peb, msg);
+        }
+    })
+
+    window.addEventListener("keyup", (e) => {
+        for (const hDesktop of ObEnumHandlesByType("DESKTOP")) {
+            const desk = ObGetObject<DESKTOP>(hDesktop);
+            if (!desk) continue;
+
+            let peb = desk.pActiveProcess;
+            if (!peb) continue;
+
+            let pti = NtUserGetProcInfo(peb);
+            if (!pti) continue;
+            let wnd = ObGetObject<WND>(pti.hwndFocus);
+            if (!wnd && pti.hwndActive)
+                wnd = ObGetObject<WND>(pti.hwndActive);
+
+            if (wnd) {
+                peb = wnd.peb;
+                pti = NtUserGetProcInfo(peb);
+            }
+
+            let msg = {
+                hWnd: wnd?.hWnd || 0,
+                message: WM.KEYUP,
+                wParam: e.keyCode,
+                lParam: 0,
+                pt: { x: 0, y: 0 }
+            }
+
+            console.log("keyup", msg);
+
+            NtPostMessage(peb, msg);
+        }
+    })
 }
 
 async function NtOnPointerDown(e: PointerEvent) {
