@@ -1,6 +1,12 @@
-# if -NoBuild is passed, we don't want to build anything
-if (-not ($args -contains "-NoBuild")) {
-    $configuration = "debug"
+param(
+    [string]$Configuration = "release",
+    [string[]]$Project = $null,
+    [switch]$NoBuild = $false
+)
+
+$Root = Get-Location
+
+if (-not ($NoBuild)) {
     $projects = @(
         "dlls/ntdll",
         "dlls/kernel32",
@@ -17,25 +23,39 @@ if (-not ($args -contains "-NoBuild")) {
         "apps/tests"
     )
 
-    # if -Project is passed, we only want to build that project
-    if ($args -contains "-Project") {
-        $projects = $args[$args.IndexOf("-Project") + 1].Split(",")
-        $parallelProjects = @()
+    # if -Project is passed, we only want to build those projects
+    if ($null -ne $Project) {
+        $projects = $projects | Where-Object { $Project -contains $_ }
+        $parallelProjects = $parallelProjects | Where-Object { $Project -contains $_ }
     }
 
     foreach ($project in $projects) {
+        #if $project is an array, get the first element
+        if ($project -is [array]) {
+            $proj = $project[0]
+        }      
+        else {
+            $proj = $project
+        }  
+
         Write-Host "Building $project"
-        Set-Location $project
-        yarn ntos-link . /p:configuration=$configuration
-        Set-Location ../..
+        Push-Location $proj
+        yarn ntos-link . /p:configuration=$Configuration
+        Pop-Location
     }
 
     $parallelProjects | Foreach-Object -ThrottleLimit 5 -Parallel {
-        #Action that will run in Parallel. Reference the current object via $PSItem and bring in outside variables with $USING:varname
+        if ($PSItem -is [array]) {
+            $proj = $PSItem[0]
+        }      
+        else {
+            $proj = $PSItem
+        }  
+        
         Write-Host "Building $PSItem"
-        Set-Location $PSItem
-        yarn ntos-link . /p:configuration=$USING:configuration
-        Set-Location ../..
+        Push-Location $proj
+        yarn ntos-link . /p:configuration=$USING:Configuration
+        Pop-Location
     }
 }
 
