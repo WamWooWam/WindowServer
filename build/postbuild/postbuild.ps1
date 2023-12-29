@@ -1,6 +1,6 @@
 # if -NoBuild is passed, we don't want to build anything
 if (-not ($args -contains "-NoBuild")) {
-    $configuration = "release"
+    $configuration = "debug"
     $projects = @(
         "dlls/ntdll",
         "dlls/kernel32",
@@ -16,6 +16,12 @@ if (-not ($args -contains "-NoBuild")) {
         "apps/wininit",
         "apps/tests"
     )
+
+    # if -Project is passed, we only want to build that project
+    if ($args -contains "-Project") {
+        $projects = $args[$args.IndexOf("-Project") + 1].Split(",")
+        $parallelProjects = @()
+    }
 
     foreach ($project in $projects) {
         Write-Host "Building $project"

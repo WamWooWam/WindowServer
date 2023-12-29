@@ -2,8 +2,9 @@ import * as asar from 'asar'
 
 import { FILE_SHARE_READ, GENERIC_ALL, OPEN_EXISTING } from "./subsystems/kernel32.js";
 import { HANDLE, PEB } from "ntos-sdk/types/types.js";
+import { HKEY_CURRENT_USER, ZwEnumerateValueKey, ZwOpenKey } from './reg.js';
+import { InitializeObjectAttributes, OBJECT_ATTRIBUTES, ObCloseHandle, ObCreateObject, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "./objects.js";
 import { NtCreateFile, NtGetDirectoryName, NtGetFileName, NtGetFileSizeEx, NtGetFileSystemGlobal, NtPathJoin, NtReadFile } from "./fs/file.js";
-import { ObCloseHandle, ObCreateObject, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "./objects.js";
 
 import Executable from "ntos-sdk/types/Executable.js";
 import { IMAGEINFO } from "./types/image.js";
@@ -28,6 +29,25 @@ export async function PsCreateProcess(
     if (module.hModule === 0) {
         return 0;
     }
+
+    // load environment variables from the registry
+    let env = { ...lpEnvironment };
+    let obj = {} as OBJECT_ATTRIBUTES;
+    InitializeObjectAttributes(obj, "Environment", 0, HKEY_CURRENT_USER);
+
+    let { retVal, keyHandle } = ZwOpenKey(0, obj);
+    if (retVal === 0) {
+        let retVal, lpValueName, lpData, lpType, i = 0;
+        while (({ retVal, lpValueName, lpData, lpType } = ZwEnumerateValueKey(keyHandle!, i)) && retVal === 0) {
+            if (lpType === "REG_SZ") {
+                env[lpValueName!] = lpData!;
+            }
+
+            i++;
+        }
+    }
+
+    console.log("PsCreateProcess: %O", env);
 
     const exec = module.lpExecInfo;
     const proc = new PsProcess(exec, lpApplicationName, lpCommandLine, lpCurrentDirectory, lpEnvironment);

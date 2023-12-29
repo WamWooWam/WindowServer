@@ -1,7 +1,7 @@
 {
     "name": "ntoskrnl",
     "dependencies": [],
-    "subsystem": "windows",
+    "subsystem": "native",
     "targets": [
         {
             "name": "ntoskrnl",

@@ -5,11 +5,13 @@
   "type": "module",
   "license": "MIT",
   "dependencies": {
-    "browserify": "^17.0.0"
+    "browserify": "^17.0.0",
+    "filer": "file:../../extern/filer",
+    "asar": "file:../../extern/asar"
   },
   "devDependencies": {
     "@types/node": "^20.9.0",
-    "ntos-link": "file:../build/link",
+    "ntos-link": "file:../../build/link",
     "typescript": "^5.3.3"
   }
 }

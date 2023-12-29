@@ -85,7 +85,7 @@ const asar = require('asar');
                         tsconfig: 'tsconfig.json',
                     }),
                     builtins(),
-                    // globals(),
+                    globals(),
                     ...(configuration === 'release' ? [terser()] : [])
                 ],
                 external: targetDependencies,

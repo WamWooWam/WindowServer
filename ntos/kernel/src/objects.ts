@@ -1,6 +1,27 @@
 import { HANDLE } from "ntos-sdk/types/types.js";
 import { PsProcess } from "./process.js";
 
+export const OBJ_INHERIT = 0x00000002;
+export const OBJ_OPENIF = 0x00000080;
+export const OBJ_CASE_INSENSITIVE = 0x00000040;
+export const OBJ_KERNEL_HANDLE = 0x00000200;
+export const OBJ_FORCE_ACCESS_CHECK = 0x00000400;
+export const OBJ_VALID_ATTRIBUTES = 0x000007C0;
+
+export type OBJECT_ATTRIBUTES = {
+    hRootDirectory: HANDLE,
+    lpObjectName: string,
+    dwAttributes: number,
+    pSecurityDescriptor?: any,
+    pSecurityQualityOfService?: any,
+};
+
+export function InitializeObjectAttributes(pObjectAttributes: OBJECT_ATTRIBUTES, lpObjectName: string, dwAttributes: number, hRootDirectory: HANDLE): void {
+    pObjectAttributes.hRootDirectory = hRootDirectory;
+    pObjectAttributes.lpObjectName = lpObjectName;
+    pObjectAttributes.dwAttributes = dwAttributes;
+}
+
 type tagHANDLE<T> = {
     refCount: number;
     value: T;
