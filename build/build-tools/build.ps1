@@ -54,6 +54,7 @@ Push-Location "extern/asar"
 pnpm tsc
 Pop-Location
 
+
 if (-not ($NoBuild)) {
     # if -Project is passed, we only want to build those projects
     if ($null -ne $Project) {

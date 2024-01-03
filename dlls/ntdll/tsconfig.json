@@ -9,7 +9,7 @@
         "DOM",
         "DOM.Iterable"
       ],
-      "moduleResolution": "Bundler",
+      "moduleResolution": "Node",
       "sourceMap": true,
       "resolveJsonModule": true,
       "allowSyntheticDefaultImports": true,

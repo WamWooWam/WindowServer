@@ -14,10 +14,13 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
-    "outDir": "./lib",
+    "outDir": "./types",
     "rootDir": "./src",
     "strictNullChecks": true,
     "declaration": true,
     "declarationMap": true
-  }
+  },
+  "include": [
+    "src/**/*.ts"
+  ]
 }
