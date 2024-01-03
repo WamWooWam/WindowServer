@@ -23,6 +23,9 @@ To implement enough of the Win32 API to implement a simple application, like Not
 This project requires `pnpm` and PowerShell 7 or later to build.
 
 ```powershell
+# Clone the repository & submodules
+git clone --recursive https://github.com/WamWooWam/WindowServer
+
 # Install dependencies
 pnpm install
 

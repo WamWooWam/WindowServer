@@ -147,6 +147,10 @@ loadedModuleExports.set("ntdll", {
 
 const __oldRequire = (<any>globalThis).require;
 const NtRequire = (module: string) => {
+    if (module.startsWith("@window-server/")) {
+        module = module.replace("@window-server/", "");
+    }
+
     if (!loadedModuleExports.has(module)) {
         if (__oldRequire) {
             return __oldRequire(module);
@@ -264,6 +268,10 @@ async function LdrSearchPath(lpLibFileName: string, skipExports: boolean = false
 }
 
 async function LdrLoadDll(lpLibFileName: string) {
+    if (lpLibFileName.startsWith("@window-server/")) {
+        lpLibFileName = lpLibFileName.replace("@window-server/", "");
+    }
+
     if (loadedModules.includes(lpLibFileName)) return;
 
     console.log(`LdrLoadDll:${lpLibFileName}...`);
