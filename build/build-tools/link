@@ -89,13 +89,15 @@ const asar = require('@electron/asar');
                     ...(configuration === 'release' ? [terser()] : [])
                 ],
                 external: targetDependencies,
-                
+
                 onLog(level, log, handler) {
+                    // this appears to just, not get called for typescript errors, because fml
                     if (log.code === 'CIRCULAR_DEPENDENCY') {
                         return; // Ignore circular dependency warnings
                     }
-                    
+
                     console.log(`(!) ${log.message}`);
+                    handler(level, log);
                 },
             };
 
@@ -183,8 +185,13 @@ const asar = require('@electron/asar');
                         dts()
                     ],
                     external: targetDependencies,
-                    onLog: (...msg) => {
-                        console.log(`(!) ${msg}`);
+                    onLog(level, log, handler) {
+                        if (log.code === 'CIRCULAR_DEPENDENCY') {
+                            return; // Ignore circular dependency warnings
+                        }
+    
+                        console.log(`(!) ${log.message}`);
+                        handler(level, log);
                     },
                 };
 
@@ -199,7 +206,5 @@ const asar = require('@electron/asar');
     }
     catch (e) {
         console.log(e.message);
-
-
     }
 })();

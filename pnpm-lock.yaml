@@ -11,6 +11,9 @@ importers:
       '@types/node':
         specifier: ^20.9.0
         version: 20.10.6
+      '@window-server/build-tools':
+        specifier: workspace:build-tools
+        version: link:build/build-tools
       express:
         specifier: ^4.18.2
         version: 4.18.2

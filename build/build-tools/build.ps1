@@ -1,3 +1,5 @@
+#!/usr/bin/env pwsh
+
 param(
     [switch]$NoBuild = $false,
     [switch]$NoConfigure = $false,

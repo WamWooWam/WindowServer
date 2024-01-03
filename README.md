@@ -19,3 +19,14 @@ There isn't one.
 ## What's the goal?
 To implement enough of the Win32 API to implement a simple application, like Notepad or Calculator.
 
+# Building
+This project requires `pnpm` and PowerShell 7 or later to build.
+
+```powershell
+# Install dependencies
+pnpm install
+
+# Build
+pnpm run build
+```
+
