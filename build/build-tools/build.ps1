@@ -69,7 +69,7 @@ if (-not ($NoBuild)) {
         
         Push-Location-If-Array $project
 
-        window-server-link . /p:configuration=$Configuration
+        pnpm window-server-link . /p:configuration=$Configuration
         Pop-Location
     }
 
@@ -84,7 +84,7 @@ if (-not ($NoBuild)) {
             Push-Location $PSItem
         }
 
-        window-server-link . /p:configuration=$Configuration
+        pnpm window-server-link . /p:configuration=$Configuration
         Pop-Location
     }
 }
