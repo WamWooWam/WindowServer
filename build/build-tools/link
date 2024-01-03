@@ -53,7 +53,7 @@ const asar = require('@electron/asar');
 
             console.log(`Building target ${targetName} for ${configuration}...`);
 
-            let targetDependencies = ['ntos-sdk', ...dependencies, ...(target.dependencies ?? [])];
+            let targetDependencies = ['@window-server/sdk', ...dependencies.map(d => `@window-server/${d}`), ...(target.dependencies ?? []).map(d => `@window-server/${d}`)];
             let targetSubsystem = target.subsystem ?? subsystem;
             let targetType = target.type ?? 'exe';
 
@@ -128,7 +128,7 @@ const asar = require('@electron/asar');
                     type: targetType === 'exe' ? 'executable' : 'dll',
                     subsystem: targetSubsystem,
                     arch: 'js', // TODO: wasm
-                    dependencies: targetDependencies.filter(dep => dep !== 'ntos-sdk'),
+                    dependencies: targetDependencies.filter(dep => dep !== '@window-server/sdk'),
                     entryPoint: target.entryPoint ?? 'default',
 
                     name: targetName,

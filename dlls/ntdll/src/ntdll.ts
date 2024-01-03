@@ -22,6 +22,23 @@ import { SubsystemId } from "@window-server/sdk/types/types.js";
 
 export * from "./types/ntdll.types.js";
 
+const ERROR_BAD_EXE_FORMAT = 0x000000C1;
+const ERROR_MOD_NOT_FOUND = 0x0000007E;
+const ERROR_PROC_NOT_FOUND = 0x0000007F;
+const ERROR_APP_INIT_FAILURE = 0x0000023F;
+
+function SUCCEEDED(hr: number) {
+    return hr >= 0;
+}
+
+function FAILED(hr: number) {
+    return hr < 0;
+}
+
+function HRESULT_FROM_WIN32(x: number) {
+    return x <= 0 ? x : ((x & 0x0000FFFF) | (7 << 16) | 0x80000000);
+}
+
 const ntdll: Executable = {
     file: "ntdll.js",
     type: "dll",
@@ -138,7 +155,7 @@ class SubsystemClass implements Subsystem {
     }
 }
 
-const loadedModules: string[] = ["ntdll.dll"];
+const loadedModules: string[] = ["ntdll"];
 const loadedModuleExports = new Map<string, any>();
 loadedModuleExports.set("ntdll", {
     NtRegisterSubsystem,
@@ -150,6 +167,8 @@ const NtRequire = (module: string) => {
     if (module.startsWith("@window-server/")) {
         module = module.replace("@window-server/", "");
     }
+
+    console.debug(`NtRequire:${module}...`, loadedModules, loadedModuleExports)
 
     if (!loadedModuleExports.has(module)) {
         if (__oldRequire) {
@@ -208,10 +227,20 @@ async function NtRegisterSubsystem(subsys: SubsystemId, handler: (msg: Omit<Mess
     return new SubsystemClass(subsys, handler, retVal.data.lpSharedMemory);
 }
 
+async function NtTerminateProcess(uExitCode: number): Promise<never> {
+    await Ntdll.SendMessage<PROCESS_EXIT>({
+        nType: NTDLL.ProcessExit,
+        data: {
+            uExitCode
+        }
+    });
+
+    throw null;
+}
+
 async function LdrInitializeThunk(pPC: PROCESS_CREATE) {
     await BaseThreadInitThunk(pPC);
 }
-
 
 async function LdrSearchPath(lpLibFileName: string, skipExports: boolean = false) {
     // debugger;
@@ -234,8 +263,12 @@ async function LdrSearchPath(lpLibFileName: string, skipExports: boolean = false
             }
         });
 
+        if (!retVal) {
+            return { execInfo: null, exports: null, hModule: 0 };
+        }
+
         const execInfo = retVal.data.lpExecInfo;
-        if (skipExports) return { execInfo, exports: null };
+        if (skipExports) return { execInfo, exports: null, hModule: retVal.data.retVal };
 
         const module = await fetch(retVal.data.lpszLibFile);
         const exec = await module.text();
@@ -258,7 +291,7 @@ async function LdrSearchPath(lpLibFileName: string, skipExports: boolean = false
         console.log(`LdrSearchPath:${lpLibFileName} -> ${retVal.data.lpszLibFile}`);
         console.log(exports);
 
-        return { execInfo, exports: exports as any };
+        return { execInfo, exports: exports as any, hModule: retVal.data.retVal };
     }
     catch (e) {
         console.error(`LdrSearchPath:${lpLibFileName} -> ${e}`);
@@ -267,62 +300,80 @@ async function LdrSearchPath(lpLibFileName: string, skipExports: boolean = false
     }
 }
 
-async function LdrLoadDll(lpLibFileName: string) {
+async function LdrLoadDll(lpLibFileName: string): Promise<number> {
     if (lpLibFileName.startsWith("@window-server/")) {
         lpLibFileName = lpLibFileName.replace("@window-server/", "");
     }
 
-    if (loadedModules.includes(lpLibFileName)) return;
+    if (loadedModules.includes(lpLibFileName)) return 0;
 
     console.log(`LdrLoadDll:${lpLibFileName}...`);
 
-    // TODO: search for dll in search path
     const module = await LdrSearchPath(lpLibFileName);
+    if (!(module && module.execInfo && module.hModule)) {
+        return HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND);
+    }
+
     const exec = module.execInfo;
     if (exec.type !== "dll") {
-        throw new Error(`invalid module ${lpLibFileName}`);
+        return HRESULT_FROM_WIN32(ERROR_BAD_EXE_FORMAT);
     }
 
     loadedModules.push(lpLibFileName);
     loadedModuleExports.set(exec.name, module.exports);
 
     for (const lpDependency of exec.dependencies) {
-        await LdrLoadDll(lpDependency);
+        let hr = await LdrLoadDll(lpDependency);
+        if (FAILED(hr)) return hr;
     }
-
-    console.log(`LdrLoadDll:${lpLibFileName} -> ${exec.entryPoint}`)
 
     let retVal = 0;
     if (exec.entryPoint) {
-        if (typeof exec.entryPoint === "string" && module.exports[exec.entryPoint]) {
-            retVal = await module.exports[exec.entryPoint]();
+        try {
+            if (typeof exec.entryPoint === "string" && module.exports[exec.entryPoint]) {
+                retVal = await module.exports[exec.entryPoint]();
+            }
+            else if (typeof exec.entryPoint === "function") {
+                retVal = await exec.entryPoint();
+            }
+            else {
+                retVal = HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
+            }
         }
-        else if (typeof exec.entryPoint === "function") {
-            retVal = await exec.entryPoint();
-        }
-        else {
-            retVal = 0x800700C1;
+        catch {
+            retVal = HRESULT_FROM_WIN32(ERROR_APP_INIT_FAILURE);
         }
     }
+
+    console.debug(`LdrLoadDll:${lpLibFileName} -> ${exec.entryPoint}`)
+    console.debug(`LdrLoadDll:${lpLibFileName} -> ${retVal}`)
 
     return retVal ?? 0;
 }
 
 async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
-
     // load the executable, but don't run it yet
     let module = await LdrSearchPath(pPC.lpExecutable, true);
     let exec = module.execInfo;
-    if (exec.type !== "executable") {
-        throw new Error(`invalid module ${pPC.lpExecutable}`);
+    if (!exec || exec.type !== "executable") {
+        await NtTerminateProcess(HRESULT_FROM_WIN32(ERROR_BAD_EXE_FORMAT));
+        return;
     }
 
     for (const lpDependencies of exec.dependencies) {
-        await LdrLoadDll(lpDependencies);
+        let hr = await LdrLoadDll(lpDependencies);
+        if (FAILED(hr)) {
+            await NtTerminateProcess(hr);
+            return;
+        }
     }
 
     // load and run the executable
     module = await LdrSearchPath(pPC.lpExecutable);
+    if (!(module && module.execInfo && module.hModule)) {
+        await NtTerminateProcess(HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND));
+        return;
+    }
 
     let retVal = 0;
     if (exec.entryPoint) {
@@ -333,8 +384,13 @@ async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
             retVal = await exec.entryPoint();
         }
         else {
-            retVal = 0x800700C1;
+            await NtTerminateProcess(HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND));
+            return;
         }
+    }
+    else {
+        await NtTerminateProcess(HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND));
+        return;
     }
 
     await Ntdll.SendMessage<PROCESS_EXIT>({
@@ -344,6 +400,8 @@ async function BaseThreadInitThunk(pPC: PROCESS_CREATE) {
         }
     });
 }
+
+
 
 function NTDLL_HandleMessage(msg: Message) {
     switch (msg.nType) {

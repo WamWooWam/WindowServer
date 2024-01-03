@@ -40,19 +40,21 @@ function Push-Location-If-Array {
 Write-Host "Building WindowServer"
 Write-Host "Configuration: $Configuration"
 
-pnpm install
+if ($null -eq $Project) {
+    pnpm install
 
-Write-Host "Preparing build environment"
+    Write-Host "Preparing build environment"
 
-Push-Location "sdk"
-pnpm tsc
-Pop-Location
+    Push-Location "sdk"
+    pnpm tsc
+    Pop-Location
 
-Write-Host "Building external dependencies"
+    Write-Host "Building external dependencies"
 
-Push-Location "extern/asar"
-pnpm tsc
-Pop-Location
+    Push-Location "extern/asar"
+    pnpm tsc
+    Pop-Location
+}
 
 
 if (-not ($NoBuild)) {
