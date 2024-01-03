@@ -42,19 +42,17 @@ Write-Host "Configuration: $Configuration"
 
 pnpm install
 
-if ($Clean) {
-    Write-Host "Preparing build environment"
+Write-Host "Preparing build environment"
 
-    Push-Location "sdk"
-    pnpm tsc
-    Pop-Location
+Push-Location "sdk"
+pnpm tsc
+Pop-Location
 
-    Write-Host "Building external dependencies"
+Write-Host "Building external dependencies"
 
-    Push-Location "extern/asar"
-    pnpm tsc
-    Pop-Location
-}
+Push-Location "extern/asar"
+pnpm tsc
+Pop-Location
 
 if (-not ($NoBuild)) {
     # if -Project is passed, we only want to build those projects
