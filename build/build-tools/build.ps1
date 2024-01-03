@@ -38,6 +38,7 @@ function Push-Location-If-Array {
 Write-Host "Building WindowServer"
 Write-Host "Configuration: $Configuration"
 
+pnpm install
 
 if ($Clean) {
     Write-Host "Preparing build environment"
@@ -52,8 +53,6 @@ if ($Clean) {
     pnpm tsc
     Pop-Location
 }
-
-pnpm install
 
 if (-not ($NoBuild)) {
     # if -Project is passed, we only want to build those projects
