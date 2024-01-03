@@ -4,7 +4,7 @@
 
 import { InitializeObjectAttributes, OBJECT_ATTRIBUTES, OBJ_OPENIF, ObCloseHandle, ObGetObject, ObSetObject } from "./objects";
 
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 
 type NTRETURN<T> = ({ retVal: number } & Partial<T>);
 type REG_VALUE_TYPE = "REG_SZ" | "REG_DWORD" | "REG_BINARY" | "REG_MULTI_SZ" | "REG_EXPAND_SZ";

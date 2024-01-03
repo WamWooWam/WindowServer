@@ -1,16 +1,16 @@
-import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF, Version } from "ntos-sdk/types/types.js";
-import NTDLL, { PROCESS_CREATE } from "ntdll/dist/ntdll.int.js";
+import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF, Version } from "@window-server/sdk/types/types.js";
+import NTDLL, { PROCESS_CREATE } from "@window-server/ntdll/dist/ntdll.int.js";
 import { ObDestroyHandle, ObGetObject, ObSetObject } from "./objects.js";
 
-import Executable from "ntos-sdk/types/Executable.js";
+import Executable from "@window-server/sdk/types/Executable.js";
 import { IMAGEINFO } from "./types/image.js";
 import { KeBugCheckEx } from "./bugcheck.js";
 import { LdrLoadLibrary } from "./loader.js";
-import Message from "ntos-sdk/types/Message.js";
+import Message from "@window-server/sdk/types/Message.js";
 import NTDLL_SUBSYSTEM from "./subsystems/ntdll.js";
 import { NtAllocSharedMemory } from "./sharedmem.js";
 import { NtGetDefaultDesktop } from "./win32k/desktop.js";
-import { SUBSYS_NTDLL } from "ntos-sdk/types/subsystems.js";
+import { SUBSYS_NTDLL } from "@window-server/sdk/types/subsystems.js";
 
 // TODO: use hungarian notation for types
 export class PsProcess {

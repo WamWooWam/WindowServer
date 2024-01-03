@@ -1,6 +1,6 @@
-import { HDC, LOGFONT, POINT, RECT } from "gdi32";
+import { HDC, LOGFONT, POINT, RECT } from "@window-server/gdi32";
 
-import { HANDLE } from "ntdll";
+import { HANDLE } from "@window-server/ntdll";
 
 export const HWND_TOP = 0;
 export const HWND_BOTTOM = 1;

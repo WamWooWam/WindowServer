@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "kernel32";
+import { GetModuleHandle } from "@window-server/kernel32";
 import {
     CreateWindow,
     CW_USEDEFAULT,
@@ -32,8 +32,8 @@ import {
     CallWindowProc,
     SendMessage,
     BM
-} from "user32";
-import { INRECT } from "gdi32"
+} from "@window-server/user32";
+import { INRECT } from "@window-server/gdi32"
 
 async function ButtonWndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {

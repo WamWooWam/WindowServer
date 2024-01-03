@@ -1,5 +1,5 @@
 {
-  "name": "ntdll",
+  "name": "@window-server/ntdll",
   "version": "1.0.0",
   "description": "NT Layer DLL",
   "main": "dist/ntdll.js",
@@ -7,8 +7,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "ntos-link": "../../build/link",
-    "ntos-sdk": "../../sdk",
+    "@window-server/sdk": "../../sdk",
     "rollup-plugin-dts": "^6.1.0"
   },
   "devDependencies": {
@@ -16,7 +15,8 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "rollup": "^4.9.1",
     "rollup-plugin-typescript2": "^0.36.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",    
+    "@window-server/build-tools": "../../build/build-tools"
   },
   "scripts": {
     "build": "rollup -c",

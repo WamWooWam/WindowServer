@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "kernel32";
+import { GetModuleHandle } from "@window-server/kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -21,7 +21,7 @@ import {
     RegisterClass,
     ShowWindow,
     TranslateMessage
-} from "user32";
+} from "@window-server/user32";
 
 
 async function main() {

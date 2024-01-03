@@ -1,9 +1,9 @@
 import { MONITOR, NtGetPrimaryMonitor, NtRegisterMonitorHook } from "./monitor.js";
 import { SM, SPI } from "../subsystems/user32.js";
 
-import { LOGFONT } from "gdi32/dist/gdi32.int.js";
-import { PEB } from "ntos-sdk/types/types.js";
-import { SUBSYS_USER32 } from "ntos-sdk/types/subsystems.js";
+import { LOGFONT } from "@window-server/gdi32/dist/gdi32.int.js";
+import { PEB } from "@window-server/sdk/types/types.js";
+import { SUBSYS_USER32 } from "@window-server/sdk/types/subsystems.js";
 
 const CAPTION_LOGFONT: LOGFONT = {
     lfHeight: 11,

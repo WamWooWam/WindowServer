@@ -27,7 +27,7 @@ import PEN, { GreCreatePen } from "./pen.js";
 
 import FONT from "./font.js";
 import { GDIOBJ } from "./ntgdi.js";
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 
 const STOCK_HANDLE_BASE = 0x80000000;
 

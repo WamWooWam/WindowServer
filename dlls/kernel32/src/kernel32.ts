@@ -23,12 +23,12 @@ import KERNEL32, {
     WRITE_FILE,
     WRITE_FILE_REPLY
 } from "./types/kernel32.int.types.js";
-import { NtRegisterSubsystem, Subsystem } from 'ntdll';
+import { NtRegisterSubsystem, Subsystem } from "@window-server/ntdll"
 
-import Executable from "ntos-sdk/types/Executable.js";
-import { HANDLE } from "ntos-sdk/types/types.js";
-import Message from "ntos-sdk/types/Message.js";
-import { SUBSYS_KERNEL32 } from "ntos-sdk/types/subsystems.js";
+import Executable from "@window-server/sdk/types/Executable.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
+import Message from "@window-server/sdk/types/Message.js";
+import { SUBSYS_KERNEL32 } from "@window-server/sdk/types/subsystems.js";
 
 export * from "./types/kernel32.types.js";
 

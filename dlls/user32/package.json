@@ -1,5 +1,5 @@
 {
-  "name": "user32",
+  "name": "@window-server/user32",
   "version": "1.0.0",
   "description": "NT Layer DLL",
   "main": "dist/user32.js",
@@ -7,11 +7,11 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "ntos-sdk": "../../sdk",
+    "@window-server/sdk": "../../sdk",
     "rollup-plugin-dts": "^6.1.0",
-    "kernel32": "file:../kernel32",
-    "ntdll": "file:../../dlls/ntdll",
-    "gdi32": "file:../../dlls/gdi32"
+    "@window-server/kernel32": "workspace:kernel32",
+    "@window-server/ntdll": "workspace:ntdll",
+    "@window-server/gdi32": "workspace:gdi32"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",

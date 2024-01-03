@@ -6,10 +6,10 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "user32": "file:../../dlls/user32"
+    "@window-server/user32": "workspace:user32"
   },
   "devDependencies": {
-    "ntos-link": "file:../../build/link",
+    "@window-server/build-tools": "workspace:build-tools",
     "typescript": "^5.3.3"
   },
   "scripts": {

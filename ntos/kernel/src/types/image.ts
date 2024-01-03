@@ -1,4 +1,4 @@
-import Executable from "ntos-sdk/types/Executable.js";
+import Executable from "@window-server/sdk/types/Executable.js";
 
 // TODO: this will get refactored over time
 export interface IMAGEINFO {

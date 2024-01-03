@@ -7,7 +7,7 @@ import WND, { PWND } from "./wnd.js";
 
 import { IntIsWindowVisible } from "./sizemove.js";
 import { ObGetObject } from "../objects.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 
 let gpqForeground: PEB | null = null;
 let gpqForegroundPrev: PEB | null = null;

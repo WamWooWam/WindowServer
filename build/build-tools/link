@@ -22,7 +22,7 @@ const json = require('@rollup/plugin-json').default;
 const builtins = require("rollup-plugin-node-builtins");
 const globals = require("rollup-plugin-node-globals");
 
-const asar = require('asar');
+const asar = require('@electron/asar');
 
 (async () => {
     try {
@@ -42,7 +42,7 @@ const asar = require('asar');
         projectPath = path.resolve(projectPath);
 
         const configuration = (properties.configuration ?? 'debug').toLowerCase();
-        const project = require(path.join(projectPath, 'project.json'));
+        const project = JSON.parse(await fsp.readFile(path.join(projectPath, 'project.json'), 'utf-8'));
         const { name, dependencies, subsystem, targets } = project;
 
         console.log(`Building project ${name}...`)
@@ -89,16 +89,14 @@ const asar = require('asar');
                     ...(configuration === 'release' ? [terser()] : [])
                 ],
                 external: targetDependencies,
-                onLog: (level, msg) => {
-                    console.log(msg.message);
-                },
-                onwarn: (warning, warn) => {
-                    if (warning.code === 'CIRCULAR_DEPENDENCY') {
-                        return;
+                
+                onLog(level, log, handler) {
+                    if (log.code === 'CIRCULAR_DEPENDENCY') {
+                        return; // Ignore circular dependency warnings
                     }
-
-                    warn(warning);
-                }
+                    
+                    console.log(`(!) ${log.message}`);
+                },
             };
 
             let bundle = await rollup.rollup(rollupConfig);
@@ -170,7 +168,6 @@ const asar = require('asar');
                 await fsp.rm(linkPath, { recursive: true });
             }
 
-
             if (generateTypes) {
                 rollupConfig = {
                     input: target.sources.map(source => path.join(projectPath, source)),
@@ -185,7 +182,10 @@ const asar = require('asar');
                         commonjs(),
                         dts()
                     ],
-                    external: targetDependencies
+                    external: targetDependencies,
+                    onLog: (...msg) => {
+                        console.log(`(!) ${msg}`);
+                    },
                 };
 
                 bundle = await rollup.rollup(rollupConfig);
@@ -198,7 +198,7 @@ const asar = require('asar');
         }
     }
     catch (e) {
-        console.log(e);
+        console.log(e.message);
 
 
     }

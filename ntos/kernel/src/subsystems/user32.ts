@@ -50,9 +50,9 @@ import USER32, {
     ADJUST_WINDOW_RECT_PARAMS,
     ADJUST_WINDOW_RECT_REPLY,
     COLOR,
-} from "user32/dist/user32.int.js";
-import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "ntos-sdk/types/types.js";
-import { LPRECT, OffsetRect, POINT, RECT } from "gdi32/dist/gdi32.int.js"
+} from "@window-server/user32/dist/user32.int.js";
+import { HANDLE, PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "@window-server/sdk/types/types.js";
+import { LPRECT, OffsetRect, POINT, RECT } from "@window-server/gdi32/dist/gdi32.int.js"
 import { NtCallWindowProc, NtCreateWindowEx, NtDestroyWindow, NtFindWindow, NtUserGetDC, NtUserGetWindowRect } from "../win32k/window.js";
 import { NtDispatchMessage, NtGetMessage, NtPeekMessage, NtPostMessage, NtPostQuitMessage } from "../win32k/msg.js";
 import { NtInitSysMetrics, NtUserGetSystemMetrics } from "../win32k/metrics.js";
@@ -66,7 +66,7 @@ import { NtRegisterClassEx } from "../win32k/class.js";
 import { NtUserGetWindowLong, NtUserSetWindowLong } from "../win32k/gwl.js";
 import { NtUserScreenToClient } from "../win32k/client.js";
 import { ObGetObject } from "../objects.js";
-import { SUBSYS_USER32 } from "ntos-sdk/types/subsystems.js";
+import { SUBSYS_USER32 } from "@window-server/sdk/types/subsystems.js";
 import { StaticWndProc } from "./user32/static.js";
 import W32MSG_QUEUE from "../win32k/msgqueue.js";
 import { NtUserGetProcInfo, W32PROCINFO } from "../win32k/shared.js";
@@ -77,7 +77,7 @@ import { NtUserInvalidateRect } from "../win32k/draw.js";
 import { GreReleaseDC } from "../win32k/gdi/dc.js";
 import { IntGetSysColorBrush } from "../win32k/brush.js";
 
-export * from 'user32/dist/user32.int.js';
+export * from '@window-server/user32/dist/user32.int.js';
 
 const DefaultClasses: WNDCLASSEX[] = [
     {

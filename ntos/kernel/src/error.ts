@@ -1,6 +1,6 @@
-import { IDX_LAST_ERROR } from "kernel32/dist/kernel32.int.js"
-import { PEB } from "ntos-sdk/types/types.js";
-import { SUBSYS_KERNEL32 } from "ntos-sdk/types/subsystems.js";
+import { IDX_LAST_ERROR } from "@window-server/kernel32/dist/kernel32.int.js"
+import { PEB } from "@window-server/sdk/types/types.js";
+import { SUBSYS_KERNEL32 } from "@window-server/sdk/types/subsystems.js";
 
 export function NtGetLastError(peb: PEB) {
     const subsystem = peb.lpSubsystems.get(SUBSYS_KERNEL32);

@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "kernel32";
+import { GetModuleHandle } from "@window-server/kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -23,7 +23,7 @@ import {
     TranslateMessage,
     FindWindow,
     SendMessage
-} from "user32";
+} from "@window-server/user32";
 
 const className = "b19563a3-13df-4838-88b2-27a4c3f25e22";
 let wndCount = 0;

@@ -5,11 +5,11 @@
  * @usermode
  */
 
-import { HANDLE, NtRegisterSubsystem, Subsystem } from "ntdll";
+import { HANDLE, NtRegisterSubsystem, Subsystem } from "@window-server/ntdll";
 import { HDC, HRGN, LOGFONT } from "./types/gdi32.types.js";
 
 import GDI32 from "./types/gdi32.int.types.js";
-import { SUBSYS_GDI32 } from "ntos-sdk/types/subsystems.js";
+import { SUBSYS_GDI32 } from "@window-server/sdk/types/subsystems.js";
 
 export * from "./types/gdi32.types.js";
 

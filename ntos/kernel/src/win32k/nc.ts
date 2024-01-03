@@ -7,7 +7,7 @@ import { NtDefWindowProc } from "./def.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
 import { NtUserIntSetForegroundWindowMouse } from "./focus.js";
 import { ObGetObject } from "../objects.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
 

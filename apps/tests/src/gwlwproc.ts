@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "kernel32";
+import { GetModuleHandle } from "@window-server/kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -29,7 +29,7 @@ import {
     SendMessage,
     SetWindowLong,
     GWL
-} from "user32";
+} from "@window-server/user32";
 
 let hBtn: HWND;
 

@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "kernel32";
+import { GetModuleHandle } from "@window-server/kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -24,7 +24,7 @@ import {
     BS,
     LOWORD,
     SendMessage
-} from "user32";
+} from "@window-server/user32";
 
 
 const BUTTON_NAMES = [

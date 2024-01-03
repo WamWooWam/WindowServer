@@ -14,7 +14,7 @@ import {
     COLOR
 } from "../subsystems/user32.js";
 import DC, { GreAllocDCForWindow, GreResizeDC } from "./gdi/dc.js";
-import { HANDLE, PEB } from "ntos-sdk/types/types.js";
+import { HANDLE, PEB } from "@window-server/sdk/types/types.js";
 import { HDC, LPRECT, POINT, RECT } from "../subsystems/gdi32.js"
 import { NtDispatchMessage, NtPostMessage } from "./msg.js";
 import { NtUserIntSetStyle, NtUserUnlinkWindow } from "./window.js";

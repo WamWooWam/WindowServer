@@ -16,6 +16,6 @@
     "noImplicitAny": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "strictNullChecks": true,
+    "strictNullChecks": true
   }
 }

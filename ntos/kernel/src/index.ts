@@ -1,7 +1,7 @@
 import { NtPostProcessMessage } from "./win32k/msg.js";
 import { PsCreateProcess, PsRegisterProcessHooks, PsQuitProcess, PsTerminateProcess } from "./loader.js"
 
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 import { PsProcess } from "./process.js";
 import { HWND, WM } from "./subsystems/user32.js";
 import { ObDumpHandles, ObEnumHandles, ObGetObject, ObGetOwnedHandleCount } from "./objects.js";

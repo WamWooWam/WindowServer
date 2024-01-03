@@ -3,7 +3,7 @@ import { BS, DC_BRUSH, HS, TRANSPARENT } from "../../subsystems/gdi32.js";
 import DC from "./dc.js";
 import { GDIOBJ } from "./ntgdi.js";
 import { GreGetStockObject } from "./obj.js";
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 import { ObCreateObject } from "../../objects.js";
 
 export default interface BRUSH extends GDIOBJ {

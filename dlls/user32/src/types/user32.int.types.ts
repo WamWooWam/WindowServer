@@ -1,7 +1,7 @@
 import { ATOM, HCURSOR, HICON, HINSTANCE, HMENU, HWND, LPARAM, LRESULT, MONITORINFO, MONITORINFOEX, MSG, PAINTSTRUCT, WNDCLASS, WPARAM } from "./user32.types.js";
-import { HBRUSH, HDC, LPPOINT, LPRECT, POINT } from "gdi32";
+import { HBRUSH, HDC, LPPOINT, LPRECT, POINT } from "@window-server/gdi32";
 
-import { HANDLE } from "ntdll";
+import { HANDLE } from "@window-server/ntdll";
 
 export * from "./user32.types.js";
 

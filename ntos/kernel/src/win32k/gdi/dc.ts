@@ -3,7 +3,7 @@ import BRUSH, { GreCreateBrush } from "./brush.js";
 import { COLOR, HWND, SPI } from "../../subsystems/user32.js";
 import FONT, { GreCreateFontIndirect } from "./font.js";
 import { GreCombineRgn, GreCreateRectRgn } from "./rgn.js";
-import { HANDLE, PEB } from "ntos-sdk/types/types.js";
+import { HANDLE, PEB } from "@window-server/sdk/types/types.js";
 import { ObCloseHandle, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "../../objects.js";
 import PEN, { GreRealisePen } from "./pen.js";
 

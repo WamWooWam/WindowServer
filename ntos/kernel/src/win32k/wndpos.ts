@@ -12,7 +12,7 @@ import { NtUserClientToScreen } from "./client.js";
 import { NtUserGetCursorPos } from "./cursor.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
 import { ObGetObject } from "../objects.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 import WND, { PWND } from "./wnd.js";
 
 interface WINDOWPOS {

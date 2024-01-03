@@ -1,5 +1,5 @@
 import { ObEnumHandlesByType, ObGetObject, ObSetObject } from "../objects.js";
-import { HANDLE, PEB } from "ntos-sdk/types/types.js";
+import { HANDLE, PEB } from "@window-server/sdk/types/types.js";
 import { CREATE_DESKTOP, CREATE_WINDOW_EX, WMP, HT, HWND, LPARAM, LRESULT, SM, SW, SWP, WM, WPARAM, WS } from "../subsystems/user32.js";
 import { NtDefWindowProc } from "./def.js";;
 import DesktopElement from "./html/DesktopElement.js";
@@ -10,7 +10,7 @@ import { NtSetWindowPos, NtUserShowWindow } from "./wndpos.js";
 import { GreCreateSolidBrush } from "./gdi/brush.js";
 import { GreSelectObject } from "./gdi/dc.js";
 import { NtGdiCreateSolidBrush, NtGdiDeleteObject, NtGdiGetStockObject, NtGdiRectangle, NtGdiSelectObject } from "./gdi/ntgdi.js";
-import { NULL_PEN } from "gdi32/dist/gdi32.int.js";
+import { NULL_PEN } from "@window-server/gdi32/dist/gdi32.int.js";
 
 // export default interface DESKTOP {
 //     dwSessionId: number;

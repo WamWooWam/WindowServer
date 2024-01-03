@@ -1,7 +1,7 @@
 export * from "./ntdll.types.js";
 
-import Executable from "ntos-sdk/types/Executable.js";
-import { HANDLE } from "ntos-sdk/types/types.js";
+import Executable from "@window-server/sdk/types/Executable.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 
 const NTDLL = {
     ProcessCreate: 0x00000001,

@@ -2,7 +2,7 @@ import { HWND, LRESULT, MSG, WM } from "../subsystems/user32.js";
 import { MSG_QUEUE, W32PROCINFO } from "./shared.js";
 
 import { ObGetObject } from "../objects.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 import WND from "./wnd.js";
 
 type MSG_CALLBACK = (result: LRESULT) => Promise<void> | void;

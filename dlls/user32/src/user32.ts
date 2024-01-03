@@ -49,14 +49,14 @@ import USER32, {
     WNDCLASS_WIRE,
     WNDPROC_PARAMS
 } from "./types/user32.int.types.js";
-import { HDC, LPRECT, POINT, RECT } from "gdi32";
+import { HDC, LPRECT, POINT, RECT } from "@window-server/gdi32";
 import { ATOM, HINSTANCE, LPARAM, LRESULT, MONITORINFO, MONITORINFOEX, MSG, PAINTSTRUCT, SM, WNDCLASS, WNDPROC, WPARAM } from "./types/user32.types.js";
 
-import Executable from "ntos-sdk/types/Executable.js";
-import { GetModuleHandle } from "kernel32";
-import Message from "ntos-sdk/types/Message.js";
-import { NtRegisterSubsystem, HANDLE, CALLBACK_MESSAGE_TYPE, Subsystem } from "ntdll";
-import { SUBSYS_USER32 } from "ntos-sdk/types/subsystems.js";
+import Executable from "@window-server/sdk/types/Executable.js";
+import { GetModuleHandle } from "@window-server/kernel32";
+import Message from "@window-server/sdk/types/Message.js";
+import { NtRegisterSubsystem, HANDLE, CALLBACK_MESSAGE_TYPE, Subsystem } from "@window-server/ntdll";
+import { SUBSYS_USER32 } from "@window-server/sdk/types/subsystems.js";
 
 export * from "./types/user32.types.js";
 

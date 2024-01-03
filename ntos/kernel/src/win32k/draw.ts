@@ -55,7 +55,7 @@ import DESKTOP from "./desktop.js";
 import { GreRectangle } from "./gdi/draw.js";
 import { NtDispatchMessage } from "./msg.js";
 import PEN from "./gdi/pen.js";
-import { WM } from "user32";
+import { WM } from "@window-server/user32";
 import WND from "./wnd.js";
 
 export function NtUserFillRect(hDC: HDC, prc: RECT, hbr: HBRUSH) {

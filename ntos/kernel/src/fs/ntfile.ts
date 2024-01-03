@@ -1,4 +1,4 @@
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 
 // TODO: this entire interface is a mess and doesn't map to the real NT API at all
 // fix it

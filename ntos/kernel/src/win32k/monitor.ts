@@ -1,7 +1,7 @@
 import { HWND_BROADCAST, WM } from "../subsystems/user32.js";
 import { POINT, RECT } from "../subsystems/gdi32.js";
 
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 import { NtPostMessage } from "./msg.js";
 import { ObSetObject } from "../objects.js";
 

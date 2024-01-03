@@ -1,5 +1,5 @@
 {
-  "name": "gdi32",
+  "name": "@window-server/gdi32",
   "version": "1.0.0",
   "description": "NT Layer DLL",
   "main": "dist/gdi32.js",
@@ -7,10 +7,10 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "ntos-sdk": "../../sdk",
+    "@window-server/sdk": "workspace:sdk",
     "rollup-plugin-dts": "^6.1.0",
-    "kernel32": "file:../../dlls/kernel32",
-    "ntdll": "file:../../dlls/ntdll"
+    "@window-server/kernel32": "workspace:kernel32",
+    "@window-server/ntdll": "workspace:ntdll"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",

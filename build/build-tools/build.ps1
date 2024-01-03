@@ -1,60 +1,89 @@
 param(
-    [string]$Configuration = "release",
-    [string[]]$Project = $null,
-    [switch]$NoBuild = $false
+    [switch]$NoBuild = $false,
+    [switch]$NoConfigure = $false,
+    [switch]$Clean = $false,
+    [switch]$UseNpx = $false,
+    [string]$Configuration = "debug",
+    [string[]]$Project = $null
 )
 
-$Root = Get-Location
+$projects = @(
+    "dlls/ntdll",
+    "dlls/kernel32",
+    "dlls/gdi32",
+    "dlls/user32"
+)
+
+$parallelProjects = @(
+    "ntos/kernel",
+    "ntos/ldr",
+    "ntos/setup",
+    "apps/notepad",
+    "apps/wininit",
+    "apps/tests"
+)
+
+function Push-Location-If-Array {
+    param(
+        $project
+    )
+    if ($project -is [array]) {
+        Push-Location $project[0]
+    }
+    else {
+        Push-Location $project
+    }
+}
+
+Write-Host "Building WindowServer"
+Write-Host "Configuration: $Configuration"
+
+
+if ($Clean) {
+    Write-Host "Preparing build environment"
+
+    Push-Location "sdk"
+    pnpm tsc
+    Pop-Location
+
+    Write-Host "Building external dependencies"
+
+    Push-Location "extern/asar"
+    pnpm tsc
+    Pop-Location
+}
+
+pnpm install
 
 if (-not ($NoBuild)) {
-    $projects = @(
-        "dlls/ntdll",
-        "dlls/kernel32",
-        "dlls/gdi32",
-        "dlls/user32"
-    )
-
-    $parallelProjects = @(
-        "ntos/kernel",
-        "ntos/ldr",
-        "ntos/setup",
-        "apps/notepad",
-        "apps/wininit",
-        "apps/tests"
-    )
-
     # if -Project is passed, we only want to build those projects
     if ($null -ne $Project) {
         $projects = $projects | Where-Object { $Project -contains $_ }
         $parallelProjects = $parallelProjects | Where-Object { $Project -contains $_ }
     }
-
+    
+    # build the projects
     foreach ($project in $projects) {
-        #if $project is an array, get the first element
-        if ($project -is [array]) {
-            $proj = $project[0]
-        }      
-        else {
-            $proj = $project
-        }  
-
         Write-Host "Building $project"
-        Push-Location $proj
-        yarn ntos-link . /p:configuration=$Configuration
+        
+        Push-Location-If-Array $project
+
+        window-server-link . /p:configuration=$Configuration
         Pop-Location
     }
 
-    $parallelProjects | Foreach-Object -ThrottleLimit 5 -Parallel {
-        if ($PSItem -is [array]) {
-            $proj = $PSItem[0]
-        }      
-        else {
-            $proj = $PSItem
-        }  
-        
+    $parallelProjects | Foreach-Object {        
         Write-Host "Building $PSItem"
-        Push-Location $proj
-        yarn ntos-link . /p:configuration=$USING:Configuration
+        
+        # can't use Push-Location-If-Array here because it's in a parallel block
+        if ($PSItem -is [array]) {
+            Push-Location $PSItem[0]
+        }
+        else {
+            Push-Location $PSItem
+        }
+
+        window-server-link . /p:configuration=$Configuration
         Pop-Location
     }
 }

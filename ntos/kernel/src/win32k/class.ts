@@ -2,8 +2,8 @@ import { ATOM, HWND, LPARAM, WNDCLASS, WNDCLASSEX, WNDPROC, WPARAM, WNDCLASS_WIR
 import { NtUserGetProcInfo, W32CLASSINFO, W32PROCINFO } from "./shared.js";
 
 import { NtDoCallbackAsync } from "../callback.js";
-import { PEB } from "ntos-sdk/types/types.js";
-import { SUBSYS_USER32 } from "ntos-sdk/types/subsystems.js";
+import { PEB } from "@window-server/sdk/types/types.js";
+import { SUBSYS_USER32 } from "@window-server/sdk/types/subsystems.js";
 import { ObGetObject } from "../objects.js";
 import { PsProcess } from "../process.js";
 

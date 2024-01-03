@@ -33,7 +33,7 @@ import { NtSetLastError } from "../error.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
 import { NtUserInvalidateRect } from "./draw.js";
 import { NtUserScreenToClient } from "./client.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 
 export function NtGetDesktopWindow(peb: PEB | null): HWND {
     const desktop = NtUserGetDesktop(peb);

@@ -10,7 +10,7 @@ import {
     GetMessage,
     TranslateMessage,
     MSG
-} from "user32";
+} from "@window-server/user32";
 
 async function main() {
     const window = await FindWindow(<string><any>0x8001, null);

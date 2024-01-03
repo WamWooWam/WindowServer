@@ -2,8 +2,8 @@ import { HBRUSH, HCURSOR, HICON, HINSTANCE, HWND, LPARAM, LRESULT, MSG, WNDPROC,
 
 import DESKTOP from "./desktop.js";
 import { ObGetObject } from "../objects.js";
-import { PEB } from "ntos-sdk/types/types.js";
-import { SUBSYS_USER32 } from "ntos-sdk/types/subsystems.js";
+import { PEB } from "@window-server/sdk/types/types.js";
+import { SUBSYS_USER32 } from "@window-server/sdk/types/subsystems.js";
 
 export interface MSG_QUEUE {
     EnqueueMessage(msg: MSG, callback?: (result: LRESULT) => void | Promise<void>): void;

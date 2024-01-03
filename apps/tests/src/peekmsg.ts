@@ -1,4 +1,4 @@
-import { GetModuleHandle } from "kernel32";
+import { GetModuleHandle } from "@window-server/kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -21,7 +21,7 @@ import {
     PeekMessage,
     PM,
     PostMessage
-} from "user32";
+} from "@window-server/user32";
 
 let hText: HWND;
 let iCnt: number = 0;

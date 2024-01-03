@@ -1,4 +1,4 @@
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 import { ObSetObject } from "./objects.js";
 
 export function NtAllocSharedMemory(cbSize: number, hOwner: HANDLE): HANDLE {

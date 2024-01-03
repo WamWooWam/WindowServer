@@ -11,7 +11,7 @@ import { NtUserDoNCHitTest } from "./nc.js";
 import { NtUserGetProcInfo } from "./shared.js";
 import { NtUserGetSystemMetrics } from "./metrics.js";
 import { ObGetObject } from "../objects.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 import WND, { PWND } from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
 

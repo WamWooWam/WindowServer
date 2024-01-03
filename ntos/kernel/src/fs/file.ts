@@ -1,5 +1,5 @@
 import { Buffer, FileSystem, Path } from "filer";
-import { HANDLE, PEB } from "ntos-sdk/types/types.js";
+import { HANDLE, PEB } from "@window-server/sdk/types/types.js";
 import { ObDestroyHandle, ObGetObject, ObSetObject } from "../objects.js";
 
 import ConsoleFile from "./confile.js";

@@ -1,8 +1,8 @@
-import { CW_USEDEFAULT, GetDC, GetSystemMetrics, HINSTANCE, SM, SendMessage, WM } from "user32";
-import { CreateFontIndirect, DEFAULT_CHARSET, DeleteObject, FW, GetDeviceCaps, LOGFONT, LOGPIXELSY, SetRect } from "gdi32";
+import { CW_USEDEFAULT, GetDC, GetSystemMetrics, HINSTANCE, SM, SendMessage, WM } from "@window-server/user32";
+import { CreateFontIndirect, DEFAULT_CHARSET, DeleteObject, FW, GetDeviceCaps, LOGFONT, LOGPIXELSY, SetRect } from "@window-server/gdi32";
 
 import Globals from "./globals.js";
-import { MulDiv } from "kernel32";
+import { MulDiv } from "@window-server/kernel32";
 
 export function InitData(hInstance: HINSTANCE) {
 

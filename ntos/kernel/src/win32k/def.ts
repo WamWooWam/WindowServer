@@ -8,7 +8,7 @@ import { NtDispatchMessage } from "./msg.js";
 import { NtUserGetProcInfo } from "./shared.js";
 import { NtUserShowWindow } from "./wndpos.js";
 import { ObGetObject } from "../objects.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 import WND from "./wnd.js";
 import WindowElement from "./html/WindowElement.js";
 import WindowElementBase from "./html/WindowElementBase.js";

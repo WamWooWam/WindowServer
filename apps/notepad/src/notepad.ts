@@ -31,9 +31,9 @@ import {
     WM,
     WNDCLASSEX,
     PostQuitMessage
-} from "user32";
-import { IntersectRect, RECT, LOGFONT } from "gdi32";
-import { GetModuleHandle } from "kernel32";
+} from "@window-server/user32";
+import { IntersectRect, RECT, LOGFONT } from "@window-server/gdi32";
+import { GetModuleHandle } from "@window-server/kernel32";
 
 import Globals from "./globals.js";
 import { InitData, LoadSettingsFromRegistry } from "./settings.js";

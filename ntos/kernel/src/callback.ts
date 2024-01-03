@@ -1,6 +1,6 @@
-import { PEB, SubsystemId } from "ntos-sdk/types/types.js";
+import { PEB, SubsystemId } from "@window-server/sdk/types/types.js";
 
-import { CALLBACK_MESSAGE_TYPE } from "ntdll/dist/ntdll.int.js"
+import { CALLBACK_MESSAGE_TYPE } from "@window-server/ntdll/dist/ntdll.int.js"
 import { ObGetObject } from "./objects.js";
 import { PsProcess } from "./process.js";
 

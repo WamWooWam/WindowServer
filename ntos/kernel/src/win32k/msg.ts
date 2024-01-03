@@ -1,5 +1,5 @@
 import { GET_MESSAGE, GET_MESSAGE_REPLY, HWND_BROADCAST, LRESULT, MSG, PEEK_MESSAGE, WM, WMP, WNDPROC_PARAMS } from "../subsystems/user32.js";
-import { HANDLE, PEB } from "ntos-sdk/types/types.js";
+import { HANDLE, PEB } from "@window-server/sdk/types/types.js";
 import { ObEnumHandlesByType, ObGetObject } from "../objects.js";
 
 import { NtUserGetProcInfo, } from "./shared.js";

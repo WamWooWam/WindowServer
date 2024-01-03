@@ -19,10 +19,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import { AdjustWindowRect, BeginPaint, CreateWindowEx, DefWindowProc, DispatchMessage, EndPaint, GetMessage, HWND, IDC, IDI, InvalidateRect, LPARAM, LoadCursor, LoadIcon, MAKEINTRESOURCE, MSG, PAINTSTRUCT, PostMessage, PostQuitMessage, RegisterClass, TranslateMessage, VK, WM, WPARAM, WS } from "user32";
-import { CreateSolidBrush, GetStockObject, NULL_PEN, RECT, Rectangle, SelectObject } from "gdi32";
+import { AdjustWindowRect, BeginPaint, CreateWindowEx, DefWindowProc, DispatchMessage, EndPaint, GetMessage, HWND, IDC, IDI, InvalidateRect, LPARAM, LoadCursor, LoadIcon, MAKEINTRESOURCE, MSG, PAINTSTRUCT, PostMessage, PostQuitMessage, RegisterClass, TranslateMessage, VK, WM, WPARAM, WS } from "@window-server/user32";
+import { CreateSolidBrush, GetStockObject, NULL_PEN, RECT, Rectangle, SelectObject } from "@window-server/gdi32";
 
-import { GetModuleHandle } from "kernel32";
+import { GetModuleHandle } from "@window-server/kernel32";
 
 const WINDOW_STYLE = WS.VISIBLE | WS.OVERLAPPEDWINDOW & ~WS.THICKFRAME & ~WS.MAXIMIZEBOX;
 const WINDOW_WIDTH = 640;

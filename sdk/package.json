@@ -1,5 +1,5 @@
 {
-  "name": "ntos-sdk",
+  "name": "@window-server/sdk",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",

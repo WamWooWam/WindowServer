@@ -5,15 +5,15 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "ntos-sdk": "file:../../sdk",
-    "ntdll": "file:../../dlls/ntdll",
-    "kernel32": "file:../../dlls/kernel32",
-    "user32": "file:../../dlls/user32",
-    "gdi32": "file:../../dlls/gdi32"
+    "@window-server/sdk": "workspace:sdk",
+    "@window-server/ntdll": "workspace:ntdll",
+    "@window-server/kernel32": "workspace:kernel32",
+    "@window-server/user32": "workspace:user32",
+    "@window-server/gdi32": "workspace:gdi32"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
-    "ntos-link": "file:../../build/link"
+    "@window-server/build-tools": "workspace:build-tools"
   },
   "scripts": {
     "build": "rollup -c",

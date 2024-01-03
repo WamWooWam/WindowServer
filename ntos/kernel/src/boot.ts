@@ -4,7 +4,7 @@ import { NtInitFileSystem } from "./fs/file.js";
 import { NtUserDrawLoop } from "./win32k/draw.js";
 import { NtUserInit } from "./win32k/init.js";
 import { NtUserInitInput } from "./win32k/input.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 import { ZwInitializeRegistry } from "./reg.js";
 
 const g_kernelPeb: PEB = {

@@ -1,12 +1,12 @@
 import * as asar from 'asar'
 
 import { FILE_SHARE_READ, GENERIC_ALL, OPEN_EXISTING } from "./subsystems/kernel32.js";
-import { HANDLE, PEB } from "ntos-sdk/types/types.js";
+import { HANDLE, PEB } from "@window-server/sdk/types/types.js";
 import { HKEY_CURRENT_USER, ZwEnumerateValueKey, ZwOpenKey } from './reg.js';
 import { InitializeObjectAttributes, OBJECT_ATTRIBUTES, ObCloseHandle, ObCreateObject, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "./objects.js";
 import { NtCreateFile, NtGetDirectoryName, NtGetFileName, NtGetFileSizeEx, NtGetFileSystemGlobal, NtPathJoin, NtReadFile } from "./fs/file.js";
 
-import Executable from "ntos-sdk/types/Executable.js";
+import Executable from "@window-server/sdk/types/Executable.js";
 import { IMAGEINFO } from "./types/image.js";
 import { KeBugCheckEx } from "./bugcheck.js";
 import { NtGetKernelPeb } from "./boot.js";

@@ -1,11 +1,11 @@
-import NTDLL, { LOAD_LIBRARY, LOAD_LIBRARY_REPLY, LOAD_SUBSYSTEM, PROCESS_CRASH, PROCESS_EXIT } from "ntdll/dist/ntdll.int.js";
-import { PEB, SUBSYSTEM_DEF, SubsystemId } from "ntos-sdk/types/types.js";
+import NTDLL, { LOAD_LIBRARY, LOAD_LIBRARY_REPLY, LOAD_SUBSYSTEM, PROCESS_CRASH, PROCESS_EXIT } from "@window-server/ntdll/dist/ntdll.int.js";
+import { PEB, SUBSYSTEM_DEF, SubsystemId } from "@window-server/sdk/types/types.js";
 import {
     SUBSYS_GDI32,
     SUBSYS_KERNEL32,
     SUBSYS_NTDLL,
     SUBSYS_USER32
-} from "ntos-sdk/types/subsystems.js";
+} from "@window-server/sdk/types/subsystems.js";
 
 import GDI32_SUBSYSTEM from "./gdi32.js";
 import KERNEL32_SUBSYSTEM from "./kernel32.js";
@@ -34,7 +34,7 @@ const SubsystemMap = new Map<SubsystemId, SUBSYSTEM_DEF>([
     [SUBSYS_GDI32, GDI32_SUBSYSTEM],
 ]);
 
-export * from "ntdll/dist/ntdll.int.js";
+export * from "@window-server/ntdll/dist/ntdll.int.js";
 
 async function NTDLL_SubsystemLoaded(peb: PEB, data: LOAD_SUBSYSTEM) {
     const process = ObGetObject<PsProcess>(peb.hProcess);

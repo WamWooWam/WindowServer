@@ -1,5 +1,5 @@
 {
-  "name": "kernel32",
+  "name": "@window-server/kernel32",
   "version": "1.0.0",
   "description": "NT Layer DLL",
   "main": "dist/kernel32.js",
@@ -7,8 +7,8 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "ntdll": "../../dlls/ntdll",
-    "ntos-sdk": "../../sdk",
+    "@window-server/ntdll": "workspace:ntdll",
+    "@window-server/sdk": "workspace:sdk",
     "rollup-plugin-dts": "^6.1.0"
   },
   "devDependencies": {

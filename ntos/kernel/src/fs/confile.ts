@@ -1,4 +1,4 @@
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 import NtFile from "./ntfile.js";
 
 export default class ConsoleFile extends NtFile {

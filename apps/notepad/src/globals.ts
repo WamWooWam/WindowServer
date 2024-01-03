@@ -1,5 +1,5 @@
-import { HFONT, LOGFONT, RECT } from "gdi32";
-import { HINSTANCE, HMENU, HWND, WNDPROC } from "user32";
+import { HFONT, LOGFONT, RECT } from "@window-server/gdi32";
+import { HINSTANCE, HMENU, HWND, WNDPROC } from "@window-server/user32";
 
 type NOTEPAD_GLOBALS = {
     hInstance: HINSTANCE;

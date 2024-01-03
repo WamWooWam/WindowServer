@@ -1,5 +1,5 @@
-import { CombineRgn, CreateRectRgn, CreateSolidBrush, DeleteObject, FillRgn, SelectObject, TextOut, HDC, RGN, CreatePen, PS, SetTextColor, Rectangle, RECT } from "gdi32";
-import { GetModuleHandle } from "kernel32";
+import { CombineRgn, CreateRectRgn, CreateSolidBrush, DeleteObject, FillRgn, SelectObject, TextOut, HDC, RGN, CreatePen, PS, SetTextColor, Rectangle, RECT } from "@window-server/gdi32";
+import { GetModuleHandle } from "@window-server/kernel32";
 import {
     CW_USEDEFAULT,
     HINSTANCE,
@@ -23,7 +23,7 @@ import {
     TranslateMessage,
     PostMessage,
     GetClientRect
-} from "user32";
+} from "@window-server/user32";
 
 function RGB(r: number, g: number, b: number): number {
     return (r << 16) | (g << 8) | b;

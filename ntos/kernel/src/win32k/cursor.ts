@@ -1,5 +1,5 @@
 import { NtUserGetDesktop } from "./shared.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 import { POINT } from "../subsystems/gdi32.js";
 
 let gptCursorPos: POINT = { x: 0, y: 0 };

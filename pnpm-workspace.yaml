@@ -1,0 +1,7 @@
+packages:
+  - 'dlls/*'
+  - 'apps/*'
+  - 'ntos/*'
+  - 'build/*'
+  - 'extern/*'
+  - 'sdk'

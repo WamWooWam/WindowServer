@@ -1,4 +1,4 @@
-import { HANDLE } from "ntdll";
+import { HANDLE } from "@window-server/ntdll";
 
 export type RECT = {
     left: number;

@@ -1,4 +1,4 @@
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 import { PsProcess } from "./process.js";
 
 export const OBJ_INHERIT = 0x00000002;

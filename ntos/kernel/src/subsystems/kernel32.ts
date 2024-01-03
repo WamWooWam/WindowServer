@@ -17,15 +17,15 @@ import KERNEL32, {
     SET_FILE_POINTER_REPLY,
     WRITE_FILE,
     WRITE_FILE_REPLY,
-} from "kernel32/dist/kernel32.int.js";
+} from "@window-server/kernel32/dist/kernel32.int.js";
 import { NtCreateDirectory, NtCreateFile, NtReadFile, NtSetFilePointer, NtWriteFile } from "../fs/file.js";
 import { ObCloseHandle, ObGetObject } from "../objects.js";
-import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "ntos-sdk/types/types.js";
+import { PEB, SUBSYSTEM, SUBSYSTEM_DEF } from "@window-server/sdk/types/types.js";
 
 import { PsProcess } from "../process.js";
-import { SUBSYS_KERNEL32 } from "ntos-sdk/types/subsystems.js";
+import { SUBSYS_KERNEL32 } from "@window-server/sdk/types/subsystems.js";
 
-export * from "kernel32/dist/kernel32.int.js";
+export * from "@window-server/kernel32/dist/kernel32.int.js";
 
 function NtK32Initialize(peb: PEB, lpSubsystem: SUBSYSTEM) {
     console.debug("KERNEL32 initialized");

@@ -1,6 +1,6 @@
 import { NtFileNameToUnix, NtGetFileSystemGlobal, NtRootPath } from "./file.js";
 
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 import NtFile from "./ntfile.js";
 
 export default class FsFile extends NtFile {

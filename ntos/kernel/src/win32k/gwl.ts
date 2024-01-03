@@ -1,7 +1,7 @@
 import { ObGetObject, ObSetObject } from "../objects.js";
 
 import { GWL, WM } from "../subsystems/user32.js";
-import { PEB } from "ntos-sdk/types/types.js";
+import { PEB } from "@window-server/sdk/types/types.js";
 import WND from "./wnd.js";
 import { NtCreateCallback } from "../callback.js";
 import { NtDispatchMessage } from "./msg.js";

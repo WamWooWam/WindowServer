@@ -14,11 +14,11 @@ import NTDLL, {
     SUBSYSTEM_LOADED
 } from "./types/ntdll.int.types.js";
 
-import Executable from "ntos-sdk/types/Executable.js";
-import Message from "ntos-sdk/types/Message.js";
+import Executable from "@window-server/sdk/types/Executable.js";
+import Message from "@window-server/sdk/types/Message.js";
 import { PROCESS_CRASH } from "./types/ntdll.int.types.js";
-import { SUBSYS_NTDLL } from "ntos-sdk/types/subsystems.js";
-import { SubsystemId } from "ntos-sdk/types/types.js";
+import { SUBSYS_NTDLL } from "@window-server/sdk/types/subsystems.js";
+import { SubsystemId } from "@window-server/sdk/types/types.js";
 
 export * from "./types/ntdll.types.js";
 
@@ -145,7 +145,7 @@ loadedModuleExports.set("ntdll", {
     default: ntdll
 });
 
-const __oldRequire = globalThis.require;
+const __oldRequire = (<any>globalThis).require;
 const NtRequire = (module: string) => {
     if (!loadedModuleExports.has(module)) {
         if (__oldRequire) {
@@ -159,7 +159,7 @@ const NtRequire = (module: string) => {
     return loadedModuleExports.get(module);
 }
 
-(<any>globalThis.require) = NtRequire;
+((<any>globalThis).require) = NtRequire;
 
 __addEventListener('message', (event) => {
     // console.debug(`client recieved message %s:%d, %O`, event.data.lpSubsystem, event.data.nType, event.data);

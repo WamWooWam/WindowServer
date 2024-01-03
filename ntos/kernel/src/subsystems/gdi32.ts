@@ -1,6 +1,6 @@
-import GDI32, { HRGN, LOGFONT, LOGPIXELSX, LOGPIXELSY } from "gdi32/dist/gdi32.int.js";
+import GDI32, { HRGN, LOGFONT, LOGPIXELSX, LOGPIXELSY } from "@window-server/gdi32/dist/gdi32.int.js";
 import { GreFillRegion, GreRectangle } from "../win32k/gdi/draw.js";
-import { HANDLE, PEB, SUBSYSTEM_DEF } from "ntos-sdk/types/types.js";
+import { HANDLE, PEB, SUBSYSTEM_DEF } from "@window-server/sdk/types/types.js";
 import { NtGdiDeleteObject, NtGdiRectangle, NtGdiSelectObject, NtGdiSetTextColor, NtGdiTextOut } from "../win32k/gdi/ntgdi.js";
 import { ObGetObject, ObSetHandleOwner, ObSetObject } from "../objects.js";
 import REGION, { GreCombineRgn, GreCreateRectRgn } from "../win32k/gdi/rgn.js";
@@ -9,9 +9,9 @@ import DC from "../win32k/gdi/dc.js";
 import { GreCreateFontIndirect } from "../win32k/gdi/font.js";
 import { GreCreatePen } from "../win32k/gdi/pen.js";
 import { GreCreateSolidBrush } from "../win32k/gdi/brush.js";
-import { SUBSYS_GDI32 } from "ntos-sdk/types/subsystems.js";
+import { SUBSYS_GDI32 } from "@window-server/sdk/types/subsystems.js";
 
-export * from "gdi32/dist/gdi32.int.js";
+export * from "@window-server/gdi32/dist/gdi32.int.js";
 
 function GdiCreateRectRgn(peb: PEB, { x1, x2, y1, y2 }: { x1: number, y1: number, x2: number, y2: number }): HRGN {
     const rgn = GreCreateRectRgn({ left: x1, top: y1, right: x2, bottom: y2 });

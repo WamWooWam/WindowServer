@@ -10,8 +10,8 @@ import {
     Rectangle,
     SelectObject,
     TextOut
-} from "gdi32";
-import { GetModuleHandle } from "kernel32";
+} from "@window-server/gdi32";
+import { GetModuleHandle } from "@window-server/kernel32";
 import {
     COLOR,
     CW_USEDEFAULT,
@@ -39,7 +39,7 @@ import {
     WNDCLASSEX,
     WPARAM,
     WS
-} from "user32";
+} from "@window-server/user32";
 
 async function WndProc(hwnd: HWND, msg: number, wParam: WPARAM, lParam: LPARAM): Promise<LRESULT> {
     switch (msg) {

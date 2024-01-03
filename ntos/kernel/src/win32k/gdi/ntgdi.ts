@@ -7,7 +7,7 @@ import { ObCloseHandle, ObDestroyHandle } from "../../objects.js";
 import PEN, { GreCreatePen } from "./pen.js";
 
 import { GreCreateSolidBrush } from "./brush.js";
-import { HANDLE } from "ntos-sdk/types/types.js";
+import { HANDLE } from "@window-server/sdk/types/types.js";
 
 export interface GDIOBJ {
     _type: string;
