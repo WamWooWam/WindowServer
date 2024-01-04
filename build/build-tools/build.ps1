@@ -115,4 +115,4 @@ Write-Host "Creating install.zip"
 
 pnpm window-server-package dist windows install.wim
 
-Remove-Item dist/windows -Recurse -Force
+# Remove-Item dist/windows -Recurse -Force
