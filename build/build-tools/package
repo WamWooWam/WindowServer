@@ -17,10 +17,10 @@ const asar = require('asar');
 
     // create asar file
     let asarPath = path.join(targetPath, outputFile);
-    let linkPath = path.join(targetPath, inDir);
+    let linkPath = path.join(targetPath, `windows`);
 
     // create a nested object tree of files as blobs to package by recursing through the link directory
-    let files = { inDir: {} };
+    let files = { 'windows': {} };
     let recurse = async (dir, root) => {
         let entries = await fsp.readdir(dir, { withFileTypes: true });
         for (const entry of entries) {
@@ -36,7 +36,7 @@ const asar = require('asar');
         }
     };
 
-    await recurse(linkPath, files[inDir]);
+    await recurse(linkPath, files['windows']);
 
     // package the files
     let buffer = await asar.createPackage(files);
