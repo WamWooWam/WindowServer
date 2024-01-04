@@ -1,4 +1,4 @@
-import * as asar from 'asar'
+import * as asar from 'asar';
 
 import { FILE_SHARE_READ, GENERIC_ALL, OPEN_EXISTING } from "./subsystems/kernel32.js";
 import { HANDLE, PEB } from "@window-server/sdk/types/types.js";
@@ -6,6 +6,7 @@ import { HKEY_CURRENT_USER, ZwEnumerateValueKey, ZwOpenKey } from './reg.js';
 import { InitializeObjectAttributes, OBJECT_ATTRIBUTES, ObCloseHandle, ObCreateObject, ObDuplicateHandle, ObEnumHandlesByType, ObGetObject, ObSetHandleOwner, ObSetObject } from "./objects.js";
 import { NtCreateFile, NtGetDirectoryName, NtGetFileName, NtGetFileSizeEx, NtGetFileSystemGlobal, NtPathJoin, NtReadFile } from "./fs/file.js";
 
+import { Decoder } from '@msgpack/msgpack';
 import Executable from "@window-server/sdk/types/Executable.js";
 import { IMAGEINFO } from "./types/image.js";
 import { KeBugCheckEx } from "./bugcheck.js";
@@ -169,6 +170,7 @@ export async function LdrLoadLibrary(peb: PEB, lpLibFileName: string): Promise<I
 
     console.log(`LdrLoadLibrary: ${lpLibFileName} -> %O`, loaderPaths);
 
+    const decoder = new Decoder();
     for (const lpPath of loaderPaths) {
         const hFile = await NtCreateFile(peb, lpPath!, GENERIC_ALL, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
         if (hFile === -1) continue;
@@ -185,10 +187,10 @@ export async function LdrLoadLibrary(peb: PEB, lpLibFileName: string): Promise<I
             continue;
         }
 
-        console.log(ret2);
+        console.log(ret2);        
 
         const headerData = await asar.extractFile(ret2.lpBuffer!, '.header');
-        const header: Executable = JSON.parse(new TextDecoder().decode(headerData));
+        const header: Executable = decoder.decode(headerData) as Executable;
 
         console.log(header);
 

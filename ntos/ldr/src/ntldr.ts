@@ -2,8 +2,12 @@ import * as asar from 'asar';
 
 import { Buffer, FileSystem, Path } from 'filer';
 
+import { Decoder } from '@msgpack/msgpack'
+
 const fs = new FileSystem();
 const path = Path;
+
+const decoder = new Decoder();
 
 // load ntoskrnl.exe 
 fs.readFile('/windows/system32/ntoskrnl.exe', async (err, data) => {
@@ -15,7 +19,7 @@ fs.readFile('/windows/system32/ntoskrnl.exe', async (err, data) => {
     let headerData = await asar.extractFile(data, '.header');
     console.log(headerData);
 
-    let header = JSON.parse(new TextDecoder().decode(headerData));
+    let header = decoder.decode(headerData) as { file: string, entryPoint: string };
     console.log(header);
 
     let entryPoint = await asar.extractFile(data, `.text/${header.file}`);

@@ -27,10 +27,6 @@ const ERROR_MOD_NOT_FOUND = 0x0000007E;
 const ERROR_PROC_NOT_FOUND = 0x0000007F;
 const ERROR_APP_INIT_FAILURE = 0x0000023F;
 
-function SUCCEEDED(hr: number) {
-    return hr >= 0;
-}
-
 function FAILED(hr: number) {
     return hr < 0;
 }

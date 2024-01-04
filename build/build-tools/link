@@ -22,7 +22,10 @@ const json = require('@rollup/plugin-json').default;
 const builtins = require("rollup-plugin-node-builtins");
 const globals = require("rollup-plugin-node-globals");
 
-const asar = require('@electron/asar');
+const asar = require('asar');
+const msgpack = require('@msgpack/msgpack');
+
+const encoder = new msgpack.Encoder();
 
 (async () => {
     try {
@@ -136,7 +139,12 @@ const asar = require('@electron/asar');
                     rsrc: {}
                 };
 
-                await fsp.writeFile(path.join(linkPath, `.header`), JSON.stringify(metadata));
+                // await fsp.writeFile(path.join(linkPath, `.header`), JSON.stringify(metadata));
+
+                // write metadata
+                let metadataFile = path.join(linkPath, '.header');
+                let metadataBuffer = encoder.encode(metadata);
+                await fsp.writeFile(metadataFile, metadataBuffer);
 
                 // copy resources
                 for (const resource of targetResources) {
@@ -164,7 +172,30 @@ const asar = require('@electron/asar');
                 // package
                 // create asar file
                 let asarPath = path.join(targetPath, `${targetName}.${targetType}`);
-                await asar.createPackageWithOptions(linkPath, asarPath, {});
+                // create a nested object tree of files as blobs to package by recursing through the link directory
+                let files = {};
+                let recurse = async (dir, root) => {
+                    let entries = await fsp.readdir(dir, { withFileTypes: true });
+                    for (const entry of entries) {
+                        let entryName = entry.name;
+                        let entryPath = path.join(dir, entryName);
+                        if (entry.isDirectory()) {
+                            root[entryName] = {};
+                            await recurse(entryPath, root[entryName]);
+                        }
+                        else {
+                            root[entryName] = (await fsp.readFile(entryPath));
+                        }
+                    }
+                };
+
+                await recurse(linkPath, files);
+
+                // package the files
+                let buffer = await asar.createPackage(files);
+
+                // write the asar file
+                await fsp.writeFile(asarPath, buffer);
 
                 // delete link directory
                 await fsp.rm(linkPath, { recursive: true });

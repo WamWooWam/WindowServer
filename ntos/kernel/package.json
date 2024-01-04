@@ -5,6 +5,7 @@
   "type": "module",
   "license": "MIT",
   "dependencies": {
+    "@msgpack/msgpack": "3.0.0-beta2",
     "@window-server/gdi32": "workspace:gdi32",
     "@window-server/kernel32": "workspace:kernel32",
     "@window-server/ntdll": "workspace:ntdll",

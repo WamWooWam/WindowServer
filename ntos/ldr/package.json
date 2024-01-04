@@ -5,9 +5,10 @@
   "type": "module",
   "license": "MIT",
   "dependencies": {
+    "@msgpack/msgpack": "3.0.0-beta2",
+    "asar": "workspace:asar",
     "browserify": "^17.0.0",
-    "filer": "workspace:filer",
-    "asar": "workspace:asar"
+    "filer": "workspace:filer"
   },
   "devDependencies": {
     "@types/node": "^20.9.0",

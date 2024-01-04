@@ -1,3 +1,6 @@
 [submodule "extern/filer"]
 	path = extern/filer
 	url = https://github.com/wamwoowam/filer
+[submodule "extern/asar"]
+	path = extern/asar
+	url = https://github.com/WamWooWam/asar

@@ -40,7 +40,7 @@ function Push-Location-If-Array {
 Write-Host "Building WindowServer"
 Write-Host "Configuration: $Configuration"
 
-if ($null -eq $Project) {
+if ($null -eq $Project -and $Clean) {
     pnpm install
 
     Write-Host "Preparing build environment"
@@ -74,7 +74,7 @@ if (-not ($NoBuild)) {
         Pop-Location
     }
 
-    $parallelProjects | Foreach-Object {        
+    $parallelProjects | Foreach-Object -ThrottleLimit 4 -Parallel {        
         Write-Host "Building $PSItem"
         
         # can't use Push-Location-If-Array here because it's in a parallel block
@@ -85,7 +85,7 @@ if (-not ($NoBuild)) {
             Push-Location $PSItem
         }
 
-        pnpm window-server-link . /p:configuration=$Configuration
+        pnpm window-server-link . /p:configuration=$USING:Configuration
         Pop-Location
     }
 }
