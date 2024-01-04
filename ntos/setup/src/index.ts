@@ -1,6 +1,12 @@
-import * as zip from '@zip.js/zip.js'
+import * as asar from 'asar'
 
 import { Buffer as B, FileSystem, Path } from "filer"
+
+import { Decoder } from '@msgpack/msgpack'
+
+// import * as zip from '@zip.js/zip.js'
+
+
 
 (async () => {
     const fs = new FileSystem({ flags: ['FORMAT'] });
@@ -24,10 +30,9 @@ import { Buffer as B, FileSystem, Path } from "filer"
         })
     });
 
-    const zipFile = await fetch('/install.zip')
-    const zipBlob = await zipFile.blob()
-    const zipReader = new zip.ZipReader(new zip.BlobReader(zipBlob))
-    const entries = await zipReader.getEntries()
+    const asarFile = await fetch('/install.wim')
+    const asarBlob = await asarFile.blob()
+    const entries = await asar.extractAll(asarBlob, { flat: true }) as any;
 
     const textArea = document.createElement('textarea')
     textArea.style.width = '100%'
@@ -35,10 +40,10 @@ import { Buffer as B, FileSystem, Path } from "filer"
     document.body.appendChild(textArea)
 
     const root = '/';
-    for (const entry of entries) {
+    for (const [entry, data] of Object.entries(entries)) {
         if (!entry) continue;
 
-        const entryPath = entry.filename.toLowerCase().split('/')
+        const entryPath = entry.toLowerCase().split('/')
         const entryName = entryPath[entryPath.length - 1]
         const entryDir = entryPath.slice(0, entryPath.length - 1).join('/')
 
@@ -51,40 +56,43 @@ import { Buffer as B, FileSystem, Path } from "filer"
         }
 
         if (entryName) {
-            const file = path.join(root, entryDir, entryName)
-            const blob = await entry.getData!(new zip.BlobWriter())
-            const buffer = await blob.arrayBuffer()
-
+            const file = path.join(root, entryDir, entryName);
             textArea.value += `Writing file ${file}\n`
-            await writeFile(file, B.from(buffer))
+            await writeFile(file, B.from(data as ArrayBuffer))
         }
     }
 
+
     textArea.value += 'Done!\n'
 
-    // textArea.value += 'Launching ntoskrnl.exe\n'
-    // fs.readFile('/windows/system32/ntoskrnl.js', (err, data) => {
-    //     if (err) {
-    //         textArea.value += `Error: ${err}\n`
-    //         return
-    //     }
-    //     else {
-    //         textArea.remove();
-    //     }
+    textArea.value += 'ldr:ntoskrnl.exe\n'
 
-    //     const blob = new Blob([data], { type: 'text/javascript' })
-    //     const url = URL.createObjectURL(blob)
-    //     const script = document.createElement('script')
-    //     script.src = url
-    //     document.body.appendChild(script)
-    // })
+    // load ntoskrnl.exe 
+    fs.readFile('/windows/system32/ntoskrnl.exe', async (err, data) => {
+        if (err) throw err;
 
-    const url = "/ntldr.js"
-    const script = document.createElement('script')
-    script.setAttribute('type', 'module')
-    script.src = url
-    document.body.appendChild(script)
+        const decoder = new Decoder();
+
+        // exes are ASAR archives, so we need to extract it
+        // we can't use the asar module because it's not compatible with the browser
+        // so we have to do it manually
+        let headerData = await asar.extractFile(data, '.header');
+        textArea.value += `headerData: len:0x${headerData.byteLength.toString(16)}\n`
+
+        let header = decoder.decode(headerData) as { file: string, entryPoint: string };
+        textArea.value += `header: ${header.file}, ${header.entryPoint}\n`
+
+        let entryPoint = await asar.extractFile(data, `.text/${header.file}`);
+        textArea.value += `entryPoint: len:0x${entryPoint.byteLength.toString(16)}\n`
+
+        // execute the entry point
+        let url = URL.createObjectURL(new Blob([entryPoint], { type: 'text/javascript' }));
+        let def = await import(url);
+
+        if (def[header.entryPoint])
+            await def[header.entryPoint]();
+    });
+
 
     textArea.remove();
-
 })();

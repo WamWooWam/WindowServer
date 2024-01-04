@@ -6,7 +6,8 @@
   "private": true,
   "bin": {
     "window-server-link": "link",
-    "window-server-build": "build.ps1"
+    "window-server-build": "build.ps1",
+    "window-server-package": "package"
   },
   "dependencies": {
     "asar": "workspace:asar",

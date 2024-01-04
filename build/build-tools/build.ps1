@@ -112,6 +112,7 @@ Copy-Item ntos/setup/dist/ntsetup.js dist/setup.js
 Copy-Item ntos/ldr/dist/ntldr.js dist/
 
 Write-Host "Creating install.zip"
-Compress-Archive -Path dist/windows -DestinationPath dist/install.zip -Force
+
+pnpm window-server-package dist windows install.wim
 
 Remove-Item dist/windows -Recurse -Force

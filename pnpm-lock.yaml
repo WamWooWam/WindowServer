@@ -376,9 +376,15 @@ importers:
 
   ntos/setup:
     dependencies:
+      '@msgpack/msgpack':
+        specifier: 3.0.0-beta2
+        version: 3.0.0-beta2
       '@zip.js/zip.js':
         specifier: ^2.7.32
         version: 2.7.32
+      asar:
+        specifier: workspace:asar
+        version: link:../../extern/asar
       filer:
         specifier: workspace:filer
         version: link:../../extern/filer

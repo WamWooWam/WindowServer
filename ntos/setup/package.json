@@ -6,6 +6,8 @@
   "dependencies": {
     "@zip.js/zip.js": "^2.7.32",
     "filer": "workspace:filer",
+    "@msgpack/msgpack": "3.0.0-beta2",
+    "asar": "workspace:asar",
     "typescript": "^5.3.3"
   },
   "devDependencies": {
