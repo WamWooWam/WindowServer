@@ -1,0 +1,241 @@
+#! /usr/bin/env node
+
+//
+// The final step in the build process is to package the application into a
+// single file that can be loaded by the OS loader. Rollup is used to bundle
+// the application into a single file, then this combines that file with the
+// metadata file to create the final application file.
+//
+
+const path = require('node:path');
+const rollup = require('rollup');
+const fs = require('fs');
+const fsp = require('node:fs/promises');
+
+const resolve = require('@rollup/plugin-node-resolve').default;
+const commonjs = require('@rollup/plugin-commonjs').default;
+const typescript = require('rollup-plugin-typescript2');
+const dts = require('rollup-plugin-dts').default;
+const terser = require('@rollup/plugin-terser').default;
+const json = require('@rollup/plugin-json').default;
+
+const builtins = require("rollup-plugin-node-builtins");
+const globals = require("rollup-plugin-node-globals");
+
+const asar = require('asar');
+const msgpack = require('@msgpack/msgpack');
+
+const encoder = new msgpack.Encoder();
+
+(async () => {
+    try {
+        let [, , projectPath] = process.argv;
+
+        // parse the rest of argv like msbuild does (/p:foo=bar /p:baz=qux)
+        let properties = {};
+        for (const arg of process.argv.slice(3)) {
+            const [key, value] = arg.split('=');
+
+            if (key.startsWith('/p:')) {
+                const property = key.substring(3);
+                properties[property] = value;
+            }
+        }
+
+        projectPath = path.resolve(projectPath);
+
+        const configuration = (properties.configuration ?? 'debug').toLowerCase();
+        const project = JSON.parse(await fsp.readFile(path.join(projectPath, 'project.json'), 'utf-8'));
+        const { name, dependencies, subsystem, targets } = project;
+
+        console.log(`Building project ${name}...`)
+
+        for (const target of targets) {
+            let targetName = target.name || name;
+            let targetPath = path.join(projectPath, 'dist');
+
+            console.log(`Building target ${targetName} for ${configuration}...`);
+
+            let targetDependencies = ['@window-server/sdk', ...dependencies.map(d => `@window-server/${d}`), ...(target.dependencies ?? []).map(d => `@window-server/${d}`)];
+            let targetSubsystem = target.subsystem ?? subsystem;
+            let targetType = target.type ?? 'exe';
+
+            let format = 'iife';
+            if (targetSubsystem !== 'native' || targetType === 'sys') {
+                // sys targets are bundled as es modules so they can be bundled with the kernel
+                // this may change in the future
+                format = targetType === 'sys' ? 'es' : 'cjs';
+            }
+
+            let generateTypes = targetType === 'sys' || targetType === 'lib' || targetType === 'dll';
+
+            let rollupConfig = {
+                input: target.sources.map(source => path.join(projectPath, source)),
+                output: {
+                    dir: targetPath,
+                    format,
+                    sourcemap: configuration === 'debug' ? 'inline' : false,
+                    inlineDynamicImports: targetType === 'sys',
+                    compact: configuration === 'release',
+                    name: format === 'iife' ? targetName : undefined,
+                    exports: 'named'
+                },
+                plugins: [
+                    resolve({ preferBuiltins: false }),
+                    commonjs(),
+                    json(),
+                    typescript({
+                        tsconfig: 'tsconfig.json',
+                    }),
+                    builtins(),
+                    globals(),
+                    ...(configuration === 'release' ? [terser()] : [])
+                ],
+                external: targetDependencies,
+
+                onLog(level, log, handler) {
+                    // this appears to just, not get called for typescript errors, because fml
+                    if (log.code === 'CIRCULAR_DEPENDENCY') {
+                        return; // Ignore circular dependency warnings
+                    }
+
+                    console.log(`(!) ${log.message}`);
+                    handler(level, log);
+                },
+            };
+
+            let bundle = await rollup.rollup(rollupConfig);
+            let { output } = await bundle.generate(rollupConfig.output);
+
+            await fsp.mkdir(targetPath, { recursive: true });
+            await fsp.writeFile(path.join(targetPath, `${targetName}.js`), output[0].code);
+
+            if (targetType === "dll" || targetType === "exe") {
+                console.log(`Linking target ${targetName}.${targetType}...`)
+
+                let targetResources = [...(target.resources ?? []), ...(project.resources ?? [])];
+                let linkPath = path.join(targetPath, `${targetName}.link`);
+                await fsp.mkdir(linkPath, { recursive: true });
+
+                let resourcePath = path.join(linkPath, '.rsrc');
+                let textPath = path.join(linkPath, '.text');
+
+                await fsp.mkdir(resourcePath, { recursive: true });
+                await fsp.mkdir(textPath, { recursive: true });
+
+                // let linkedFile = path.join(linkPath, `${targetName}.${targetType}`);
+                // await fsp.writeFile(linkedFile, '');
+
+                let metadata = {
+                    file: output[0].fileName,
+                    type: targetType === 'exe' ? 'executable' : 'dll',
+                    subsystem: targetSubsystem,
+                    arch: 'js', // TODO: wasm
+                    dependencies: targetDependencies.filter(dep => dep !== '@window-server/sdk'),
+                    entryPoint: target.entryPoint ?? 'default',
+
+                    name: targetName,
+                    version: [1, 0, 0, 0],
+                    rsrc: {}
+                };
+
+                // await fsp.writeFile(path.join(linkPath, `.header`), JSON.stringify(metadata));
+
+                // write metadata
+                let metadataFile = path.join(linkPath, '.header');
+                let metadataBuffer = encoder.encode(metadata);
+                await fsp.writeFile(metadataFile, metadataBuffer);
+
+                // copy resources
+                for (const resource of targetResources) {
+                    // TODO: handle **/*.ext, etc.
+                    let resourcePath = path.join(projectPath, resource);
+                    let resourceTargetPath = path.join(resourcePath, resource);
+
+                    await fsp.mkdir(path.dirname(resourceTargetPath), { recursive: true });
+                    await fsp.copyFile(resourcePath, resourceTargetPath);
+                }
+
+                // copy bundled files
+                for (const out of output) {
+                    if (out.type === 'chunk') {
+                        let bundledFile = path.join(textPath, out.fileName);
+                        await fsp.writeFile(bundledFile, out.code);
+                    }
+
+                    if (out.type === 'asset') {
+                        let bundledFile = path.join(resourcePath, out.fileName);
+                        await fsp.copyFile(out.source, bundledFile);
+                    }
+                }
+
+                // package
+                // create asar file
+                let asarPath = path.join(targetPath, `${targetName}.${targetType}`);
+                // create a nested object tree of files as blobs to package by recursing through the link directory
+                let files = {};
+                let recurse = async (dir, root) => {
+                    let entries = await fsp.readdir(dir, { withFileTypes: true });
+                    for (const entry of entries) {
+                        let entryName = entry.name;
+                        let entryPath = path.join(dir, entryName);
+                        if (entry.isDirectory()) {
+                            root[entryName] = {};
+                            await recurse(entryPath, root[entryName]);
+                        }
+                        else {
+                            root[entryName] = (await fsp.readFile(entryPath));
+                        }
+                    }
+                };
+
+                await recurse(linkPath, files);
+
+                // package the files
+                let buffer = await asar.createPackage(files);
+
+                // write the asar file
+                await fsp.writeFile(asarPath, buffer);
+
+                // delete link directory
+                await fsp.rm(linkPath, { recursive: true });
+            }
+
+            if (generateTypes) {
+                rollupConfig = {
+                    input: target.sources.map(source => path.join(projectPath, source)),
+                    output: {
+                        dir: targetPath,
+                        format: 'es',
+                        sourcemap: "inline",
+                        inlineDynamicImports: true
+                    },
+                    plugins: [
+                        resolve(),
+                        commonjs(),
+                        dts()
+                    ],
+                    external: targetDependencies,
+                    onLog(level, log, handler) {
+                        if (log.code === 'CIRCULAR_DEPENDENCY') {
+                            return; // Ignore circular dependency warnings
+                        }
+    
+                        console.log(`(!) ${log.message}`);
+                        handler(level, log);
+                    },
+                };
+
+                bundle = await rollup.rollup(rollupConfig);
+                output = (await bundle.generate(rollupConfig.output)).output;
+
+                // console.log(output);
+
+                await fsp.writeFile(path.join(targetPath, `${targetName}.d.ts`), output[0].code);
+            }
+        }
+    }
+    catch (e) {
+        console.log(e.message);
+    }
+})();

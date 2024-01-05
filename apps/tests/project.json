@@ -1,0 +1,110 @@
+{
+    "name": "tests",
+    "dependencies": [
+        "ntdll",
+        "kernel32",
+        "gdi32",
+        "user32"
+    ],
+    "subsystem": "windows",
+    "targets": [
+        {
+            "name": "asyncfre",
+            "type": "exe",
+            "sources": [
+                "src/asyncfre.ts"
+            ]
+        },
+        {
+            "name": "button",
+            "type": "exe",
+            "sources": [
+                "src/button.ts"
+            ]
+        },
+        {
+            "name": "custdraw",
+            "type": "exe",
+            "sources": [
+                "src/custdraw.ts"
+            ]
+        },
+        {
+            "name": "gditest",
+            "type": "exe",
+            "sources": [
+                "src/gditest.ts"
+            ]
+        },
+        {
+            "name": "gwlwproc",
+            "type": "exe",
+            "sources": [
+                "src/gwlwproc.ts"
+            ]
+        },
+        {
+            "name": "minmaxin",
+            "type": "exe",
+            "sources": [
+                "src/minmaxin.ts"
+            ]
+        },
+        {
+            "name": "nchitsub",
+            "type": "exe",
+            "sources": [
+                "src/nchitsub.ts"
+            ]
+        },
+        {
+            "name": "nchittest",
+            "type": "exe",
+            "sources": [
+                "src/nchittest.ts"
+            ]
+        },
+        {
+            "name": "peekmsg",
+            "type": "exe",
+            "sources": [
+                "src/peekmsg.ts"
+            ]
+        },
+        {
+            "name": "props",
+            "type": "exe",
+            "sources": [
+                "src/props.ts"
+            ]
+        },
+        {
+            "name": "singinst",
+            "type": "exe",
+            "sources": [
+                "src/singinst.ts"
+            ]
+        },
+        {
+            "name": "static",
+            "type": "exe",
+            "sources": [
+                "src/static.ts"
+            ]
+        },
+        {
+            "name": "syncfre",
+            "type": "exe",
+            "sources": [
+                "src/syncfre.ts"
+            ]
+        },
+        {
+            "name": "snake",
+            "type": "exe",
+            "sources": [
+                "src/snake.ts"
+            ]
+        }
+    ]
+}

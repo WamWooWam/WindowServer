@@ -1,0 +1,21 @@
+{
+  "name": "@window-server/kernel32",
+  "version": "1.0.0",
+  "description": "NT Layer DLL",
+  "main": "dist/kernel32.js",
+  "types": "dist/kernel32.d.ts",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@window-server/ntdll": "workspace:ntdll",
+    "@window-server/sdk": "workspace:sdk"
+  },
+  "devDependencies": {
+    "@window-server/build-tools": "workspace:build-tools",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "window-server-link .",
+    "watch": "window-server-watch ."
+  }
+}

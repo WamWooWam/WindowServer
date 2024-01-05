@@ -1,0 +1,22 @@
+{
+    "name": "gdi32",
+    "dependencies": ["ntdll", "kernel32"],
+    "subsystem": "console",
+    "targets": [
+        {
+            "name": "gdi32",
+            "type": "dll",
+            "sources": [
+                "src/gdi32.ts"
+            ],
+            "entryPoint": "DllMain"
+        },
+        {
+            "name": "gdi32.int",
+            "type": "sys",
+            "sources": [
+                "src/types/gdi32.int.types.ts"
+            ]
+        }
+    ]
+}

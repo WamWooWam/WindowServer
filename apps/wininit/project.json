@@ -1,0 +1,19 @@
+{
+    "name": "wininit",
+    "dependencies": [
+        "ntdll",
+        "kernel32",
+        "gdi32",
+        "user32"
+    ],
+    "subsystem": "windows",
+    "targets": [
+        {
+            "name": "wininit",
+            "type": "exe",
+            "sources": [
+                "src/wininit.ts"
+            ]
+        }
+    ]
+}

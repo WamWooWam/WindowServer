@@ -1,0 +1,14 @@
+{
+    "name": "ntoskrnl",
+    "dependencies": [],
+    "subsystem": "native",
+    "targets": [
+        {
+            "name": "ntoskrnl",
+            "type": "exe",
+            "sources": [
+                "src/index.ts"
+            ]
+        }
+    ]
+}

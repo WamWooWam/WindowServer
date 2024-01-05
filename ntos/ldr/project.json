@@ -1,0 +1,14 @@
+{
+    "name": "ntldr",
+    "dependencies": [],
+    "subsystem": "windows",
+    "targets": [
+        {
+            "name": "ntldr",
+            "type": "sys",
+            "sources": [
+                "src/ntldr.ts"
+            ]
+        }
+    ]
+}

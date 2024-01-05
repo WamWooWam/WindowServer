@@ -1,0 +1,46 @@
+#! /usr/bin/env node
+
+//
+// The final step in the build process is to package the application into a
+// single file that can be loaded by the OS loader. Rollup is used to bundle
+// the application into a single file, then this combines that file with the
+// metadata file to create the final application file.
+//
+
+const path = require('node:path');
+const fsp = require('node:fs/promises');
+const asar = require('asar');
+
+(async () => {
+
+    let [, , targetPath, inDir, outputFile] = process.argv;
+
+    // create asar file
+    let asarPath = path.join(targetPath, outputFile);
+    let linkPath = path.join(targetPath, `windows`);
+
+    // create a nested object tree of files as blobs to package by recursing through the link directory
+    let files = { 'windows': {} };
+    let recurse = async (dir, root) => {
+        let entries = await fsp.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            let entryName = entry.name;
+            let entryPath = path.join(dir, entryName);
+            if (entry.isDirectory()) {
+                root[entryName] = {};
+                await recurse(entryPath, root[entryName]);
+            }
+            else {
+                root[entryName] = (await fsp.readFile(entryPath));
+            }
+        }
+    };
+
+    await recurse(linkPath, files['windows']);
+
+    // package the files
+    let buffer = await asar.createPackage(files);
+
+    // write the asar file
+    await fsp.writeFile(asarPath, buffer);
+})();

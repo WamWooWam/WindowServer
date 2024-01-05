@@ -1,0 +1,20 @@
+{
+  "name": "@window-server/ntdll",
+  "version": "1.0.0",
+  "description": "NT Layer DLL",
+  "main": "dist/ntdll.js",
+  "types": "dist/ntdll.d.ts",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@window-server/sdk": "workspace:sdk"
+  },
+  "devDependencies": {
+    "@window-server/build-tools": "workspace:build-tools",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "window-server-link .",
+    "watch": "window-server-watch ."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@window-server/sdk",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

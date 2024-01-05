@@ -1,0 +1,22 @@
+{
+    "name": "kernel32",
+    "dependencies": ["ntdll"],
+    "subsystem": "console",
+    "targets": [
+        {
+            "name": "kernel32",
+            "type": "dll",
+            "sources": [
+                "src/kernel32.ts"
+            ],
+            "entryPoint": "Kernel32Initialize"
+        },
+        {
+            "name": "kernel32.int",
+            "type": "sys",
+            "sources": [
+                "src/types/kernel32.int.types.ts"
+            ]
+        }
+    ]
+}

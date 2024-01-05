@@ -1,0 +1,22 @@
+{
+  "name": "tests",
+  "version": "1.0.0",
+  "description": "NT Tests",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@window-server/sdk": "workspace:sdk",
+    "@window-server/ntdll": "workspace:ntdll",
+    "@window-server/kernel32": "workspace:kernel32",
+    "@window-server/user32": "workspace:user32",
+    "@window-server/gdi32": "workspace:gdi32"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@window-server/build-tools": "workspace:build-tools"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
+  }
+}

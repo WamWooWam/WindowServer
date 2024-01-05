@@ -1,0 +1,23 @@
+{
+  "name": "@window-server/user32",
+  "version": "1.0.0",
+  "description": "NT Layer DLL",
+  "main": "dist/user32.js",
+  "types": "dist/user32.d.ts",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@window-server/sdk": "workspace:sdk",
+    "@window-server/kernel32": "workspace:kernel32",
+    "@window-server/ntdll": "workspace:ntdll",
+    "@window-server/gdi32": "workspace:gdi32"
+  },
+  "devDependencies": {
+    "@window-server/build-tools": "workspace:build-tools",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "window-server-link .",
+    "watch": "window-server-watch ."
+  }
+}

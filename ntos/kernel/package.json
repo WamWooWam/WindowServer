@@ -1,0 +1,23 @@
+{
+  "name": "@window-server/kernel",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+    "@msgpack/msgpack": "3.0.0-beta2",
+    "@window-server/gdi32": "workspace:gdi32",
+    "@window-server/kernel32": "workspace:kernel32",
+    "@window-server/ntdll": "workspace:ntdll",
+    "@window-server/sdk": "workspace:sdk",
+    "@window-server/user32": "workspace:user32",
+    "asar": "workspace:asar",
+    "filer": "workspace:filer",
+    "tslib": "^2.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "@window-server/build-tools": "workspace:build-tools",
+    "typescript": "^5.3.3"
+  }
+}

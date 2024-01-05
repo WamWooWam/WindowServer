@@ -1,0 +1,23 @@
+{
+  "name": "wininit",
+  "version": "1.0.0",
+  "description": "Notepad",
+  "main": "dist/wininit.js",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@window-server/sdk": "workspace:sdk",
+    "@window-server/ntdll": "workspace:ntdll",
+    "@window-server/kernel32": "workspace:kernel32",
+    "@window-server/user32": "workspace:user32",
+    "@window-server/gdi32": "workspace:gdi32"
+  },
+  "devDependencies": {
+    "@window-server/build-tools": "workspace:build-tools",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "window-server-link .",
+    "watch": "window-server-watch ."
+  }
+}

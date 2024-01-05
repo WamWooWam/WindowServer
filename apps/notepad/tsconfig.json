@@ -1,0 +1,21 @@
+{
+    "compileOnSave": true,
+    "compilerOptions": {
+      "module": "ES2022",
+      "target": "ES2017",
+      "lib": [
+        "ES2022",
+        "es2022.sharedmemory",
+        "DOM",
+        "DOM.Iterable"
+      ],
+      "moduleResolution": "Node",
+      "sourceMap": true,
+      "resolveJsonModule": true,
+      "allowSyntheticDefaultImports": true,
+      "noImplicitAny": true,
+      "outDir": "./dist",
+      "rootDir": "./src",
+      "strictNullChecks": true,
+    }
+  }

@@ -4,15 +4,13 @@
 .vs/
 
 # dependencies
-/node_modules
+**/node_modules
 /.pnp
 .pnp.js
 
 # testing
 /coverage
 
-# production
-/build
 
 # misc
 .DS_Store
@@ -27,8 +25,13 @@ yarn-error.log*
 
 .env
 
-dist/**/*.js
-dist/**/*.js.map
+**/dist/**/*.js
+**/dist/**/*.js.map
+**/dist/**/*.d.ts
+**/dist/**/*.d.ts.map
+**/dist/**/*.dll
+**/dist/**/*.exe
+sdk/lib/**
 publish/
 publish.zip
 
